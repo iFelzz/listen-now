@@ -1,0 +1,44 @@
+# Listen Now – gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Env files
+.env
+ENV/
+
+# Virtual environment (bundled, include in repo jika diinginkan)
+# Uncomment baris di bawah jika TIDAK ingin commit venv ke git
+# venv/
+
+# FFmpeg bundled (besar, opsional untuk commit ke git)
+# Uncomment jika TIDAK ingin commit ffmpeg ke git
+# ffmpeg/
+
+# Installer files
+*.exe
+*.msi
+*.zip
+
+# Downloads folder (konten user)
+downloads/*.mp3
+downloads/*.webm
+downloads/*.m4a
+downloads/*.opus
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  listen-now:
+    image: listen-now:latest
+    container_name: listen-now-container
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount seluruh direktori project untuk hot-reload kode
+      - /home/andalan/listen-now:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
