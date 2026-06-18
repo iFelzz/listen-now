@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Listen Now – YouTube MP3 Downloader</title>
-  <meta name="description" content="Cari lagu dari YouTube dan download sebagai MP3 gratis. Kualitas audio terbaik, cepat dan mudah." />
+  <meta name="description" content="Search YouTube and download as free MP3. Best audio quality, fast and easy." />
   <meta name="theme-color" content="#7c3aed" />
   <link rel="icon" type="image/png" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/static/logo.png" />
@@ -12,39 +13,40 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
 
   <style>
     /* ═══════════════════════════════════════════════════
        DESIGN TOKENS
     ═══════════════════════════════════════════════════ */
     :root {
-      --clr-bg:           #09090f;
-      --clr-surface:      #13131f;
-      --clr-surface-2:    #1a1a2e;
-      --clr-border:       rgba(124, 58, 237, 0.18);
+      --clr-bg: #09090f;
+      --clr-surface: #13131f;
+      --clr-surface-2: #1a1a2e;
+      --clr-border: rgba(124, 58, 237, 0.18);
       --clr-border-hover: rgba(124, 58, 237, 0.45);
 
-      --clr-primary:      #7c3aed;
+      --clr-primary: #7c3aed;
       --clr-primary-soft: #8b5cf6;
-      --clr-accent:       #a78bfa;
-      --clr-accent-glow:  rgba(139, 92, 246, 0.35);
+      --clr-accent: #a78bfa;
+      --clr-accent-glow: rgba(139, 92, 246, 0.35);
 
-      --clr-pink:         #ec4899;
-      --clr-pink-soft:    #f472b6;
-      --clr-cyan:         #06b6d4;
+      --clr-pink: #ec4899;
+      --clr-pink-soft: #f472b6;
+      --clr-cyan: #06b6d4;
 
-      --clr-text:         #f1f0ff;
-      --clr-text-muted:   #8b8cae;
-      --clr-text-dim:     #4b4c6e;
+      --clr-text: #f1f0ff;
+      --clr-text-muted: #8b8cae;
+      --clr-text-dim: #4b4c6e;
 
-      --radius-sm:  8px;
-      --radius-md:  14px;
-      --radius-lg:  20px;
-      --radius-xl:  28px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
 
-      --shadow-card: 0 4px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(124,58,237,0.12);
-      --shadow-glow: 0 0 40px rgba(139,92,246,0.3);
+      --shadow-card: 0 4px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(124, 58, 237, 0.12);
+      --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.3);
 
       --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -52,9 +54,17 @@
     /* ═══════════════════════════════════════════════════
        RESET & BASE
     ═══════════════════════════════════════════════════ */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
@@ -74,6 +84,7 @@
       pointer-events: none;
       overflow: hidden;
     }
+
     .bg-mesh::before,
     .bg-mesh::after {
       content: '';
@@ -83,20 +94,32 @@
       opacity: 0.18;
       animation: blob-drift 12s ease-in-out infinite alternate;
     }
+
     .bg-mesh::before {
-      width: 600px; height: 600px;
+      width: 600px;
+      height: 600px;
       background: radial-gradient(circle, #7c3aed, transparent 70%);
-      top: -150px; left: -150px;
+      top: -150px;
+      left: -150px;
     }
+
     .bg-mesh::after {
-      width: 500px; height: 500px;
+      width: 500px;
+      height: 500px;
       background: radial-gradient(circle, #ec4899, transparent 70%);
-      bottom: -100px; right: -100px;
+      bottom: -100px;
+      right: -100px;
       animation-delay: -6s;
     }
+
     @keyframes blob-drift {
-      0%   { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(60px, 40px) scale(1.15); }
+      0% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      100% {
+        transform: translate(60px, 40px) scale(1.15);
+      }
     }
 
     /* Grid lines overlay */
@@ -106,8 +129,8 @@
       z-index: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+        linear-gradient(rgba(124, 58, 237, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124, 58, 237, 0.04) 1px, transparent 1px);
       background-size: 48px 48px;
     }
 
@@ -143,12 +166,14 @@
       gap: 14px;
       margin-bottom: 28px;
     }
+
     .logo-img {
       width: 52px;
       height: 52px;
       border-radius: 14px;
-      box-shadow: 0 0 24px rgba(139,92,246,0.5);
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.5);
     }
+
     .logo-text {
       font-size: 1.9rem;
       font-weight: 800;
@@ -209,7 +234,11 @@
       transition: var(--transition);
       backdrop-filter: blur(8px);
     }
-    #search-input::placeholder { color: var(--clr-text-dim); }
+
+    #search-input::placeholder {
+      color: var(--clr-text-dim);
+    }
+
     #search-input:focus {
       border-color: var(--clr-primary-soft);
       box-shadow: 0 0 0 3px var(--clr-accent-glow), var(--shadow-glow);
@@ -232,18 +261,34 @@
       overflow: hidden;
       white-space: nowrap;
     }
+
     #search-btn::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
       opacity: 0;
       transition: var(--transition);
     }
-    #search-btn:hover::before { opacity: 1; }
-    #search-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(124,58,237,0.5); }
-    #search-btn:active { transform: translateY(0); }
-    #search-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    #search-btn:hover::before {
+      opacity: 1;
+    }
+
+    #search-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(124, 58, 237, 0.5);
+    }
+
+    #search-btn:active {
+      transform: translateY(0);
+    }
+
+    #search-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
 
     /* ═══════════════════════════════════════════════════
        MAIN CONTENT AREA
@@ -261,7 +306,10 @@
       gap: 16px;
       padding: 60px 0;
     }
-    #loading.visible { display: flex; }
+
+    #loading.visible {
+      display: flex;
+    }
 
     .spinner {
       width: 48px;
@@ -271,7 +319,12 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     .loading-text {
       color: var(--clr-text-muted);
@@ -279,9 +332,17 @@
       font-weight: 500;
       animation: pulse-text 1.5s ease-in-out infinite;
     }
+
     @keyframes pulse-text {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
+
+      0%,
+      100% {
+        opacity: 0.6;
+      }
+
+      50% {
+        opacity: 1;
+      }
     }
 
     /* ── Error / Empty states ── */
@@ -290,9 +351,23 @@
       padding: 60px 20px;
       color: var(--clr-text-muted);
     }
-    .state-msg .icon { font-size: 3rem; margin-bottom: 12px; }
-    .state-msg h3 { font-size: 1.1rem; font-weight: 600; color: var(--clr-text); margin-bottom: 6px; }
-    .state-msg p  { font-size: 0.9rem; line-height: 1.6; }
+
+    .state-msg .icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+
+    .state-msg h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--clr-text);
+      margin-bottom: 6px;
+    }
+
+    .state-msg p {
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
 
     /* ── Section header ── */
     .results-header {
@@ -301,6 +376,7 @@
       justify-content: space-between;
       margin-bottom: 20px;
     }
+
     .results-title {
       font-size: 1rem;
       font-weight: 600;
@@ -309,8 +385,9 @@
       text-transform: uppercase;
       font-size: 0.78rem;
     }
+
     .results-count {
-      background: rgba(124,58,237,0.18);
+      background: rgba(124, 58, 237, 0.18);
       color: var(--clr-accent);
       border-radius: 999px;
       padding: 3px 10px;
@@ -326,7 +403,10 @@
       max-width: 900px;
       margin: 0 auto;
     }
-    #results.visible { display: block; }
+
+    #results.visible {
+      display: block;
+    }
 
     .results-grid {
       display: grid;
@@ -347,33 +427,64 @@
       overflow: hidden;
       animation: card-in 0.4s ease both;
     }
+
     .card::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(124,58,237,0.05) 0%, transparent 60%);
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, transparent 60%);
       opacity: 0;
       transition: var(--transition);
+      pointer-events: none;
+      /* overlay tidak memblokir klik elemen di dalam card */
     }
+
     .card:hover {
       border-color: var(--clr-border-hover);
       box-shadow: var(--shadow-card);
       transform: translateY(-2px);
     }
-    .card:hover::before { opacity: 1; }
+
+    .card:hover::before {
+      opacity: 1;
+    }
 
     @keyframes card-in {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Staggered animation delay */
-    .card:nth-child(1) { animation-delay: 0.05s; }
-    .card:nth-child(2) { animation-delay: 0.10s; }
-    .card:nth-child(3) { animation-delay: 0.15s; }
-    .card:nth-child(4) { animation-delay: 0.20s; }
-    .card:nth-child(5) { animation-delay: 0.25s; }
-    .card:nth-child(6) { animation-delay: 0.30s; }
+    .card:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .card:nth-child(2) {
+      animation-delay: 0.10s;
+    }
+
+    .card:nth-child(3) {
+      animation-delay: 0.15s;
+    }
+
+    .card:nth-child(4) {
+      animation-delay: 0.20s;
+    }
+
+    .card:nth-child(5) {
+      animation-delay: 0.25s;
+    }
+
+    .card:nth-child(6) {
+      animation-delay: 0.30s;
+    }
 
     /* Thumbnail */
     .card-thumb-wrap {
@@ -383,6 +494,7 @@
       flex-shrink: 0;
       aspect-ratio: 16/9;
     }
+
     .card-thumb {
       width: 100%;
       height: 100%;
@@ -390,13 +502,16 @@
       display: block;
       transition: transform 0.4s ease;
     }
-    .card:hover .card-thumb { transform: scale(1.06); }
+
+    .card:hover .card-thumb {
+      transform: scale(1.06);
+    }
 
     .card-duration {
       position: absolute;
       bottom: 6px;
       right: 6px;
-      background: rgba(0,0,0,0.78);
+      background: rgba(0, 0, 0, 0.78);
       color: #fff;
       font-size: 0.72rem;
       font-weight: 600;
@@ -411,6 +526,7 @@
       flex: 1;
       min-width: 0;
     }
+
     .card-title {
       font-size: 0.95rem;
       font-weight: 600;
@@ -422,17 +538,20 @@
       overflow: hidden;
       margin-bottom: 6px;
     }
+
     .card-meta {
       display: flex;
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
     }
+
     .card-channel {
       font-size: 0.8rem;
       font-weight: 500;
       color: var(--clr-accent);
     }
+
     .card-views {
       font-size: 0.78rem;
       color: var(--clr-text-dim);
@@ -445,8 +564,8 @@
       gap: 8px;
       padding: 10px 18px;
       border-radius: var(--radius-md);
-      border: 1.5px solid rgba(139,92,246,0.3);
-      background: rgba(124,58,237,0.1);
+      border: 1.5px solid rgba(139, 92, 246, 0.3);
+      background: rgba(124, 58, 237, 0.1);
       color: var(--clr-accent);
       font-family: inherit;
       font-size: 0.82rem;
@@ -458,37 +577,92 @@
       position: relative;
       z-index: 1;
     }
+
     .btn-download:hover {
       background: var(--clr-primary);
       border-color: var(--clr-primary);
       color: #fff;
-      box-shadow: 0 4px 18px rgba(124,58,237,0.45);
+      box-shadow: 0 4px 18px rgba(124, 58, 237, 0.45);
       transform: translateY(-1px);
     }
-    .btn-download:active { transform: translateY(0); }
+
+    .btn-download:active {
+      transform: translateY(0);
+    }
 
     /* Download button states */
     .btn-download.loading {
       pointer-events: none;
-      background: rgba(124,58,237,0.08);
+      background: rgba(124, 58, 237, 0.08);
       color: var(--clr-text-muted);
       border-color: var(--clr-border);
     }
-    .btn-download.loading .btn-icon { animation: spin 0.8s linear infinite; }
+
+    .btn-download.loading .btn-icon {
+      animation: spin 0.8s linear infinite;
+    }
 
     .btn-download.done {
-      background: rgba(16,185,129,0.12);
-      border-color: rgba(16,185,129,0.35);
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
       color: #6ee7b7;
       pointer-events: none;
     }
+
     .btn-download.error-state {
-      background: rgba(239,68,68,0.1);
-      border-color: rgba(239,68,68,0.3);
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
       color: #fca5a5;
     }
 
-    .btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
+    .btn-icon {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    /* Quality selector */
+    .quality-selector {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .quality-btn {
+      padding: 4px 9px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: inherit;
+      border-radius: 6px;
+      border: 1.5px solid rgba(139, 92, 246, 0.25);
+      background: transparent;
+      color: var(--clr-text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      z-index: 2;
+    }
+
+    .quality-btn:hover {
+      border-color: var(--clr-accent);
+      color: var(--clr-accent);
+      background: rgba(124, 58, 237, 0.08);
+    }
+
+    .quality-btn.active {
+      background: rgba(124, 58, 237, 0.2);
+      border-color: var(--clr-accent);
+      color: var(--clr-accent);
+    }
+
+    /* Card action — stack quality + download vertically */
+    .card-action {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0;
+      flex-shrink: 0;
+    }
 
     /* ═══════════════════════════════════════════════════
        TOAST NOTIFICATIONS
@@ -503,6 +677,7 @@
       gap: 10px;
       align-items: flex-end;
     }
+
     .toast {
       display: flex;
       align-items: center;
@@ -511,24 +686,57 @@
       border-radius: var(--radius-md);
       background: var(--clr-surface-2);
       border: 1px solid var(--clr-border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       font-size: 0.88rem;
       font-weight: 500;
       max-width: 360px;
-      animation: toast-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+      animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
-    .toast.success { border-color: rgba(16,185,129,0.4); }
-    .toast.error   { border-color: rgba(239,68,68,0.4); }
-    .toast.info    { border-color: rgba(124,58,237,0.4); }
-    .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .toast-msg  { flex: 1; color: var(--clr-text); }
+
+    .toast.success {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .toast.error {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .toast.info {
+      border-color: rgba(124, 58, 237, 0.4);
+    }
+
+    .toast-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .toast-msg {
+      flex: 1;
+      color: var(--clr-text);
+    }
+
     @keyframes toast-in {
-      from { opacity: 0; transform: translateX(40px) scale(0.9); }
-      to   { opacity: 1; transform: translateX(0) scale(1); }
+      from {
+        opacity: 0;
+        transform: translateX(40px) scale(0.9);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
     }
+
     @keyframes toast-out {
-      from { opacity: 1; transform: translateX(0) scale(1); }
-      to   { opacity: 0; transform: translateX(40px) scale(0.9); }
+      from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translateX(40px) scale(0.9);
+      }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -541,217 +749,248 @@
       font-size: 0.78rem;
       border-top: 1px solid var(--clr-border);
     }
-    footer a { color: var(--clr-accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+
+    footer a {
+      color: var(--clr-accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
 
     /* ═══════════════════════════════════════════════════
        RESPONSIVE
     ═══════════════════════════════════════════════════ */
     @media (max-width: 680px) {
-      .hero { padding: 44px 16px 36px; }
-      .logo-text { font-size: 1.5rem; }
+      .hero {
+        padding: 44px 16px 36px;
+      }
 
-      .search-form { flex-direction: column; }
-      #search-btn { width: 100%; }
+      .logo-text {
+        font-size: 1.5rem;
+      }
+
+      .search-form {
+        flex-direction: column;
+      }
+
+      #search-btn {
+        width: 100%;
+      }
 
       .card {
         grid-template-columns: 100px 1fr;
         grid-template-rows: auto auto;
       }
-      .card-action { grid-column: 1 / -1; }
-      .btn-download { width: 100%; justify-content: center; }
+
+      .card-action {
+        grid-column: 1 / -1;
+      }
+
+      .btn-download {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     @media (max-width: 440px) {
-      .card { grid-template-columns: 1fr; }
-      .card-thumb-wrap { aspect-ratio: 16/6; width: 100%; }
+      .card {
+        grid-template-columns: 1fr;
+      }
+
+      .card-thumb-wrap {
+        aspect-ratio: 16/6;
+        width: 100%;
+      }
     }
   </style>
 </head>
+
 <body>
 
-<!-- Decorative background -->
-<div class="bg-mesh" aria-hidden="true"></div>
-<div class="bg-grid"  aria-hidden="true"></div>
+  <!-- Decorative background -->
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
 
-<div class="app-wrapper">
+  <div class="app-wrapper">
 
-  <!-- ── HERO / HEADER ── -->
-  <header class="hero" role="banner">
-    <div class="logo-wrap">
-      <img src="/static/logo.png" alt="Listen Now logo" class="logo-img" />
-      <span class="logo-text">Listen Now</span>
-    </div>
-    <p class="hero-tagline">
-      Temukan lagu favoritmu di YouTube, lalu download langsung sebagai MP3 berkualitas tinggi — gratis dan instan.
-    </p>
-
-    <!-- Search form -->
-    <form class="search-form" id="search-form" role="search" aria-label="Cari lagu di YouTube">
-      <div class="search-input-wrap">
-        <!-- Search icon -->
-        <svg class="search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-        </svg>
-        <input
-          id="search-input"
-          type="search"
-          name="q"
-          placeholder="Cari judul lagu, artis, atau album…"
-          autocomplete="off"
-          spellcheck="false"
-          aria-label="Kata kunci pencarian"
-          required
-        />
+    <!-- ── HERO / HEADER ── -->
+    <header class="hero" role="banner">
+      <div class="logo-wrap">
+        <img src="/static/logo.png" alt="Listen Now logo" class="logo-img" />
+        <span class="logo-text">Listen Now</span>
       </div>
-      <button type="submit" id="search-btn" aria-label="Cari lagu">
-        Cari Lagu
-      </button>
-    </form>
-  </header>
+      <p class="hero-tagline">
+        Find your favorite songs on YouTube, then download directly as high-quality MP3 — free and instant.
+      </p>
 
-  <!-- ── MAIN CONTENT ── -->
-  <main class="main-content" id="main-content" aria-live="polite">
-    <div class="container">
-
-      <!-- Loading spinner -->
-      <div id="loading" role="status" aria-label="Sedang mencari…">
-        <div class="spinner" aria-hidden="true"></div>
-        <p class="loading-text" id="loading-text">Sedang mencari lagu…</p>
-      </div>
-
-      <!-- Empty state (default) -->
-      <div class="state-msg" id="empty-state">
-        <div class="icon" aria-hidden="true">🎵</div>
-        <h3>Mulai cari lagu</h3>
-        <p>Ketik judul lagu, nama artis, atau lirik di kotak pencarian di atas.</p>
-      </div>
-
-      <!-- Error state -->
-      <div class="state-msg" id="error-state" style="display:none;" role="alert">
-        <div class="icon" aria-hidden="true">⚠️</div>
-        <h3>Pencarian gagal</h3>
-        <p id="error-msg">Terjadi kesalahan. Silakan coba lagi.</p>
-      </div>
-
-      <!-- No results state -->
-      <div class="state-msg" id="no-results-state" style="display:none;">
-        <div class="icon" aria-hidden="true">🔍</div>
-        <h3>Tidak ada hasil</h3>
-        <p>Coba kata kunci yang berbeda.</p>
-      </div>
-
-      <!-- Results -->
-      <section id="results" aria-label="Hasil pencarian">
-        <div class="results-header">
-          <span class="results-title">Hasil Pencarian</span>
-          <span class="results-count" id="results-count">0 hasil</span>
+      <!-- Search form -->
+      <form class="search-form" id="search-form" role="search" aria-label="Search songs on YouTube">
+        <div class="search-input-wrap">
+          <!-- Search icon -->
+          <svg class="search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input id="search-input" type="search" name="q" placeholder="Cari judul lagu, artis, atau album…"
+            autocomplete="off" spellcheck="false" aria-label="Search keyword" required />
         </div>
-        <div class="results-grid" id="results-grid" role="list">
-          <!-- Cards injected here -->
+        <button type="submit" id="search-btn" aria-label="Search songs">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+            style="margin-right: 6px; display: inline-block; vertical-align: text-bottom;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          Search
+        </button>
+      </form>
+    </header>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content" id="main-content" aria-live="polite">
+      <div class="container">
+
+        <!-- Loading spinner -->
+        <div id="loading" role="status" aria-label="Searching…">
+          <div class="spinner" aria-hidden="true"></div>
+          <p class="loading-text" id="loading-text">Searching for songs…</p>
         </div>
-      </section>
 
-    </div><!-- /container -->
-  </main>
+        <!-- Empty state (default) -->
+        <div class="state-msg" id="empty-state">
+          <div class="icon" aria-hidden="true">🎵</div>
+          <h3>Start searching</h3>
+          <p>Type a song title, artist name, or lyrics in the search box above.</p>
+        </div>
 
-  <!-- ── FOOTER ── -->
-  <footer>
-    <p>Listen Now &copy; 2024 &mdash; Didukung oleh <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a> &amp; <a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener">FastAPI</a></p>
-  </footer>
+        <!-- Error state -->
+        <div class="state-msg" id="error-state" style="display:none;" role="alert">
+          <div class="icon" aria-hidden="true">⚠️</div>
+          <h3>Search failed</h3>
+          <p id="error-msg">An error occurred. Please try again.</p>
+        </div>
 
-</div><!-- /app-wrapper -->
+        <!-- No results state -->
+        <div class="state-msg" id="no-results-state" style="display:none;">
+          <div class="icon" aria-hidden="true">🔍</div>
+          <h3>No results found</h3>
+          <p>Try a different keyword.</p>
+        </div>
 
-<!-- Toast container -->
-<div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+        <!-- Results -->
+        <section id="results" aria-label="Search results">
+          <div class="results-header">
+            <span class="results-title">Search Results</span>
+            <span class="results-count" id="results-count">0 results</span>
+          </div>
+          <div class="results-grid" id="results-grid" role="list">
+            <!-- Cards injected here -->
+          </div>
+        </section>
 
-<!-- ═══════════════════════════════════════════════════════
+      </div><!-- /container -->
+    </main>
+
+    <!-- ── FOOTER ── -->
+    <footer>
+      <p>Listen Now &copy; 2026 &mdash; Created by <a href="https://github.com/iFelzz/" target="_blank" rel="noopener">iFelzz</a> &mdash; Powered by <a href="https://github.com/yt-dlp/yt-dlp" target="_blank"
+          rel="noopener">yt-dlp</a> &amp; <a href="https://fastapi.tiangolo.com" target="_blank"
+          rel="noopener">FastAPI</a></p>
+    </footer>
+
+  </div><!-- /app-wrapper -->
+
+  <!-- Toast container -->
+  <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- ═══════════════════════════════════════════════════════
      JAVASCRIPT
 ═══════════════════════════════════════════════════════ -->
-<script>
-  'use strict';
+  <script>
+    'use strict';
 
-  // ── DOM refs ──────────────────────────────────────────────
-  const $form        = document.getElementById('search-form');
-  const $input       = document.getElementById('search-input');
-  const $searchBtn   = document.getElementById('search-btn');
-  const $loading     = document.getElementById('loading');
-  const $loadingText = document.getElementById('loading-text');
-  const $emptyState  = document.getElementById('empty-state');
-  const $errorState  = document.getElementById('error-state');
-  const $errorMsg    = document.getElementById('error-msg');
-  const $noResults   = document.getElementById('no-results-state');
-  const $results     = document.getElementById('results');
-  const $grid        = document.getElementById('results-grid');
-  const $count       = document.getElementById('results-count');
-  const $toastWrap   = document.getElementById('toast-container');
+    // ── DOM refs ──────────────────────────────────────────────
+    const $form = document.getElementById('search-form');
+    const $input = document.getElementById('search-input');
+    const $searchBtn = document.getElementById('search-btn');
+    const $loading = document.getElementById('loading');
+    const $loadingText = document.getElementById('loading-text');
+    const $emptyState = document.getElementById('empty-state');
+    const $errorState = document.getElementById('error-state');
+    const $errorMsg = document.getElementById('error-msg');
+    const $noResults = document.getElementById('no-results-state');
+    const $results = document.getElementById('results');
+    const $grid = document.getElementById('results-grid');
+    const $count = document.getElementById('results-count');
+    const $toastWrap = document.getElementById('toast-container');
 
-  // ── Helpers ───────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────
 
-  /** Format view count to human-readable string */
-  function formatViews(n) {
-    if (!n || n === 0) return '';
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M tayangan`;
-    if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K tayangan`;
-    return `${n} tayangan`;
-  }
+    /** Format view count to human-readable string */
+    function formatViews(n) {
+      if (!n || n === 0) return '';
+      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M views`;
+      if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K views`;
+      return `${n} views`;
+    }
 
-  /** Show / hide the named state panel */
-  function showState(state) {
-    $emptyState.style.display  = state === 'empty'     ? '' : 'none';
-    $errorState.style.display  = state === 'error'     ? '' : 'none';
-    $noResults.style.display   = state === 'no-results'? '' : 'none';
-    $results.classList.toggle('visible', state === 'results');
-    $loading.classList.toggle('visible', state === 'loading');
-  }
+    /** Show / hide the named state panel */
+    function showState(state) {
+      $emptyState.style.display = state === 'empty' ? '' : 'none';
+      $errorState.style.display = state === 'error' ? '' : 'none';
+      $noResults.style.display = state === 'no-results' ? '' : 'none';
+      $results.classList.toggle('visible', state === 'results');
+      $loading.classList.toggle('visible', state === 'loading');
+    }
 
-  /** Render a toast notification */
-  function toast(type, msg, duration = 4000) {
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.setAttribute('role', 'status');
-    el.innerHTML = `
+    /** Render a toast notification */
+    function toast(type, msg, duration = 4000) {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.setAttribute('role', 'status');
+      el.innerHTML = `
       <span class="toast-icon" aria-hidden="true">${icons[type] || 'ℹ️'}</span>
       <span class="toast-msg">${msg}</span>`;
-    $toastWrap.appendChild(el);
-    setTimeout(() => {
-      el.style.animation = 'toast-out 0.3s ease forwards';
-      el.addEventListener('animationend', () => el.remove());
-    }, duration);
-  }
+      $toastWrap.appendChild(el);
+      setTimeout(() => {
+        el.style.animation = 'toast-out 0.3s ease forwards';
+        el.addEventListener('animationend', () => el.remove());
+      }, duration);
+    }
 
-  /** Escape HTML to prevent XSS */
-  function esc(str) {
-    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'": '&#39;' };
-    return String(str).replace(/[&<>"']/g, c => map[c]);
-  }
+    /** Escape HTML to prevent XSS */
+    function esc(str) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(str).replace(/[&<>"']/g, c => map[c]);
+    }
 
-  // ── SVG Icons ────────────────────────────────────────────
+    // ── SVG Icons ────────────────────────────────────────────
 
-  const ICON_DOWNLOAD = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    const ICON_DOWNLOAD = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"
       d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 12l-4 4-4-4M12 3v13"/>
   </svg>`;
 
-  const ICON_SPIN = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    const ICON_SPIN = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
       d="M4 12a8 8 0 018-8v4l3-3-3-3V4A10 10 0 1012 22"/>
   </svg>`;
 
-  const ICON_CHECK = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    const ICON_CHECK = `<svg class="btn-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
   </svg>`;
 
-  // ── Build card HTML ───────────────────────────────────────
+    // ── Build card HTML ───────────────────────────────────────
 
-  function buildCard(item, index) {
-    const views   = formatViews(item.views);
-    const cardId  = `card-${index}`;
-    const btnId   = `btn-dl-${index}`;
+    function buildCard(item, index) {
+      const views = formatViews(item.views);
+      const cardId = `card-${index}`;
+      const btnId = `btn-dl-${index}`;
 
-    return `
+      return `
     <article class="card" id="${cardId}" role="listitem" aria-label="${esc(item.title)}">
       <div class="card-thumb-wrap">
         <img
@@ -762,7 +1001,7 @@
           decoding="async"
           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 90%22><rect fill=%22%231a1a2e%22 width=%22160%22 height=%2290%22/><text x=%2280%22 y=%2250%22 fill=%22%234b4c6e%22 text-anchor=%22middle%22 font-size=%2224%22>♪</text></svg>'"
         />
-        <span class="card-duration" aria-label="Durasi ${esc(item.duration)}">${esc(item.duration)}</span>
+        <span class="card-duration" aria-label="Duration ${esc(item.duration)}">${esc(item.duration)}</span>
       </div>
 
       <div class="card-info">
@@ -774,134 +1013,162 @@
       </div>
 
       <div class="card-action">
+        <div class="quality-selector" role="group" aria-label="Audio quality">
+          <button class="quality-btn" data-card="${index}" data-q="128" aria-pressed="false">128k</button>
+          <button class="quality-btn active" data-card="${index}" data-q="192" aria-pressed="true">192k</button>
+          <button class="quality-btn" data-card="${index}" data-q="320" aria-pressed="false">320k</button>
+        </div>
         <button
           class="btn-download"
           id="${btnId}"
           data-url="${esc(item.url)}"
           data-title="${esc(item.title)}"
+          data-quality="192"
           aria-label="Download MP3: ${esc(item.title)}"
-          title="Download sebagai MP3"
+          title="Download as MP3"
         >
           ${ICON_DOWNLOAD}
           MP3
         </button>
       </div>
     </article>`;
-  }
-
-  // ── Search ───────────────────────────────────────────────
-
-  async function performSearch(query) {
-    showState('loading');
-    $loadingText.textContent = 'Sedang mencari lagu…';
-    $searchBtn.disabled = true;
-
-    try {
-      const res  = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.detail || `HTTP ${res.status}`);
-      }
-
-      const items = data.results || [];
-
-      if (items.length === 0) {
-        showState('no-results');
-        return;
-      }
-
-      // Render cards
-      $grid.innerHTML = items.map((item, i) => buildCard(item, i)).join('');
-      $count.textContent = `${items.length} hasil`;
-      showState('results');
-
-      // Attach download handlers
-      items.forEach((item, i) => {
-        const btn = document.getElementById(`btn-dl-${i}`);
-        if (btn) btn.addEventListener('click', () => handleDownload(btn, item));
-      });
-
-    } catch (err) {
-      console.error('[Search Error]', err);
-      $errorMsg.textContent = err.message || 'Terjadi kesalahan saat mencari. Silakan coba lagi.';
-      showState('error');
-    } finally {
-      $searchBtn.disabled = false;
     }
-  }
 
-  // ── Download ──────────────────────────────────────────────
+    // ── Search ───────────────────────────────────────────────
 
-  async function handleDownload(btn, item) {
-    // Set loading state
-    btn.classList.add('loading');
-    btn.innerHTML = `${ICON_SPIN} Memproses…`;
-    btn.setAttribute('aria-label', `Mengunduh ${item.title}…`);
-    $loadingText.textContent = `Mengunduh: ${item.title}`;
+    async function performSearch(query) {
+      showState('loading');
+      $loadingText.textContent = 'Searching for songs…';
+      $searchBtn.disabled = true;
 
-    try {
-      const res = await fetch('/api/download', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: item.url, title: item.title }),
-      });
-      const data = await res.json();
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`);
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.detail || `HTTP ${res.status}`);
+        if (!res.ok) {
+          throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        const items = data.results || [];
+
+        if (items.length === 0) {
+          showState('no-results');
+          return;
+        }
+
+        // Render cards
+        $grid.innerHTML = items.map((item, i) => buildCard(item, i)).join('');
+        $count.textContent = `${items.length} results`;
+        showState('results');
+
+        // Attach quality selector handlers
+        document.querySelectorAll('.quality-btn').forEach(qBtn => {
+          qBtn.addEventListener('click', () => {
+            const cardIdx = qBtn.dataset.card;
+            const quality = qBtn.dataset.q;
+            // Update active state for this card's quality buttons
+            document.querySelectorAll(`.quality-btn[data-card="${cardIdx}"]`).forEach(b => {
+              b.classList.toggle('active', b === qBtn);
+              b.setAttribute('aria-pressed', b === qBtn ? 'true' : 'false');
+            });
+            // Update download button's data-quality
+            const dlBtn = document.getElementById(`btn-dl-${cardIdx}`);
+            if (dlBtn) dlBtn.dataset.quality = quality;
+          });
+        });
+
+        // Attach download handlers
+        items.forEach((item, i) => {
+          const btn = document.getElementById(`btn-dl-${i}`);
+          if (btn) btn.addEventListener('click', () => handleDownload(btn, item));
+        });
+
+      } catch (err) {
+        console.error('[Search Error]', err);
+        $errorMsg.textContent = err.message || 'An error occurred while searching. Please try again.';
+        showState('error');
+      } finally {
+        $searchBtn.disabled = false;
       }
-
-      // Trigger browser download
-      const link = document.createElement('a');
-      link.href     = data.download_url;
-      link.download = data.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Success state
-      btn.classList.remove('loading');
-      btn.classList.add('done');
-      btn.innerHTML = `${ICON_CHECK} Selesai!`;
-      btn.setAttribute('aria-label', `Download selesai: ${item.title}`);
-
-      toast('success', `🎵 <strong>${esc(item.title)}</strong> berhasil didownload!`);
-
-    } catch (err) {
-      console.error('[Download Error]', err);
-
-      btn.classList.remove('loading');
-      btn.classList.add('error-state');
-      btn.innerHTML = `${ICON_DOWNLOAD} Coba Lagi`;
-      btn.setAttribute('aria-label', `Coba lagi download ${item.title}`);
-
-      // Re-enable retry
-      btn.classList.remove('error-state');
-      setTimeout(() => {
-        btn.innerHTML = `${ICON_DOWNLOAD} MP3`;
-        btn.removeAttribute('disabled');
-      }, 2500);
-
-      toast('error', `Gagal download: ${err.message}`);
     }
-  }
 
-  // ── Form submit ───────────────────────────────────────────
+    // ── Download ──────────────────────────────────────────────
 
-  $form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const q = $input.value.trim();
-    if (q) performSearch(q);
-  });
+    async function handleDownload(btn, item) {
+      // Set loading state
+      btn.classList.add('loading');
+      btn.innerHTML = `${ICON_SPIN} Processing…`;
+      btn.setAttribute('aria-label', `Mengunduh ${item.title}…`);
+      $loadingText.textContent = `Downloading: ${item.title}`;
 
-  // Allow Enter key to submit from anywhere in the form
-  $input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') $form.dispatchEvent(new Event('submit'));
-  });
+      try {
+        const quality = btn.dataset.quality || '192';
+        const res = await fetch('/api/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: item.url, title: item.title, quality }),
+        });
+        const data = await res.json();
 
-  // ── Focus search on load ──────────────────────────────────
-  window.addEventListener('load', () => $input.focus());
-</script>
+        if (!res.ok) {
+          // Handle rate limit specifically
+          if (res.status === 429) {
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          }
+          throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        // Trigger browser download
+        const link = document.createElement('a');
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Success state
+        btn.classList.remove('loading');
+        btn.classList.add('done');
+        btn.innerHTML = `${ICON_CHECK} Done!`;
+        btn.setAttribute('aria-label', `Download complete: ${item.title}`);
+
+        toast('success', `🎵 <strong>${esc(item.title)}</strong> downloaded successfully!`);
+
+      } catch (err) {
+        console.error('[Download Error]', err);
+
+        btn.classList.remove('loading');
+        btn.classList.add('error-state');
+        btn.innerHTML = `${ICON_DOWNLOAD} Coba Lagi`;
+        btn.setAttribute('aria-label', `Retry download ${item.title}`);
+
+        // Re-enable retry
+        btn.classList.remove('error-state');
+        setTimeout(() => {
+          btn.innerHTML = `${ICON_DOWNLOAD} MP3`;
+          btn.removeAttribute('disabled');
+        }, 2500);
+
+        toast('error', `Download failed: ${err.message}`);
+      }
+    }
+
+    // ── Form submit ───────────────────────────────────────────
+
+    $form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const q = $input.value.trim();
+      if (q) performSearch(q);
+    });
+
+    // Allow Enter key to submit from anywhere in the form
+    $input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $form.dispatchEvent(new Event('submit'));
+    });
+
+    // ── Focus search on load ──────────────────────────────────
+    window.addEventListener('load', () => $input.focus());
+  </script>
 </body>
+
 </html>

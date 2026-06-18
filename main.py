@@ -5,13 +5,16 @@ Endpoints:
   GET  /                   → Serves the frontend (index.html)
   GET  /favicon.ico        → App favicon
   GET  /api/health         → Health check
-  GET  /api/search         → Search YouTube (returns up to 6 results)
-  POST /api/download       → Download audio as MP3 (192 kbps)
+  GET  /api/search         → Search YouTube (rate-limited: 30/min per IP)
+  POST /api/download       → Download audio as MP3 (rate-limited: 10/min per IP)
   GET  /api/storage        → Storage usage info
   POST /api/cleanup        → Trigger manual cleanup
   GET  /downloads/{file}   → Serve the downloaded MP3 file
 
 Stability features:
+  - Rate limiting: 30/min search, 10/min download per IP (slowapi)
+  - Audio quality options: 128 / 192 / 320 kbps
+  - yt-dlp version check on startup
   - Concurrent download lock per filename (prevents race conditions)
   - Temp file cleanup on error (.part / .webm / .m4a)
   - Auto-cleanup: files deleted after MAX_AGE_HOURS (default 1h)
@@ -29,11 +32,17 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import yt_dlp
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+# pyrefly: ignore [missing-import]
+from slowapi import Limiter, _rate_limit_exceeded_handler
+# pyrefly: ignore [missing-import]
+from slowapi.util import get_remote_address
+# pyrefly: ignore [missing-import]
+from slowapi.errors import RateLimitExceeded
 import shutil
 
 # ── Logging ─────────────────────────────────────────────────
@@ -89,9 +98,9 @@ _download_locks: dict[str, asyncio.Lock] = {}
 # ── Cleanup logic ─────────────────────────────────────────────
 def run_cleanup() -> dict:
     """
-    Hapus file MP3 di downloads/ yang:
+    Delete MP3 files in downloads/ that:
     1. Berumur lebih dari MAX_AGE_HOURS, ATAU
-    2. Folder melebihi MAX_STORAGE_MB (hapus file terlama dulu)
+    2. Exceed MAX_STORAGE_MB (delete oldest files first)
     Mengembalikan ringkasan hasil cleanup.
     """
     now        = time.time()
@@ -106,7 +115,7 @@ def run_cleanup() -> dict:
         key=lambda f: f.stat().st_mtime
     )
 
-    # 1. Hapus file yang sudah kadaluarsa
+    # 1. Delete expired files
     for f in files[:]:
         try:
             age = now - f.stat().st_mtime
@@ -119,7 +128,7 @@ def run_cleanup() -> dict:
         except Exception as e:
             errors.append(str(e))
 
-    # 2. Hapus file terlama jika folder masih terlalu besar
+    # 2. Delete oldest files if folder is still too large
     total = sum(f.stat().st_size for f in files if f.exists())
     while total > max_bytes and files:
         oldest = files.pop(0)
@@ -134,7 +143,7 @@ def run_cleanup() -> dict:
 
     total_mb = sum(f.stat().st_size for f in DOWNLOADS_DIR.iterdir()
                    if f.is_file()) / 1024 / 1024
-    logger.info("Cleanup selesai: %d dihapus, folder %.1f MB", len(deleted), total_mb)
+    logger.info("Cleanup finished: %d deleted, folder size %.1f MB", len(deleted), total_mb)
     return {"deleted": deleted, "errors": errors, "folder_mb": round(total_mb, 2)}
 
 
@@ -142,7 +151,7 @@ async def _cleanup_loop():
     """Background task: jalankan cleanup secara berkala."""
     interval = CLEANUP_INTERVAL_MINUTES * 60
     logger.info(
-        "Auto-cleanup aktif: max_age=%.0fj, max_size=%.0fMB, interval=%.0f menit",
+        "Auto-cleanup active: max_age=%.0fh, max_size=%.0fMB, interval=%.0f min",
         MAX_AGE_HOURS, MAX_STORAGE_MB, CLEANUP_INTERVAL_MINUTES
     )
     while True:
@@ -156,12 +165,34 @@ async def _cleanup_loop():
 # ── Lifespan (startup / shutdown) ─────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: jalankan cleanup sekali lalu loop berkala
+    # 1. Check yt-dlp version
+    try:
+        ver = yt_dlp.version.__version__
+        logger.info("yt-dlp version: %s", ver)
+        # Parse date from version string like "2024.11.4"
+        parts = str(ver).split(".")
+        if len(parts) == 3:
+            import datetime
+            ver_date = datetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+            age_days = (datetime.date.today() - ver_date).days
+            if age_days > 30:
+                logger.warning(
+                    "yt-dlp is %d days old (version %s). "
+                    "Run: venv\\Scripts\\pip install -U yt-dlp",
+                    age_days, ver
+                )
+    except Exception:
+        logger.warning("Could not determine yt-dlp version.")
+
+    # 2. Run initial cleanup then start background loop
     await asyncio.to_thread(run_cleanup)
     task = asyncio.create_task(_cleanup_loop())
     yield
     # Shutdown
     task.cancel()
+
+# ── Rate limiter ─────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/day"])
 
 # ── FastAPI app ──────────────────────────────────────────────
 app = FastAPI(
@@ -170,6 +201,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -186,21 +219,31 @@ app.mount("/downloads", StaticFiles(directory=str(DOWNLOADS_DIR)), name="downloa
 
 
 # ── Pydantic Models ──────────────────────────────────────────
+ALLOWED_QUALITIES = {"128", "192", "320"}
+
 class DownloadRequest(BaseModel):
-    url: str
-    title: Optional[str] = "audio"
+    url:     str
+    title:   Optional[str] = "audio"
+    quality: Optional[str] = "192"   # kbps: 128 | 192 | 320
+
+    @field_validator("quality")
+    @classmethod
+    def validate_quality(cls, v: str) -> str:
+        if v not in ALLOWED_QUALITIES:
+            raise ValueError(f"quality must be one of {sorted(ALLOWED_QUALITIES)}")
+        return v
 
 
 # ── Helper: sanitise filename ─────────────────────────────────
 def sanitise_filename(name: str) -> str:
     """
-    Bersihkan nama file dari karakter ilegal Windows/Linux.
-    Spasi dipertahankan agar nama file tetap rapi dan mudah dibaca.
-    Karakter ilegal: \\ / * ? : " < > |
+    Clean filename of illegal Windows/Linux characters.
+    Spaces are preserved for readability.
+    Illegal characters: \\ / * ? : " < > |
     """
-    # Hapus karakter yang tidak valid di nama file Windows/Linux
+    # Remove invalid Windows/Linux filename characters
     name = re.sub(r'[\\/*?:"<>|]', "", name)
-    # Hilangkan spasi berlebih di awal/akhir dan kolapskan spasi ganda
+    # Strip excess spaces and collapse double spaces
     name = re.sub(r"\s+", " ", name).strip()
     return name[:200]  # cap length
 
@@ -253,7 +296,7 @@ async def health():
 
 @app.get("/api/storage")
 async def storage_info():
-    """Info penggunaan folder downloads/ dan konfigurasi cleanup."""
+    """Storage usage info for downloads/ and cleanup config."""
     files = [
         f for f in DOWNLOADS_DIR.iterdir()
         if f.is_file() and f.suffix.lower() == ".mp3"
@@ -290,7 +333,8 @@ async def manual_cleanup():
 
 
 @app.get("/api/search")
-async def search(q: str, limit: int = 6):
+@limiter.limit("30/minute")
+async def search(request: Request, q: str, limit: int = 6):
     """
     Search YouTube and return up to `limit` results.
     
@@ -361,20 +405,24 @@ async def search(q: str, limit: int = 6):
 
 
 @app.post("/api/download")
-async def download(request: DownloadRequest, background_tasks: BackgroundTasks):
+@limiter.limit("10/minute")
+async def download(request: Request, body: DownloadRequest, background_tasks: BackgroundTasks):
     """
-    Download audio from the given YouTube URL and convert to MP3 (192 kbps).
-    Returns a JSON with the download URL once the file is ready.
+    Download audio from the given YouTube URL and convert to MP3.
+    Supports quality: 128 / 192 / 320 kbps (default: 192).
+    Rate-limited to 10 requests per minute per IP.
 
     Uses per-filename async lock to prevent race conditions when multiple
     users request the same song simultaneously.
     """
-    url   = request.url.strip()
-    title = sanitise_filename(request.title or "audio")
+    url     = body.url.strip()
+    title   = sanitise_filename(body.title or "audio")
+    quality = body.quality or "192"
 
     if not url:
         raise HTTPException(status_code=400, detail="URL is required.")
 
+    # File will have the exact same name regardless of quality
     output_filename = f"{title}.mp3"
     output_path     = DOWNLOADS_DIR / output_filename
 
@@ -430,7 +478,7 @@ async def download(request: DownloadRequest, background_tasks: BackgroundTasks):
                 {
                     "key":              "FFmpegExtractAudio",
                     "preferredcodec":   "mp3",
-                    "preferredquality": "192",
+                    "preferredquality": quality,
                 },
                 {
                     "key":          "FFmpegMetadata",
