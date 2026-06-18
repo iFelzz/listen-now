@@ -593,10 +593,30 @@
 
     /* Download button states */
     .btn-download.loading {
-      pointer-events: none;
       background: rgba(124, 58, 237, 0.08);
       color: var(--clr-text-muted);
       border-color: var(--clr-border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: rgba(124, 58, 237, 0.25);
+      transition: width 0.3s ease;
+      z-index: 0;
+    }
+
+    .btn-text {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .btn-download.loading .btn-icon {
@@ -834,8 +854,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input id="search-input" type="search" name="q" placeholder="Cari judul lagu, artis, atau album…"
-            autocomplete="off" spellcheck="false" aria-label="Search keyword" required />
+          <input id="search-input" type="search" name="q" placeholder="Type something..." autocomplete="off"
+            spellcheck="false" aria-label="Search keyword" required />
         </div>
         <button type="submit" id="search-btn" aria-label="Search songs">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -896,7 +916,8 @@
 
     <!-- ── FOOTER ── -->
     <footer>
-      <p>Listen Now &copy; 2026 &mdash; Created by <a href="https://github.com/iFelzz/" target="_blank" rel="noopener">iFelzz</a> &mdash; Powered by <a href="https://github.com/yt-dlp/yt-dlp" target="_blank"
+      <p>Listen Now &copy; 2026 &mdash; Created by <a href="https://github.com/iFelzz/" target="_blank"
+          rel="noopener">iFelzz</a> &mdash; Powered by <a href="https://github.com/yt-dlp/yt-dlp" target="_blank"
           rel="noopener">yt-dlp</a> &amp; <a href="https://fastapi.tiangolo.com" target="_blank"
           rel="noopener">FastAPI</a></p>
     </footer>
@@ -1028,8 +1049,11 @@
           aria-label="Download MP3: ${esc(item.title)}"
           title="Download as MP3"
         >
-          ${ICON_DOWNLOAD}
-          MP3
+          <div class="progress-fill" style="width: 0%"></div>
+          <span class="btn-text">
+            ${ICON_DOWNLOAD}
+            MP3
+          </span>
         </button>
       </div>
     </article>`;
@@ -1098,16 +1122,36 @@
     async function handleDownload(btn, item) {
       // Set loading state
       btn.classList.add('loading');
-      btn.innerHTML = `${ICON_SPIN} Processing…`;
-      btn.setAttribute('aria-label', `Mengunduh ${item.title}…`);
+
+      const btnText = btn.querySelector('.btn-text');
+      const progressFill = btn.querySelector('.progress-fill');
+
+      btnText.innerHTML = `${ICON_SPIN} Processing…`;
+      btn.setAttribute('aria-label', `Downloading ${item.title}…`);
       $loadingText.textContent = `Downloading: ${item.title}`;
+
+      // Generate random ID for progress tracking
+      const clientId = crypto.randomUUID();
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/progress/${clientId}`);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.status === 'downloading') {
+          btnText.innerHTML = `${ICON_SPIN} ${data.percent}`;
+          progressFill.style.width = data.percent;
+        } else if (data.status === 'converting') {
+          btnText.innerHTML = `${ICON_SPIN} Converting…`;
+          progressFill.style.width = '100%';
+        }
+      };
 
       try {
         const quality = btn.dataset.quality || '192';
         const res = await fetch('/api/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: item.url, title: item.title, quality }),
+          body: JSON.stringify({ url: item.url, title: item.title, quality, client_id: clientId }),
         });
         const data = await res.json();
 
@@ -1130,7 +1174,8 @@
         // Success state
         btn.classList.remove('loading');
         btn.classList.add('done');
-        btn.innerHTML = `${ICON_CHECK} Done!`;
+        progressFill.style.width = '0%';
+        btnText.innerHTML = `${ICON_CHECK} Done!`;
         btn.setAttribute('aria-label', `Download complete: ${item.title}`);
 
         toast('success', `🎵 <strong>${esc(item.title)}</strong> downloaded successfully!`);
@@ -1140,17 +1185,20 @@
 
         btn.classList.remove('loading');
         btn.classList.add('error-state');
-        btn.innerHTML = `${ICON_DOWNLOAD} Coba Lagi`;
+        progressFill.style.width = '0%';
+        btnText.innerHTML = `${ICON_DOWNLOAD} Try Again`;
         btn.setAttribute('aria-label', `Retry download ${item.title}`);
 
         // Re-enable retry
         btn.classList.remove('error-state');
         setTimeout(() => {
-          btn.innerHTML = `${ICON_DOWNLOAD} MP3`;
+          btnText.innerHTML = `${ICON_DOWNLOAD} MP3`;
           btn.removeAttribute('disabled');
         }, 2500);
 
         toast('error', `Download failed: ${err.message}`);
+      } finally {
+        ws.close();
       }
     }
 

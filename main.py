@@ -32,7 +32,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import yt_dlp
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -218,13 +218,39 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/downloads", StaticFiles(directory=str(DOWNLOADS_DIR)), name="downloads")
 
 
+# ── WebSockets / Progress Tracking ───────────────────────────
+_progress_data = {}
+
+@app.websocket("/api/ws/progress/{client_id}")
+async def websocket_progress(websocket: WebSocket, client_id: str):
+    await websocket.accept()
+    try:
+        last_sent = None
+        while True:
+            data = _progress_data.get(client_id)
+            if data and data != last_sent:
+                await websocket.send_json(data)
+                last_sent = data
+            await asyncio.sleep(0.4)
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        logger.warning(f"WebSocket error for {client_id}: {exc}")
+    finally:
+        _progress_data.pop(client_id, None)
+
+
 # ── Pydantic Models ──────────────────────────────────────────
 ALLOWED_QUALITIES = {"128", "192", "320"}
+
+class SearchRequest(BaseModel):
+    query: str
 
 class DownloadRequest(BaseModel):
     url:     str
     title:   Optional[str] = "audio"
     quality: Optional[str] = "192"   # kbps: 128 | 192 | 320
+    client_id: Optional[str] = None
 
     @field_validator("quality")
     @classmethod
@@ -442,6 +468,19 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
         _download_locks[output_filename] = asyncio.Lock()
     lock = _download_locks[output_filename]
 
+    client_id = body.client_id
+
+    def progress_hook(d):
+        if not client_id:
+            return
+        if d['status'] == 'downloading':
+            percent_str = d.get('_percent_str', '0%')
+            # Remove ANSI escape codes that yt-dlp might output
+            percent_str = re.sub(r'\x1b[^m]*m', '', percent_str).strip()
+            _progress_data[client_id] = {"status": "downloading", "percent": percent_str}
+        elif d['status'] == 'finished':
+            _progress_data[client_id] = {"status": "converting", "percent": "100%"}
+
     async with lock:
         # Re-check after acquiring lock — another coroutine may have finished
         if output_path.exists():
@@ -459,6 +498,8 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
             "no_warnings":  True,
             "noplaylist":   True,
             "prefer_ffmpeg": True,
+            "progress_hooks": [progress_hook] if client_id else [],
+            "writethumbnail": True,
             # Use bundled FFmpeg if available, else fall back to system PATH
             **(({"ffmpeg_location": FFMPEG_LOCATION}) if FFMPEG_LOCATION else {}),
             "http_headers": {
@@ -480,10 +521,8 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
                     "preferredcodec":   "mp3",
                     "preferredquality": quality,
                 },
-                {
-                    "key":          "FFmpegMetadata",
-                    "add_metadata": True,
-                },
+                {"key": "FFmpegMetadata", "add_metadata": True},
+                {"key": "EmbedThumbnail", "already_have_thumbnail": False},
             ],
         }
 
