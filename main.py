@@ -498,6 +498,7 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
             "no_warnings":  True,
             "noplaylist":   True,
             "prefer_ffmpeg": True,
+            "source_address": "0.0.0.0", # Force IPv4 to prevent hanging on datacenter servers
             "progress_hooks": [progress_hook] if client_id else [],
             "writethumbnail": True,
             # Use bundled FFmpeg if available, else fall back to system PATH
