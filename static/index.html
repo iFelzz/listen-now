@@ -1130,8 +1130,8 @@
       btn.setAttribute('aria-label', `Downloading ${item.title}…`);
       $loadingText.textContent = `Downloading: ${item.title}`;
 
-      // Generate random ID for progress tracking
-      const clientId = crypto.randomUUID();
+      // Generate random ID for progress tracking (fallback for non-HTTPS)
+      const clientId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/progress/${clientId}`);
 
