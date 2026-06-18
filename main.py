@@ -3,17 +3,20 @@ Listen Now – FastAPI Backend
 ────────────────────────────
 Endpoints:
   GET  /                   → Serves the frontend (index.html)
+  GET  /favicon.ico        → App favicon
   GET  /api/health         → Health check
   GET  /api/search         → Search YouTube (returns up to 6 results)
   POST /api/download       → Download audio as MP3 (192 kbps)
-  GET  /api/storage        → Info penggunaan storage downloads/
-  POST /api/cleanup        → Trigger cleanup manual
+  GET  /api/storage        → Storage usage info
+  POST /api/cleanup        → Trigger manual cleanup
   GET  /downloads/{file}   → Serve the downloaded MP3 file
 
-Auto-cleanup:
-  - File dihapus otomatis setelah MAX_AGE_HOURS (default: 1 jam)
-  - Folder dibatasi MAX_STORAGE_MB (default: 500 MB)
-  - Cleanup berjalan setiap CLEANUP_INTERVAL_MINUTES (default: 30 menit)
+Stability features:
+  - Concurrent download lock per filename (prevents race conditions)
+  - Temp file cleanup on error (.part / .webm / .m4a)
+  - Auto-cleanup: files deleted after MAX_AGE_HOURS (default 1h)
+  - Folder size capped at MAX_STORAGE_MB (default 500 MB)
+  - Cleanup runs every CLEANUP_INTERVAL_MINUTES (default 30 min)
 """
 
 import os
@@ -74,9 +77,13 @@ else:
         logger.warning("FFmpeg NOT found! Download conversion will fail.")
 
 # ── Auto-cleanup config ───────────────────────────────────────
-MAX_AGE_HOURS           = float(os.environ.get("MAX_AGE_HOURS",    "1"))    # hapus file > 1 jam
-MAX_STORAGE_MB          = float(os.environ.get("MAX_STORAGE_MB",   "500"))  # batas folder 500 MB
-CLEANUP_INTERVAL_MINUTES = float(os.environ.get("CLEANUP_INTERVAL", "30"))  # cek tiap 30 menit
+MAX_AGE_HOURS            = float(os.environ.get("MAX_AGE_HOURS",    "1"))   # delete files older than 1 hour
+MAX_STORAGE_MB           = float(os.environ.get("MAX_STORAGE_MB",   "500")) # cap folder at 500 MB
+CLEANUP_INTERVAL_MINUTES = float(os.environ.get("CLEANUP_INTERVAL", "30"))  # run every 30 minutes
+
+# ── Concurrent download locks ─────────────────────────────────
+# Prevents race conditions when multiple users download the same file
+_download_locks: dict[str, asyncio.Lock] = {}
 
 
 # ── Cleanup logic ─────────────────────────────────────────────
@@ -184,7 +191,7 @@ class DownloadRequest(BaseModel):
     title: Optional[str] = "audio"
 
 
-# ── Helper: sanitise filename ────────────────────────────────
+# ── Helper: sanitise filename ─────────────────────────────────
 def sanitise_filename(name: str) -> str:
     """
     Bersihkan nama file dari karakter ilegal Windows/Linux.
@@ -198,6 +205,22 @@ def sanitise_filename(name: str) -> str:
     return name[:200]  # cap length
 
 
+def _cleanup_temp_files(title: str) -> None:
+    """
+    Remove leftover temporary files created by yt-dlp when a download fails.
+    Matches any file in downloads/ whose stem starts with the given title,
+    excluding already-completed .mp3 files.
+    """
+    TEMP_EXTS = {".part", ".ytdl", ".webm", ".m4a", ".opus", ".3gp"}
+    for f in DOWNLOADS_DIR.iterdir():
+        if f.is_file() and f.stem.startswith(title) and f.suffix.lower() in TEMP_EXTS:
+            try:
+                f.unlink()
+                logger.info("Cleaned up temp file: %s", f.name)
+            except Exception as e:
+                logger.warning("Failed to remove temp file %s: %s", f.name, e)
+
+
 # ── Routes ───────────────────────────────────────────────────
 
 @app.get("/", include_in_schema=False)
@@ -207,6 +230,19 @@ async def root():
     if not index_path.exists():
         raise HTTPException(status_code=404, detail="Frontend not found.")
     return FileResponse(str(index_path))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve app favicon to prevent 404 errors in browser console."""
+    favicon_path = STATIC_DIR / "favicon.ico"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path))
+    # Fallback: serve logo.png as favicon
+    logo_path = STATIC_DIR / "logo.png"
+    if logo_path.exists():
+        return FileResponse(str(logo_path), media_type="image/png")
+    raise HTTPException(status_code=404, detail="Favicon not found.")
 
 
 @app.get("/api/health")
@@ -329,6 +365,9 @@ async def download(request: DownloadRequest, background_tasks: BackgroundTasks):
     """
     Download audio from the given YouTube URL and convert to MP3 (192 kbps).
     Returns a JSON with the download URL once the file is ready.
+
+    Uses per-filename async lock to prevent race conditions when multiple
+    users request the same song simultaneously.
     """
     url   = request.url.strip()
     title = sanitise_filename(request.title or "audio")
@@ -339,7 +378,7 @@ async def download(request: DownloadRequest, background_tasks: BackgroundTasks):
     output_filename = f"{title}.mp3"
     output_path     = DOWNLOADS_DIR / output_filename
 
-    # If file already exists, serve it immediately
+    # If file already exists, serve it immediately (no lock needed)
     if output_path.exists():
         logger.info("Cache hit – serving existing file: %s", output_filename)
         return JSONResponse(content={
@@ -348,78 +387,94 @@ async def download(request: DownloadRequest, background_tasks: BackgroundTasks):
             "download_url": f"/downloads/{output_filename}",
         })
 
-    ydl_opts = {
-        # Format selector sepermissif mungkin:
-        # - Tidak pakai filter ext (m4a/webm) karena terlalu ketat untuk sebagian video
-        # - "bestaudio/best" → FFmpegExtractAudio akan konversi apapun ke MP3
-        "format": "bestaudio/best",
-        "outtmpl": str(DOWNLOADS_DIR / f"{title}.%(ext)s"),
-        "quiet":        True,
-        "no_warnings":  True,
-        "noplaylist":   True,
-        # Paksa gunakan FFmpeg untuk mux/convert — lebih reliable
-        "prefer_ffmpeg": True,
-        # Lokasi FFmpeg bundled (jika ada), fallback ke system PATH
-        **(({"ffmpeg_location": FFMPEG_LOCATION}) if FFMPEG_LOCATION else {}),
-        # Simulasikan browser agar tidak diblokir YouTube
-        "http_headers": {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-        # Argumen khusus YouTube untuk bypass pembatasan format DASH/HLS
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "web"],
-            }
-        },
-        "postprocessors": [
-            {
-                "key":              "FFmpegExtractAudio",
-                "preferredcodec":   "mp3",
-                "preferredquality": "192",
+    # ── Acquire per-filename lock ─────────────────────────────
+    # Ensures only one download process runs per unique filename.
+    # Other requests for the same file will wait and reuse the result.
+    if output_filename not in _download_locks:
+        _download_locks[output_filename] = asyncio.Lock()
+    lock = _download_locks[output_filename]
+
+    async with lock:
+        # Re-check after acquiring lock — another coroutine may have finished
+        if output_path.exists():
+            logger.info("Cache hit (post-lock) – serving: %s", output_filename)
+            return JSONResponse(content={
+                "success":      True,
+                "filename":     output_filename,
+                "download_url": f"/downloads/{output_filename}",
+            })
+
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "outtmpl": str(DOWNLOADS_DIR / f"{title}.%(ext)s"),
+            "quiet":        True,
+            "no_warnings":  True,
+            "noplaylist":   True,
+            "prefer_ffmpeg": True,
+            # Use bundled FFmpeg if available, else fall back to system PATH
+            **(({"ffmpeg_location": FFMPEG_LOCATION}) if FFMPEG_LOCATION else {}),
+            "http_headers": {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/125.0.0.0 Safari/537.36"
+                ),
+                "Accept-Language": "en-US,en;q=0.9",
             },
-            {
-                "key":          "FFmpegMetadata",
-                "add_metadata": True,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "web"],
+                }
             },
-        ],
-    }
+            "postprocessors": [
+                {
+                    "key":              "FFmpegExtractAudio",
+                    "preferredcodec":   "mp3",
+                    "preferredquality": "192",
+                },
+                {
+                    "key":          "FFmpegMetadata",
+                    "add_metadata": True,
+                },
+            ],
+        }
 
-    logger.info("Downloading: %s → %s", url, output_filename)
+        logger.info("Downloading: %s → %s", url, output_filename)
 
-    try:
-        def _download():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
+        try:
+            def _download():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
 
-        # asyncio.to_thread lebih aman di Python 3.9+ vs get_event_loop
-        await asyncio.to_thread(_download)
+            await asyncio.to_thread(_download)
 
-        if not output_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail="Download completed but file not found on disk.",
-            )
+            if not output_path.exists():
+                raise HTTPException(
+                    status_code=500,
+                    detail="Download completed but output file not found on disk.",
+                )
 
-        logger.info("Download successful: %s", output_filename)
-        return JSONResponse(content={
-            "success":      True,
-            "filename":     output_filename,
-            "download_url": f"/downloads/{output_filename}",
-        })
+            logger.info("Download successful: %s", output_filename)
+            return JSONResponse(content={
+                "success":      True,
+                "filename":     output_filename,
+                "download_url": f"/downloads/{output_filename}",
+            })
 
-    except yt_dlp.utils.DownloadError as exc:
-        logger.error("yt-dlp DownloadError: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Download failed: {str(exc)}")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Unexpected error during download")
-        raise HTTPException(status_code=500, detail=str(exc))
+        except yt_dlp.utils.DownloadError as exc:
+            logger.error("yt-dlp DownloadError: %s", exc)
+            _cleanup_temp_files(title)
+            raise HTTPException(status_code=502, detail=f"Download failed: {str(exc)}")
+        except HTTPException:
+            _cleanup_temp_files(title)
+            raise
+        except Exception as exc:
+            logger.exception("Unexpected error during download")
+            _cleanup_temp_files(title)
+            raise HTTPException(status_code=500, detail=str(exc))
+        finally:
+            # Remove lock entry once no longer needed
+            _download_locks.pop(output_filename, None)
 
 
 # ── Entry point (local dev) ──────────────────────────────────

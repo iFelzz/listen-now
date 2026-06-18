@@ -8,8 +8,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Mount seluruh direktori project untuk hot-reload kode
-      - /home/andalan/listen-now:/app
+      # Mount hanya folder downloads agar MP3 tersimpan di host
+      - ./downloads:/app/downloads
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - PYTHONUNBUFFERED=1
