@@ -298,6 +298,90 @@
       padding: 0 20px 80px;
     }
 
+    .results-header-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .limit-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--clr-text-muted);
+    }
+
+    .limit-selector select {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--clr-border);
+      color: var(--clr-text);
+      padding: 4px 8px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .limit-selector select:focus {
+      border-color: var(--clr-accent);
+    }
+
+    .results-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--clr-text-muted);
+    }
+
+    .results-count {
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(124, 58, 237, 0.2);
+      color: var(--clr-accent);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .pagination-info {
+      font-size: 0.85rem;
+      color: var(--clr-text-muted);
+    }
+
+    .pagination-btn {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--clr-border);
+      color: var(--clr-text);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background: rgba(124, 58, 237, 0.15);
+      border-color: var(--clr-accent);
+      color: var(--clr-accent);
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
     /* ── Loading indicator ── */
     #loading {
       display: none;
@@ -367,32 +451,6 @@
     .state-msg p {
       font-size: 0.9rem;
       line-height: 1.6;
-    }
-
-    /* ── Section header ── */
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .results-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--clr-text-muted);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      font-size: 0.78rem;
-    }
-
-    .results-count {
-      background: rgba(124, 58, 237, 0.18);
-      color: var(--clr-accent);
-      border-radius: 999px;
-      padding: 3px 10px;
-      font-size: 0.78rem;
-      font-weight: 600;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -941,12 +999,28 @@
 
         <!-- Results -->
         <section id="results" aria-label="Search results">
-          <div class="results-header">
-            <span class="results-title">Search Results</span>
-            <span class="results-count" id="results-count">0 results</span>
+          <div class="results-header-wrap">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="results-title">Search Results</span>
+              <span class="results-count" id="results-count">0 results</span>
+            </div>
+            <div class="limit-selector">
+              <label for="limit-select">Show:</label>
+              <select id="limit-select">
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="30">30 per page</option>
+                <option value="50">50 per page</option>
+              </select>
+            </div>
           </div>
           <div class="results-grid" id="results-grid" role="list">
             <!-- Cards injected here -->
+          </div>
+          <div class="pagination" id="pagination-controls" style="display: none;">
+            <button class="pagination-btn" id="btn-prev">Previous</button>
+            <div class="pagination-info">Page <span id="page-current">1</span> of <span id="page-total">1</span></div>
+            <button class="pagination-btn" id="btn-next">Next</button>
           </div>
         </section>
 
@@ -987,6 +1061,19 @@
     const $grid = document.getElementById('results-grid');
     const $count = document.getElementById('results-count');
     const $toastWrap = document.getElementById('toast-container');
+
+    // Pagination elements
+    const $limitSelect = document.getElementById('limit-select');
+    const $paginationControls = document.getElementById('pagination-controls');
+    const $btnPrev = document.getElementById('btn-prev');
+    const $btnNext = document.getElementById('btn-next');
+    const $pageCurrent = document.getElementById('page-current');
+    const $pageTotal = document.getElementById('page-total');
+
+    // Global state
+    let allSearchResults = [];
+    let currentPage = 1;
+    let itemsPerPage = 10;
 
     // ── Helpers ───────────────────────────────────────────────
 
@@ -1105,6 +1192,112 @@
     </article>`;
     }
 
+    // ── Pagination Logic ─────────────────────────────────────
+
+    function renderPage() {
+      const totalPages = Math.ceil(allSearchResults.length / itemsPerPage) || 1;
+      
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pageItems = allSearchResults.slice(startIndex, endIndex);
+
+      // Render cards
+      $grid.innerHTML = pageItems.map((item, i) => buildCard(item, startIndex + i)).join('');
+      
+      // Update pagination UI
+      $pageCurrent.textContent = currentPage;
+      $pageTotal.textContent = totalPages;
+      $btnPrev.disabled = currentPage === 1;
+      $btnNext.disabled = currentPage === totalPages;
+      
+      $paginationControls.style.display = allSearchResults.length > itemsPerPage ? 'flex' : 'none';
+
+      // Attach quality selector handlers
+      document.querySelectorAll('.quality-btn').forEach(qBtn => {
+        qBtn.addEventListener('click', () => {
+          const cardIdx = qBtn.dataset.card;
+          const quality = qBtn.dataset.q;
+          document.querySelectorAll(`.quality-btn[data-card="${cardIdx}"]`).forEach(b => {
+            b.classList.toggle('active', b === qBtn);
+            b.setAttribute('aria-pressed', b === qBtn ? 'true' : 'false');
+          });
+          const dlBtn = document.getElementById(`btn-dl-${cardIdx}`);
+          if (dlBtn) dlBtn.dataset.quality = quality;
+        });
+      });
+
+      // Attach preview player handlers
+      document.querySelectorAll('.btn-play-overlay').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          
+          if (currentPlayingBtn === btn) {
+            audioPlayer.pause();
+            return;
+          }
+          
+          if (currentPlayingBtn) {
+            currentPlayingBtn.innerHTML = ICON_PLAY;
+            currentPlayingBtn.classList.remove('playing');
+          }
+          
+          btn.classList.add('loading');
+          btn.innerHTML = ICON_SPIN;
+          
+          try {
+            const res = await fetch(`/api/preview?url=${encodeURIComponent(btn.dataset.url)}`);
+            if (!res.ok) throw new Error('Preview not found');
+            const data = await res.json();
+            
+            audioPlayer.src = data.stream_url;
+            await audioPlayer.play();
+            
+            btn.classList.remove('loading');
+            btn.classList.add('playing');
+            btn.innerHTML = ICON_PAUSE;
+            currentPlayingBtn = btn;
+          } catch (err) {
+            console.error(err);
+            btn.classList.remove('loading');
+            btn.innerHTML = ICON_PLAY;
+            toast('error', 'Preview unavailable for this video.');
+          }
+        });
+      });
+
+      // Attach download handlers
+      pageItems.forEach((item, i) => {
+        const btn = document.getElementById(`btn-dl-${startIndex + i}`);
+        if (btn) btn.addEventListener('click', () => handleDownload(btn, item));
+      });
+    }
+
+    $btnPrev.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+        document.getElementById('results-count').scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    $btnNext.addEventListener('click', () => {
+      const totalPages = Math.ceil(allSearchResults.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+        document.getElementById('results-count').scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    $limitSelect.addEventListener('change', (e) => {
+      itemsPerPage = parseInt(e.target.value, 10);
+      currentPage = 1;
+      renderPage();
+    });
+
     // ── Search ───────────────────────────────────────────────
 
     async function performSearch(query) {
@@ -1113,84 +1306,25 @@
       $searchBtn.disabled = true;
 
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=50`);
         const data = await res.json();
 
         if (!res.ok) {
           throw new Error(data.detail || `HTTP ${res.status}`);
         }
 
-        const items = data.results || [];
+        allSearchResults = data.results || [];
 
-        if (items.length === 0) {
+        if (allSearchResults.length === 0) {
           showState('no-results');
           return;
         }
 
-        // Render cards
-        $grid.innerHTML = items.map((item, i) => buildCard(item, i)).join('');
-        $count.textContent = `${items.length} results`;
+        $count.textContent = `${allSearchResults.length} results`;
         showState('results');
-
-        // Attach quality selector handlers
-        document.querySelectorAll('.quality-btn').forEach(qBtn => {
-          qBtn.addEventListener('click', () => {
-            const cardIdx = qBtn.dataset.card;
-            const quality = qBtn.dataset.q;
-            // Update active state for this card's quality buttons
-            document.querySelectorAll(`.quality-btn[data-card="${cardIdx}"]`).forEach(b => {
-              b.classList.toggle('active', b === qBtn);
-              b.setAttribute('aria-pressed', b === qBtn ? 'true' : 'false');
-            });
-            // Update download button's data-quality
-            const dlBtn = document.getElementById(`btn-dl-${cardIdx}`);
-            if (dlBtn) dlBtn.dataset.quality = quality;
-          });
-        });
-        // Attach preview player handlers
-        document.querySelectorAll('.btn-play-overlay').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            
-            if (currentPlayingBtn === btn) {
-              audioPlayer.pause();
-              return;
-            }
-            
-            if (currentPlayingBtn) {
-              currentPlayingBtn.innerHTML = ICON_PLAY;
-              currentPlayingBtn.classList.remove('playing');
-            }
-            
-            btn.classList.add('loading');
-            btn.innerHTML = ICON_SPIN;
-            
-            try {
-              const res = await fetch(`/api/preview?url=${encodeURIComponent(btn.dataset.url)}`);
-              if (!res.ok) throw new Error('Preview not found');
-              const data = await res.json();
-              
-              audioPlayer.src = data.stream_url;
-              await audioPlayer.play();
-              
-              btn.classList.remove('loading');
-              btn.classList.add('playing');
-              btn.innerHTML = ICON_PAUSE;
-              currentPlayingBtn = btn;
-            } catch (err) {
-              console.error(err);
-              btn.classList.remove('loading');
-              btn.innerHTML = ICON_PLAY;
-              toast('error', 'Preview unavailable for this video.');
-            }
-          });
-        });
-
-        // Attach download handlers
-        items.forEach((item, i) => {
-          const btn = document.getElementById(`btn-dl-${i}`);
-          if (btn) btn.addEventListener('click', () => handleDownload(btn, item));
-        });
+        
+        currentPage = 1;
+        renderPage();
 
       } catch (err) {
         console.error('[Search Error]', err);

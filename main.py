@@ -366,12 +366,12 @@ async def search(request: Request, q: str, limit: int = 6):
     
     Query params:
       q     – search query string
-      limit – number of results (default 6, max 10)
+      limit – number of results (default 6, max 50)
     """
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
 
-    limit = min(max(1, limit), 10)
+    limit = min(max(1, limit), 50)
 
     ydl_opts = {
         "quiet":        True,
