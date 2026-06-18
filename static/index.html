@@ -787,7 +787,7 @@
     ═══════════════════════════════════════════════════ */
     #toast-container {
       position: fixed;
-      bottom: 28px;
+      bottom: 90px;
       right: 28px;
       z-index: 9999;
       display: flex;
@@ -855,6 +855,59 @@
         opacity: 0;
         transform: translateX(40px) scale(0.9);
       }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       VOLUME CONTROL
+    ═══════════════════════════════════════════════════ */
+    .volume-control {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(15, 15, 25, 0.95);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      padding: 12px 18px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      transform: translateY(100px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .volume-control.show {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .volume-control input[type=range] {
+      -webkit-appearance: none;
+      width: 100px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-control input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--clr-accent);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .volume-control input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1038,6 +1091,16 @@
   </div><!-- /app-wrapper -->
 
   <audio id="global-player" style="display: none;"></audio>
+  
+  <!-- Volume Control -->
+  <div id="volume-control" class="volume-control">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--clr-accent);">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Volume Control">
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
@@ -1337,9 +1400,22 @@
 
     // ── Global Player Setup ───────────────────────────────────
     const audioPlayer = document.getElementById('global-player');
+    const $volumeControl = document.getElementById('volume-control');
+    const $volumeSlider = document.getElementById('volume-slider');
     let currentPlayingBtn = null;
 
+    // Volume slider initialization
+    audioPlayer.volume = $volumeSlider.value;
+    $volumeSlider.addEventListener('input', (e) => {
+      audioPlayer.volume = e.target.value;
+    });
+
+    audioPlayer.addEventListener('play', () => {
+      $volumeControl.classList.add('show');
+    });
+
     audioPlayer.addEventListener('ended', () => {
+      $volumeControl.classList.remove('show');
       if (currentPlayingBtn) {
         currentPlayingBtn.innerHTML = ICON_PLAY;
         currentPlayingBtn.classList.remove('playing');
@@ -1348,6 +1424,7 @@
     });
 
     audioPlayer.addEventListener('pause', () => {
+      $volumeControl.classList.remove('show');
       if (currentPlayingBtn && audioPlayer.currentTime > 0 && !audioPlayer.ended) {
         currentPlayingBtn.innerHTML = ICON_PLAY;
         currentPlayingBtn.classList.remove('playing');
