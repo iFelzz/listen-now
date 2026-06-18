@@ -389,8 +389,11 @@ async def search(request: Request, q: str, limit: int = 6):
         },
     }
 
-    search_query = f"ytsearch{limit}:{q.strip()}"
-    logger.info("Searching YouTube for: %s", q)
+    q_stripped = q.strip()
+    is_url = q_stripped.startswith("http://") or q_stripped.startswith("https://")
+    search_query = q_stripped if is_url else f"ytsearch{limit}:{q_stripped}"
+    
+    logger.info("Processing query (is_url=%s): %s", is_url, q)
 
     try:
         def _search():
@@ -399,11 +402,14 @@ async def search(request: Request, q: str, limit: int = 6):
 
         info = await asyncio.to_thread(_search)
 
-        if not info or "entries" not in info:
+        if not info:
             return JSONResponse(content={"results": []})
+        
+        # If it's a direct video URL, info is the video dict itself, not a list of entries
+        entries = info.get("entries") if "entries" in info else [info]
 
         results = []
-        for entry in info["entries"]:
+        for entry in entries:
             if not entry:
                 continue
             duration_sec = entry.get("duration") or 0
@@ -428,6 +434,47 @@ async def search(request: Request, q: str, limit: int = 6):
     except Exception as exc:
         logger.exception("Unexpected error during search")
         raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/preview")
+@limiter.limit("20/minute")
+async def preview(request: Request, url: str):
+    """
+    Extract best audio stream URL for preview playback.
+    """
+    if not url.strip():
+        raise HTTPException(status_code=400, detail="URL is required")
+        
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "source_address": "0.0.0.0",
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/125.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    }
+    
+    try:
+        def _extract():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                return ydl.extract_info(url, download=False)
+
+        info = await asyncio.to_thread(_extract)
+        stream_url = info.get("url")
+        if not stream_url:
+            raise HTTPException(status_code=404, detail="Stream URL not found")
+            
+        return {"stream_url": stream_url}
+        
+    except Exception as exc:
+        logger.error("Preview extraction error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
 
 
 @app.post("/api/download")
