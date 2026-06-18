@@ -94,6 +94,16 @@ CLEANUP_INTERVAL_MINUTES = float(os.environ.get("CLEANUP_INTERVAL", "30"))  # ru
 # Prevents race conditions when multiple users download the same file
 _download_locks: dict[str, asyncio.Lock] = {}
 
+# ── Preview URL cache (TTL = 10 minutes) ──────────────────────
+# Avoids re-calling yt-dlp every time user clicks Play on the same song
+_preview_cache: dict[str, dict] = {}
+_PREVIEW_TTL_SECONDS = 600  # 10 minutes
+
+# ── Search results cache (TTL = 5 minutes) ──────────────────────
+# Avoids redundant yt-dlp calls for repeated identical searches
+_search_cache: dict[str, dict] = {}
+_SEARCH_TTL_SECONDS = 300  # 5 minutes
+
 
 # ── Cleanup logic ─────────────────────────────────────────────
 def run_cleanup() -> dict:
@@ -392,7 +402,15 @@ async def search(request: Request, q: str, limit: int = 6):
     q_stripped = q.strip()
     is_url = q_stripped.startswith("http://") or q_stripped.startswith("https://")
     search_query = q_stripped if is_url else f"ytsearch{limit}:{q_stripped}"
-    
+
+    # ── Check search cache (skip for direct URLs — those are always fresh) ──
+    cache_key = f"{q_stripped.lower()}::{limit}"
+    if not is_url:
+        cached = _search_cache.get(cache_key)
+        if cached and (time.time() - cached["ts"]) < _SEARCH_TTL_SECONDS:
+            logger.info("Search cache hit for: %s (limit=%d)", q_stripped, limit)
+            return JSONResponse(content={"results": cached["results"]})
+
     logger.info("Processing query (is_url=%s): %s", is_url, q)
 
     try:
@@ -426,6 +444,11 @@ async def search(request: Request, q: str, limit: int = 6):
             })
 
         logger.info("Found %d results for query: %s", len(results), q)
+
+        # ── Store in search cache (only for keyword searches, not direct URLs) ──
+        if not is_url:
+            _search_cache[cache_key] = {"results": results, "ts": time.time()}
+
         return JSONResponse(content={"results": results})
 
     except yt_dlp.utils.DownloadError as exc:
@@ -440,10 +463,18 @@ async def search(request: Request, q: str, limit: int = 6):
 async def preview(request: Request, url: str):
     """
     Extract best audio stream URL for preview playback.
+    Results are cached in-memory for up to 10 minutes to avoid
+    redundant yt-dlp calls when a user replays the same song.
     """
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL is required")
-        
+
+    # ── Check in-memory cache first ────────────────────────────
+    cached = _preview_cache.get(url)
+    if cached and (time.time() - cached["ts"]) < _PREVIEW_TTL_SECONDS:
+        logger.info("Preview cache hit: %s", url)
+        return {"stream_url": cached["stream_url"]}
+
     ydl_opts = {
         "format": "bestaudio/best",
         "quiet": True,
@@ -459,7 +490,7 @@ async def preview(request: Request, url: str):
             "Accept-Language": "en-US,en;q=0.9",
         },
     }
-    
+
     try:
         def _extract():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -469,12 +500,37 @@ async def preview(request: Request, url: str):
         stream_url = info.get("url")
         if not stream_url:
             raise HTTPException(status_code=404, detail="Stream URL not found")
-            
+
+        # ── Store in cache ──────────────────────────────────────
+        _preview_cache[url] = {"stream_url": stream_url, "ts": time.time()}
+        logger.info("Preview extracted and cached: %s", url)
+
         return {"stream_url": stream_url}
-        
+
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Preview extraction error: %s", exc)
         raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
+
+
+@app.get("/api/file/{filename}", include_in_schema=False)
+async def serve_file(filename: str, name: Optional[str] = None):
+    """
+    Serve a downloaded file with an optional clean display name.
+    The `name` query param sets the Content-Disposition filename shown to the user,
+    allowing internal files to use quality-tagged names while downloads appear clean.
+    """
+    file_path = DOWNLOADS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found.")
+
+    display_name = name or filename
+    return FileResponse(
+        str(file_path),
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": f'attachment; filename="{display_name}"'},
+    )
 
 
 @app.post("/api/download")
@@ -484,6 +540,10 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
     Download audio from the given YouTube URL and convert to MP3.
     Supports quality: 128 / 192 / 320 kbps (default: 192).
     Rate-limited to 10 requests per minute per IP.
+
+    Internal cache filename includes quality suffix (e.g. Title_192k.mp3) to ensure
+    different qualities are cached separately. However, the file is served to the
+    browser with a clean name (Title.mp3) via Content-Disposition in /api/file/.
 
     Uses per-filename async lock to prevent race conditions when multiple
     users request the same song simultaneously.
@@ -495,121 +555,131 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
     if not url:
         raise HTTPException(status_code=400, detail="URL is required.")
 
-    # File will have the exact same name regardless of quality
-    output_filename = f"{title}.mp3"
-    output_path     = DOWNLOADS_DIR / output_filename
+    # Internal file includes quality tag for correct per-quality caching.
+    # The clean name (without quality) is used as the display name for the user.
+    cache_filename = f"{title}_{quality}k.mp3"
+    clean_filename = f"{title}.mp3"
+    output_path    = DOWNLOADS_DIR / cache_filename
 
-    # If file already exists, serve it immediately (no lock needed)
+    # If file already exists (cache hit), serve it immediately
     if output_path.exists():
-        logger.info("Cache hit – serving existing file: %s", output_filename)
+        logger.info("Cache hit – serving existing file: %s", cache_filename)
         return JSONResponse(content={
             "success":      True,
-            "filename":     output_filename,
-            "download_url": f"/downloads/{output_filename}",
+            "filename":     cache_filename,
+            "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
         })
 
     # ── Acquire per-filename lock ─────────────────────────────
-    # Ensures only one download process runs per unique filename.
-    # Other requests for the same file will wait and reuse the result.
-    if output_filename not in _download_locks:
-        _download_locks[output_filename] = asyncio.Lock()
-    lock = _download_locks[output_filename]
+    # Ensures only one download process runs per unique cache filename.
+    # Other requests for the same file+quality will wait and reuse the result.
+    if cache_filename not in _download_locks:
+        _download_locks[cache_filename] = asyncio.Lock()
+    lock = _download_locks[cache_filename]
 
     client_id = body.client_id
 
-    def progress_hook(d):
-        if not client_id:
-            return
-        if d['status'] == 'downloading':
-            percent_str = d.get('_percent_str', '0%')
-            # Remove ANSI escape codes that yt-dlp might output
-            percent_str = re.sub(r'\x1b[^m]*m', '', percent_str).strip()
-            _progress_data[client_id] = {"status": "downloading", "percent": percent_str}
-        elif d['status'] == 'finished':
-            _progress_data[client_id] = {"status": "converting", "percent": "100%"}
+    try:
+        async with lock:
+            # Re-check after acquiring lock — another coroutine may have finished
+            if output_path.exists():
+                logger.info("Cache hit (post-lock) – serving: %s", cache_filename)
+                return JSONResponse(content={
+                    "success":      True,
+                    "filename":     cache_filename,
+                    "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
+                })
 
-    async with lock:
-        # Re-check after acquiring lock — another coroutine may have finished
-        if output_path.exists():
-            logger.info("Cache hit (post-lock) – serving: %s", output_filename)
-            return JSONResponse(content={
-                "success":      True,
-                "filename":     output_filename,
-                "download_url": f"/downloads/{output_filename}",
-            })
+            def progress_hook(d):
+                if not client_id:
+                    return
+                if d['status'] == 'downloading':
+                    percent_str = d.get('_percent_str', '0%')
+                    # Remove ANSI escape codes that yt-dlp might output
+                    percent_str = re.sub(r'\x1b[^m]*m', '', percent_str).strip()
+                    _progress_data[client_id] = {"status": "downloading", "percent": percent_str}
+                elif d['status'] == 'finished':
+                    _progress_data[client_id] = {"status": "converting", "percent": "100%"}
 
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "outtmpl": str(DOWNLOADS_DIR / f"{title}.%(ext)s"),
-            "quiet":        True,
-            "no_warnings":  True,
-            "noplaylist":   True,
-            "prefer_ffmpeg": True,
-            "source_address": "0.0.0.0", # Force IPv4 to prevent hanging on datacenter servers
-            "progress_hooks": [progress_hook] if client_id else [],
-            "writethumbnail": True,
-            # Use bundled FFmpeg if available, else fall back to system PATH
-            **(({"ffmpeg_location": FFMPEG_LOCATION}) if FFMPEG_LOCATION else {}),
-            "http_headers": {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/125.0.0.0 Safari/537.36"
-                ),
-                "Accept-Language": "en-US,en;q=0.9",
-            },
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "web"],
-                }
-            },
-            "postprocessors": [
-                {
-                    "key":              "FFmpegExtractAudio",
-                    "preferredcodec":   "mp3",
-                    "preferredquality": quality,
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "outtmpl": str(DOWNLOADS_DIR / f"{title}.%(ext)s"),
+                "quiet":        True,
+                "no_warnings":  True,
+                "noplaylist":   True,
+                "prefer_ffmpeg": True,
+                "source_address": "0.0.0.0", # Force IPv4 to prevent hanging on datacenter servers
+                "progress_hooks": [progress_hook] if client_id else [],
+                "writethumbnail": True,
+                # Use bundled FFmpeg if available, else fall back to system PATH
+                **(({"ffmpeg_location": FFMPEG_LOCATION}) if FFMPEG_LOCATION else {}),
+                "http_headers": {
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/125.0.0.0 Safari/537.36"
+                    ),
+                    "Accept-Language": "en-US,en;q=0.9",
                 },
-                {"key": "FFmpegMetadata", "add_metadata": True},
-                {"key": "EmbedThumbnail", "already_have_thumbnail": False},
-            ],
-        }
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["android", "web"],
+                    }
+                },
+                "postprocessors": [
+                    {
+                        "key":              "FFmpegExtractAudio",
+                        "preferredcodec":   "mp3",
+                        "preferredquality": quality,
+                    },
+                    {"key": "FFmpegMetadata", "add_metadata": True},
+                    {"key": "EmbedThumbnail", "already_have_thumbnail": False},
+                ],
+            }
 
-        logger.info("Downloading: %s → %s", url, output_filename)
+            logger.info("Downloading: %s → %s", url, cache_filename)
 
-        try:
-            def _download():
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
+            try:
+                def _download():
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
 
-            await asyncio.to_thread(_download)
+                await asyncio.to_thread(_download)
 
-            if not output_path.exists():
-                raise HTTPException(
-                    status_code=500,
-                    detail="Download completed but output file not found on disk.",
-                )
+                # yt-dlp writes the file as Title.mp3 (from outtmpl); rename to cache_filename
+                default_output = DOWNLOADS_DIR / f"{title}.mp3"
+                if default_output.exists() and not output_path.exists():
+                    default_output.rename(output_path)
 
-            logger.info("Download successful: %s", output_filename)
-            return JSONResponse(content={
-                "success":      True,
-                "filename":     output_filename,
-                "download_url": f"/downloads/{output_filename}",
-            })
+                if not output_path.exists():
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Download completed but output file not found on disk.",
+                    )
 
-        except yt_dlp.utils.DownloadError as exc:
-            logger.error("yt-dlp DownloadError: %s", exc)
-            _cleanup_temp_files(title)
-            raise HTTPException(status_code=502, detail=f"Download failed: {str(exc)}")
-        except HTTPException:
-            _cleanup_temp_files(title)
-            raise
-        except Exception as exc:
-            logger.exception("Unexpected error during download")
-            _cleanup_temp_files(title)
-            raise HTTPException(status_code=500, detail=str(exc))
-        finally:
-            # Remove lock entry once no longer needed
-            _download_locks.pop(output_filename, None)
+                logger.info("Download successful: %s", cache_filename)
+                return JSONResponse(content={
+                    "success":      True,
+                    "filename":     cache_filename,
+                    "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
+                })
+
+            except yt_dlp.utils.DownloadError as exc:
+                logger.error("yt-dlp DownloadError: %s", exc)
+                _cleanup_temp_files(title)
+                raise HTTPException(status_code=502, detail=f"Download failed: {str(exc)}")
+            except HTTPException:
+                _cleanup_temp_files(title)
+                raise
+            except Exception as exc:
+                logger.exception("Unexpected error during download")
+                _cleanup_temp_files(title)
+                raise HTTPException(status_code=500, detail=str(exc))
+
+    finally:
+        # Always clean up the lock entry after the download attempt completes,
+        # regardless of success or failure, to prevent unbounded dict growth.
+        _download_locks.pop(cache_filename, None)
 
 
 # ── Entry point (local dev) ──────────────────────────────────

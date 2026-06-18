@@ -9,6 +9,10 @@
   <meta name="theme-color" content="#7c3aed" />
   <link rel="icon" type="image/png" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/static/logo.png" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Listen Now" />
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1298,14 +1302,20 @@
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
 
+          // Same button clicked: toggle play/pause without losing reference
           if (currentPlayingBtn === btn) {
-            audioPlayer.pause();
+            if (audioPlayer.paused) {
+              audioPlayer.play();
+            } else {
+              audioPlayer.pause();
+            }
             return;
           }
 
           if (currentPlayingBtn) {
             currentPlayingBtn.innerHTML = ICON_PLAY;
             currentPlayingBtn.classList.remove('playing');
+            currentPlayingBtn = null; // Clear stale ref before new song loads
           }
 
           btn.classList.add('loading');
@@ -1413,6 +1423,11 @@
 
     audioPlayer.addEventListener('play', () => {
       $volumeControl.classList.add('show');
+      // Restore pause icon whenever audio resumes (covers Space-key resume)
+      if (currentPlayingBtn) {
+        currentPlayingBtn.innerHTML = ICON_PAUSE;
+        currentPlayingBtn.classList.add('playing');
+      }
     });
 
     audioPlayer.addEventListener('ended', () => {
@@ -1426,10 +1441,12 @@
 
     audioPlayer.addEventListener('pause', () => {
       $volumeControl.classList.remove('show');
-      if (currentPlayingBtn && audioPlayer.currentTime > 0 && !audioPlayer.ended) {
+      // Update button icon to PLAY, but KEEP currentPlayingBtn reference
+      // so Space bar can resume without losing track of which song is active.
+      if (currentPlayingBtn && !audioPlayer.ended) {
         currentPlayingBtn.innerHTML = ICON_PLAY;
         currentPlayingBtn.classList.remove('playing');
-        currentPlayingBtn = null;
+        // NOTE: intentionally NOT setting currentPlayingBtn = null here
       }
     });
 
@@ -1496,6 +1513,16 @@
 
         toast('success', `🎵 <strong>${esc(item.title)}</strong> downloaded successfully!`);
 
+        // ── Browser notification (even if user switched tabs) ──
+        if (Notification.permission === 'granted') {
+          new Notification('✅ Download Complete!', {
+            body: item.title,
+            icon: item.thumbnail || '/static/logo.png',
+            badge: '/static/logo.png',
+            tag: 'listen-now-download',
+          });
+        }
+
       } catch (err) {
         console.error('[Download Error]', err);
 
@@ -1531,8 +1558,79 @@
       if (e.key === 'Enter') $form.dispatchEvent(new Event('submit'));
     });
 
+    // ── Keyboard Shortcuts ────────────────────────────────────
+    let shortcutTipShown = false;
+    document.addEventListener('keydown', (e) => {
+      // Don't hijack shortcuts when typing in the search box
+      if (document.activeElement === $input) return;
+      // Don't trigger on modifier keys
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (currentPlayingBtn) {
+          if (audioPlayer.paused) {
+            audioPlayer.play();
+            currentPlayingBtn.classList.add('playing');
+            currentPlayingBtn.innerHTML = ICON_PAUSE;
+          } else {
+            audioPlayer.pause();
+          }
+        }
+      } else if (e.key === 'Escape') {
+        // Explicitly reset button state FIRST (before pause fires),
+        // then reset playback position. This avoids the race condition where
+        // audioPlayer.currentTime = 0 runs before the pause event, causing
+        // the pause handler's `currentTime > 0` check to fail silently.
+        if (currentPlayingBtn) {
+          currentPlayingBtn.innerHTML = ICON_PLAY;
+          currentPlayingBtn.classList.remove('playing');
+          currentPlayingBtn = null;
+        }
+        $volumeControl.classList.remove('show');
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const newVol = Math.min(1, parseFloat($volumeSlider.value) + 0.1);
+        $volumeSlider.value = newVol;
+        audioPlayer.volume = newVol;
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const newVol = Math.max(0, parseFloat($volumeSlider.value) - 0.1);
+        $volumeSlider.value = newVol;
+        audioPlayer.volume = newVol;
+      }
+
+      // Show keyboard tip on first use
+      if (!shortcutTipShown && ['Space', 'ArrowUp', 'ArrowDown', 'Escape'].includes(e.code)) {
+        shortcutTipShown = true;
+      }
+    });
+
+    // ── Notification Permission Request ───────────────────────
+    // Request after first search (avoids asking on page load which users dismiss)
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    // ── PWA / Service Worker Registration ─────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+          .then((reg) => console.log('[SW] Registered, scope:', reg.scope))
+          .catch((err) => console.warn('[SW] Registration failed:', err));
+      });
+    }
+
     // ── Focus search on load ──────────────────────────────────
-    window.addEventListener('load', () => $input.focus());
+    window.addEventListener('load', () => {
+      $input.focus();
+      // Request notification permission after a short delay
+      setTimeout(requestNotificationPermission, 3000);
+    });
   </script>
 </body>
 

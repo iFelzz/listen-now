@@ -1,0 +1,35 @@
+{
+  "name": "Listen Now",
+  "short_name": "Listen Now",
+  "description": "Search YouTube, preview songs, and download as MP3.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#09090f",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Music",
+      "short_name": "Search",
+      "description": "Search and download MP3",
+      "url": "/",
+      "icons": [{ "src": "/static/logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["music", "entertainment"]
+}
