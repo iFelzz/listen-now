@@ -27,6 +27,7 @@ import re
 import time
 import asyncio
 import logging
+import urllib.parse
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -529,7 +530,7 @@ async def serve_file(filename: str, name: Optional[str] = None):
     return FileResponse(
         str(file_path),
         media_type="audio/mpeg",
-        headers={"Content-Disposition": f'attachment; filename="{display_name}"'},
+        filename=display_name,
     )
 
 
@@ -563,11 +564,13 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
 
     # If file already exists (cache hit), serve it immediately
     if output_path.exists():
-        logger.info("Cache hit – serving existing file: %s", cache_filename)
+        logger.info("Cache hit - serving existing file: %s", cache_filename)
+        encoded_cache = urllib.parse.quote(cache_filename)
+        encoded_clean = urllib.parse.quote(clean_filename)
         return JSONResponse(content={
             "success":      True,
             "filename":     cache_filename,
-            "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
+            "download_url": f"/api/file/{encoded_cache}?name={encoded_clean}",
         })
 
     # ── Acquire per-filename lock ─────────────────────────────
@@ -584,10 +587,12 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
             # Re-check after acquiring lock — another coroutine may have finished
             if output_path.exists():
                 logger.info("Cache hit (post-lock) – serving: %s", cache_filename)
+                encoded_cache = urllib.parse.quote(cache_filename)
+                encoded_clean = urllib.parse.quote(clean_filename)
                 return JSONResponse(content={
                     "success":      True,
                     "filename":     cache_filename,
-                    "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
+                    "download_url": f"/api/file/{encoded_cache}?name={encoded_clean}",
                 })
 
             def progress_hook(d):
@@ -658,10 +663,12 @@ async def download(request: Request, body: DownloadRequest, background_tasks: Ba
                     )
 
                 logger.info("Download successful: %s", cache_filename)
+                encoded_cache = urllib.parse.quote(cache_filename)
+                encoded_clean = urllib.parse.quote(clean_filename)
                 return JSONResponse(content={
                     "success":      True,
                     "filename":     cache_filename,
-                    "download_url": f"/api/file/{cache_filename}?name={clean_filename}",
+                    "download_url": f"/api/file/{encoded_cache}?name={encoded_clean}",
                 })
 
             except yt_dlp.utils.DownloadError as exc:
