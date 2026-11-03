@@ -38,18 +38,22 @@ _NOISE_PATTERNS = [
     r"(?i)\(\s*color\s*coded\s*lyrics?\s*\)",
     r"(?i)\[\s*audio\s*\]",
     r"(?i)\(\s*audio\s*\)",
+    r"(?i)\[\s*pre-debut\s+song\s*\]",
+    r"(?i)\(\s*pre-debut\s+song\s*\)",
+    r"(?i)\[\s*karaoke\s*(version)?\s*\]",
+    r"(?i)\(\s*karaoke\s*(version)?\s*\)",
     r"(?i)\b(4k|hd|1080p|720p)\b",
 ]
 
 def clean_noise(text: str) -> str:
-    """Strip video annotations like [MV], (Official Audio), (Lyrics), etc."""
+    """Strip video annotations like [MV], (Official Audio), (Lyrics), and all quote marks."""
     result = text
     for pat in _NOISE_PATTERNS:
         result = re.sub(pat, "", result)
     # Remove leftover empty brackets or parentheses: () or []
     result = re.sub(r"\(\s*\)|\[\s*\]", "", result)
-    # Strip enclosing quotes: 'Song' or "Song"
-    result = result.strip().strip("'\"`")
+    # Strip all ASCII and Unicode curly/straight quotes
+    result = re.sub(r"[\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\'\"\`]", "", result)
     result = re.sub(r"\s+", " ", result).strip()
     return result
 
@@ -78,15 +82,18 @@ def parse_artist_and_title(raw_title: str, uploader: str = "") -> Tuple[str, str
 def fetch_itunes_metadata(artist: str, title: str) -> Optional[Dict[str, Any]]:
     """
     Query Apple iTunes Search API for official studio metadata and 800x800 square cover art.
+    Uses smart multi-candidate matching to avoid piano covers or unrelated artists.
     Free, no API key required, response time ~100-150ms.
     """
-    # Build query
-    query = f"{artist} {title}".strip()
+    # Clean query: strip hyphens and punctuation that iTunes interprets as NOT operators
+    clean_art = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", artist)
+    clean_tit = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", title)
+    query = re.sub(r"\s+", " ", f"{clean_art} {clean_tit}").strip()
     if not query:
         return None
 
     encoded_query = urllib.parse.quote_plus(query[:100])
-    url = f"https://itunes.apple.com/search?term={encoded_query}&entity=song&limit=1"
+    url = f"https://itunes.apple.com/search?term={encoded_query}&entity=song&limit=5"
 
     req = urllib.request.Request(
         url,
@@ -102,18 +109,45 @@ def fetch_itunes_metadata(artist: str, title: str) -> Optional[Dict[str, Any]]:
             if not results:
                 return None
 
-            item = results[0]
-            raw_art = item.get("artworkUrl100", "")
+            norm_artist = re.sub(r"[^a-zA-Z0-9]", "", artist).lower()
+            norm_title  = re.sub(r"[^a-zA-Z0-9]", "", title).lower()
+
+            best_item = None
+            for item in results:
+                item_artist = re.sub(r"[^a-zA-Z0-9]", "", item.get("artistName", "")).lower()
+                item_track  = re.sub(r"[^a-zA-Z0-9]", "", item.get("trackName", "")).lower()
+
+                # Strong match: artist contains our artist OR our artist contains item artist
+                if norm_artist and (norm_artist in item_artist or item_artist in norm_artist):
+                    if norm_title and (norm_title in item_track or item_track in norm_title):
+                        best_item = item
+                        break
+                    elif not best_item:
+                        best_item = item
+
+            # If no artist match was found among candidates, reject iTunes candidates
+            # rather than picking an unrelated cover / instrumental artist
+            if not best_item:
+                first_artist = re.sub(r"[^a-zA-Z0-9]", "", results[0].get("artistName", "")).lower()
+                first_track  = re.sub(r"[^a-zA-Z0-9]", "", results[0].get("trackName", "")).lower()
+                if norm_artist and norm_artist in first_artist:
+                    best_item = results[0]
+                elif norm_title and norm_title in first_track and len(norm_title) >= 4:
+                    best_item = results[0]
+                else:
+                    return None
+
+            raw_art = best_item.get("artworkUrl100", "")
             # Upgrade standard 100x100 artwork URL to high-res 800x800 square
             hi_res_art = raw_art.replace("100x100bb.jpg", "800x800bb.jpg") if raw_art else ""
 
-            rel_date = item.get("releaseDate", "")
+            rel_date = best_item.get("releaseDate", "")
             year = rel_date[:4] if rel_date and len(rel_date) >= 4 else ""
 
             return {
-                "title":      item.get("trackName") or title,
-                "artist":     item.get("artistName") or artist,
-                "album":      item.get("collectionName") or "",
+                "title":      best_item.get("trackName") or title,
+                "artist":     best_item.get("artistName") or artist,
+                "album":      best_item.get("collectionName") or "",
                 "year":       year,
                 "poster_url": hi_res_art,
                 "source":     "itunes",

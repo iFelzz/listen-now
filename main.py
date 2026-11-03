@@ -576,7 +576,11 @@ async def prepare_download(request: Request, body: DownloadRequest):
     }
 
     ext = "m4a" if quality in ("native", "m4a") else "mp3"
-    filename = f"{clean_title}.{ext}"
+    if clean_artist and clean_artist.lower() not in clean_title.lower() and clean_artist != "Unknown Artist":
+        display_name = f"{clean_artist} - {clean_title}"
+    else:
+        display_name = clean_title
+    filename = f"{display_name}.{ext}"
 
     # Embed token AND fallback query params so the URL never 400s under multiple connections or retries
     encoded_url    = urllib.parse.quote(url)
@@ -713,10 +717,15 @@ async def stream_audio(
     is_native = stream_quality in ("native", "m4a")
     ext = "m4a" if is_native else "mp3"
     media_type = "audio/mp4" if is_native else "audio/mpeg"
-    output_filename = f"{stream_title}.{ext}"
+    if stream_artist and stream_artist.lower() not in stream_title.lower() and stream_artist != "Unknown Artist":
+        display_filename = f"{stream_artist} - {stream_title}"
+    else:
+        display_filename = stream_title
+
+    output_filename = f"{display_filename}.{ext}"
 
     quoted_filename = urllib.parse.quote(output_filename)
-    ascii_filename  = re.sub(r'[^\x20-\x7E]', '', stream_title) or "audio"
+    ascii_filename  = re.sub(r'[^\x20-\x7E]', '', display_filename) or "audio"
     content_disp    = f'attachment; filename="{ascii_filename}.{ext}"; filename*=UTF-8\'\'{quoted_filename}'
 
     # Fast response for HEAD pre-checks from Download Managers (FDM, IDM)
