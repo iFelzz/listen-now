@@ -452,7 +452,10 @@
           return;
         }
 
-        if (artists.length === 1) {
+        const normQ = query.trim().toLowerCase();
+        // If only 1 artist found OR if the top artist is an exact match (e.g. "Alan Walker"),
+        // jump straight into their discography page!
+        if (artists.length === 1 || (artists[0] && artists[0].name.trim().toLowerCase() === normQ)) {
           await loadArtistDiscography(artists[0].artist_id);
           return;
         }

@@ -304,13 +304,14 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
 def search_artists(query: str, limit: int = 5) -> list:
     """
     Search artists via iTunes Search API.
-    Returns list of artist profiles with ID, name, genre, and artwork.
+    Deduplicates identical artist names (keeping the top-ranked verified artist)
+    and sorts exact/strong keyword matches first.
     """
     clean_q = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", query).strip()
     if not clean_q:
         return []
     encoded = urllib.parse.quote_plus(clean_q[:60])
-    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(1, limit), 10)}"
+    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(10, limit * 3), 30)}"
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -320,19 +321,48 @@ def search_artists(query: str, limit: int = 5) -> list:
             if resp.status != 200:
                 return []
             data = json.loads(resp.read().decode("utf-8"))
-            results = []
+            
+            seen_names = set()
+            exact_matches = []
+            partial_matches = []
+            other_matches = []
+            
+            q_norm = clean_label_str(clean_q)
+
             for r in data.get("results", []):
                 aid = r.get("artistId")
                 name = r.get("artistName")
                 if not aid or not name:
                     continue
-                results.append({
+
+                norm_name = clean_label_str(name)
+                # Deduplicate identical names (Apple ranks results by global popularity,
+                # so the first occurrence is always the verified / primary artist)
+                if norm_name in seen_names:
+                    continue
+                seen_names.add(norm_name)
+
+                item = {
                     "artist_id": str(aid),
                     "name": name,
                     "genre": r.get("primaryGenreName") or "Music",
                     "artist_url": r.get("artistLinkUrl") or "",
-                })
-            return results
+                }
+
+                if norm_name == q_norm:
+                    exact_matches.append(item)
+                elif q_norm in norm_name or norm_name in q_norm:
+                    partial_matches.append(item)
+                else:
+                    other_matches.append(item)
+
+            # Prioritize exact and partial matches, discarding unrelated noise
+            if exact_matches or partial_matches:
+                combined = exact_matches + partial_matches
+            else:
+                combined = other_matches
+
+            return combined[:limit]
     except Exception as exc:
         logger.warning("Artist search error for '%s': %s", query, exc)
         return []

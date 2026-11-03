@@ -436,7 +436,7 @@ async def get_version():
     commit = get_commit_hash()
     return {
         "commit": commit,
-        "version": "2.2.0",
+        "version": "2.2.1",
         "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}"
     }
 
@@ -450,7 +450,7 @@ async def health():
         "active_streams": _active_streams_count,
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.2.0",
+        "version": "2.2.1",
     }
 
 @app.get("/api/storage")
