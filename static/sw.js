@@ -1,12 +1,12 @@
-﻿/**
- * Listen Now — Service Worker
+/**
+ * Listen Now — Service Worker (v4)
  * Strategy:
- *   - App Shell (HTML, fonts): Cache-first, fallback to network
- *   - API calls (/api/*): Network-first, no caching
- *   - Static assets (CSS, JS, images): Cache-first with background update
+ *   - API & Stream: Network-only, never cache
+ *   - Navigation (HTML): Network-first with cache fallback
+ *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'listen-now-v2';
+const CACHE_NAME = 'listen-now-v4';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
@@ -15,18 +15,18 @@ const APP_SHELL = [
   '/static/manifest.json',
 ];
 
-// ── Install: pre-cache the app shell ────────────────────────
+// ── Install: pre-cache app shell ────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching app shell');
+      console.log('[SW] Pre-caching app shell v4');
       return cache.addAll(APP_SHELL);
     })
   );
   self.skipWaiting();
 });
 
-// ── Activate: clean up old caches ───────────────────────────
+// ── Activate: clean up all old caches immediately ───────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) =>
@@ -34,7 +34,7 @@ self.addEventListener('activate', (event) => {
         cacheNames
           .filter((name) => name !== CACHE_NAME)
           .map((name) => {
-            console.log('[SW] Deleting old cache:', name);
+            console.log('[SW] Deleting obsolete cache:', name);
             return caches.delete(name);
           })
       )
@@ -47,35 +47,42 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Always use network for API requests — never cache
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/downloads/')) {
+  // 1. API and live streams: always use network
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Cache-first for everything else (app shell, static assets)
+  // 2. Navigation / HTML pages: Network-first, fallback to cache
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 3. Static assets: Stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) {
-        // Serve from cache, refresh in background
-        fetch(event.request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response));
-            }
-          })
-          .catch(() => {});
-        return cached;
-      }
-      // Not cached — fetch from network and cache it
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
+      const fetchPromise = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
           return response;
-        }
-        const cloned = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-        return response;
-      });
+        })
+        .catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });

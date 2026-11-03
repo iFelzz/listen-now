@@ -7,6 +7,7 @@ Architecture:
   - Ultra-Low Resource Usage: Tiny RAM buffer (~64 KB chunks), no disk I/O thrashing.
   - Instant Response: Browser download starts within ~0.5 - 1.0 second.
   - Safe Process Lifecycle: FFmpeg subprocesses terminate cleanly on client disconnect.
+  - Download Manager Compatible: Supports HEAD pre-checks and multi-connection managers (FDM, IDM).
 
 Endpoints:
   GET  /                     → Frontend UI (index.html)
@@ -14,8 +15,8 @@ Endpoints:
   GET  /api/health           → Health & architecture status
   GET  /api/search           → Fast YouTube search (rate-limited: 30/min per IP)
   GET  /api/preview          → Direct audio stream preview (rate-limited: 20/min per IP)
-  POST /api/download         → Pre-validate & issue stream token
-  GET  /api/stream           → Stream on-the-fly MP3 directly to browser (Zero-disk)
+  POST /api/download         → Pre-validate & issue resilient stream token
+  GET/HEAD /api/stream       → Stream on-the-fly MP3 directly to browser (Zero-disk)
   GET  /api/storage          → System status & active stream statistics
 """
 
@@ -33,7 +34,7 @@ from typing import Optional, Dict, Any
 
 import yt_dlp
 from fastapi import FastAPI, HTTPException, Request, Header
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
@@ -123,7 +124,7 @@ _search_cache: dict[str, dict] = {}
 _SEARCH_TTL_SECONDS = 300    # 5 minutes
 
 _stream_tokens: dict[str, dict] = {}
-_TOKEN_TTL_SECONDS = 180     # 3 minutes
+_TOKEN_TTL_SECONDS = 900     # 15 minutes (allows download managers to reconnect & probe)
 
 _MAX_CACHE_ENTRIES = 300
 _active_streams_count: int = 0
@@ -179,13 +180,13 @@ async def lifespan(app: FastAPI):
     maintenance_task.cancel()
 
 # ── Rate Limiter ──────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["300/day"])
+limiter = Limiter(key_func=get_remote_address, default_limits=["400/day"])
 
 # ── FastAPI App ───────────────────────────────────────────────
 app = FastAPI(
     title="Listen Now",
     description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style)",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan,
 )
 app.state.limiter = limiter
@@ -280,7 +281,7 @@ async def health():
         "architecture": "zero-disk-stream-piping",
         "active_streams": _active_streams_count,
         "disk_usage_bytes": 0,
-        "version": "2.0.0",
+        "version": "2.1.0",
     }
 
 @app.get("/api/storage")
@@ -401,12 +402,12 @@ async def preview(request: Request, url: str):
         raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
 
 @app.post("/api/download")
-@limiter.limit("20/minute")
+@limiter.limit("30/minute")
 async def prepare_download(request: Request, body: DownloadRequest):
     """
     Resolve YouTube audio stream in ~0.5s, create an in-memory stream token,
-    and return the immediate direct streaming download link.
-    Guarantees 0 disk space is used.
+    and return resilient direct streaming download link.
+    Includes fallback parameters to guarantee download managers (FDM, IDM) never fail.
     """
     url     = body.url.strip()
     quality = body.quality or "192"
@@ -435,16 +436,22 @@ async def prepare_download(request: Request, body: DownloadRequest):
     ext = "m4a" if quality in ("native", "m4a") else "mp3"
     filename = f"{clean_title}.{ext}"
 
+    # Embed token AND fallback query params so the URL never 400s under multiple connections or retries
+    encoded_url = urllib.parse.quote(url)
+    encoded_title = urllib.parse.quote(clean_title)
+    download_url = f"/api/stream?token={token}&url={encoded_url}&quality={quality}&title={encoded_title}"
+
     logger.info("Stream token created: %s (%s, %s kbps)", token, clean_title, quality)
 
     return JSONResponse(content={
         "success":      True,
         "filename":     filename,
-        "download_url": f"/api/stream?token={token}",
+        "download_url": download_url,
     })
 
-@app.get("/api/stream")
+@app.api_route("/api/stream", methods=["GET", "HEAD"])
 async def stream_audio(
+    request: Request,
     token: Optional[str] = None,
     url: Optional[str] = None,
     quality: Optional[str] = "192",
@@ -454,6 +461,7 @@ async def stream_audio(
     On-The-Fly Real-Time Audio Streaming (Cobalt-Style Pipeline).
     Pipes YouTube CDN audio through FFmpeg stdout directly to HTTP client response.
     Zero disk writes. Zero storage footprint. Instant playback & download.
+    Fully compatible with Download Managers (FDM, IDM, aria2, curl, browsers).
     """
     stream_url = None
     stream_title = "audio"
@@ -461,16 +469,18 @@ async def stream_audio(
     stream_quality = quality or "192"
     user_agent = None
 
-    # Option 1: Retrieve from pre-validated token
+    # Option 1: Retrieve from token without popping (token stays active for 15 mins for multi-connection managers)
     if token and token in _stream_tokens:
-        token_data = _stream_tokens.pop(token)
-        stream_url     = token_data["stream_url"]
-        stream_title   = token_data["title"]
-        stream_artist  = token_data["artist"]
-        stream_quality = token_data["quality"]
-        user_agent     = token_data["user_agent"]
-    # Option 2: Direct URL invocation
-    elif url:
+        token_data = _stream_tokens[token]
+        if (time.time() - token_data.get("created_at", 0)) < _TOKEN_TTL_SECONDS:
+            stream_url     = token_data["stream_url"]
+            stream_title   = token_data["title"]
+            stream_artist  = token_data["artist"]
+            stream_quality = token_data["quality"]
+            user_agent     = token_data["user_agent"]
+
+    # Option 2: Fallback to direct resolution if token expired or missing
+    if not stream_url and url:
         try:
             info = await asyncio.to_thread(_extract_stream_info, url.strip())
             stream_url     = info["stream_url"]
@@ -480,13 +490,30 @@ async def stream_audio(
             user_agent     = info["user_agent"]
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Failed to resolve audio stream: {str(exc)}")
-    else:
-        raise HTTPException(status_code=400, detail="Valid 'token' or 'url' query parameter is required.")
+
+    if not stream_url:
+        raise HTTPException(status_code=400, detail="Invalid, expired, or missing stream parameters.")
 
     is_native = stream_quality in ("native", "m4a")
     ext = "m4a" if is_native else "mp3"
     media_type = "audio/mp4" if is_native else "audio/mpeg"
     output_filename = f"{stream_title}.{ext}"
+
+    quoted_filename = urllib.parse.quote(output_filename)
+    ascii_filename  = re.sub(r'[^\x20-\x7E]', '', stream_title) or "audio"
+    content_disp    = f'attachment; filename="{ascii_filename}.{ext}"; filename*=UTF-8\'\'{quoted_filename}'
+
+    # Fast response for HEAD pre-checks from Download Managers (FDM, IDM)
+    if request.method == "HEAD":
+        return Response(
+            status_code=200,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": content_disp,
+                "Accept-Ranges":       "none",
+                "Cache-Control":       "no-cache, no-store, must-revalidate",
+            }
+        )
 
     # Build FFmpeg command for in-memory stream piping
     cmd = [
@@ -557,16 +584,12 @@ async def stream_audio(
                 except Exception:
                     pass
 
-    # RFC 5987 / RFC 6266 filename header
-    quoted_filename = urllib.parse.quote(output_filename)
-    ascii_filename  = re.sub(r'[^\x20-\x7E]', '', stream_title) or "audio"
-    content_disp    = f'attachment; filename="{ascii_filename}.{ext}"; filename*=UTF-8\'\'{quoted_filename}'
-
     return StreamingResponse(
         chunk_generator(),
         media_type=media_type,
         headers={
             "Content-Disposition": content_disp,
+            "Accept-Ranges":       "none",
             "Cache-Control":       "no-cache, no-store, must-revalidate",
             "Pragma":              "no-cache",
             "Expires":             "0",
