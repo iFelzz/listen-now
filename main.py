@@ -95,11 +95,14 @@ logger.info("FFmpeg binary selected: %s", FFMPEG_BIN)
 FFMPEG_LOCATION = str(Path(FFMPEG_BIN).parent) if Path(FFMPEG_BIN).is_file() else None
 
 # ── Git Commit Detection ─────────────────────────────────────
+# Embedded fallback hash matching the current release commit
+BUILTIN_COMMIT = "e826b01"
+
 def get_commit_hash() -> str:
-    """Detect current Git commit hash from env, git CLI, .git/HEAD, or version.json."""
+    """Detect current Git commit hash from env, git CLI, .git/HEAD, version.json, or builtin."""
     # 1. Environment variable (e.g. from Docker/Portainer build args)
     env_hash = os.environ.get("COMMIT_HASH") or os.environ.get("GIT_COMMIT")
-    if env_hash:
+    if env_hash and env_hash.strip() not in ("latest", "unknown", ""):
         return env_hash.strip()[:7]
 
     # 2. Direct git CLI execution if git binary is present
@@ -153,31 +156,11 @@ def get_commit_hash() -> str:
         except Exception:
             pass
 
-    return "latest"
-
-def fetch_github_latest_commit() -> Optional[str]:
-    """Fallback: query GitHub API for the latest commit hash on branch main."""
-    try:
-        import urllib.request
-        req = urllib.request.Request(
-            "https://api.github.com/repos/iFelzz/listen-now/commits/main",
-            headers={"User-Agent": "ListenNow/2.1", "Accept": "application/vnd.github.v3+json"}
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode("utf-8"))
-                sha = data.get("sha")
-                if sha:
-                    return sha.strip()[:7]
-    except Exception as exc:
-        logger.debug("GitHub API commit check failed: %s", exc)
-    return None
+    return BUILTIN_COMMIT
 
 COMMIT_HASH = get_commit_hash()
-if COMMIT_HASH == "latest":
-    gh_sha = fetch_github_latest_commit()
-    if gh_sha:
-        COMMIT_HASH = gh_sha
+if COMMIT_HASH in ("latest", "unknown", ""):
+    COMMIT_HASH = BUILTIN_COMMIT
 logger.info("Current Git commit hash: %s", COMMIT_HASH)
 
 def _get_base_ytdl_opts() -> dict[str, Any]:
@@ -375,19 +358,13 @@ async def favicon():
 async def get_version():
     """Return Git commit hash and app version."""
     global COMMIT_HASH
-    if COMMIT_HASH in ("latest", "unknown", ""):
-        fresh = get_commit_hash()
-        if fresh not in ("latest", ""):
-            COMMIT_HASH = fresh
-        else:
-            gh_sha = await asyncio.to_thread(fetch_github_latest_commit)
-            if gh_sha:
-                COMMIT_HASH = gh_sha
+    if not COMMIT_HASH or COMMIT_HASH in ("latest", "unknown"):
+        COMMIT_HASH = get_commit_hash()
 
     return {
         "commit": COMMIT_HASH,
-        "version": "2.1.1",
-        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{COMMIT_HASH}" if COMMIT_HASH not in ("latest", "") else "https://github.com/iFelzz/listen-now"
+        "version": "2.1.2",
+        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{COMMIT_HASH}"
     }
 
 @app.get("/api/health")
@@ -400,7 +377,7 @@ async def health():
         "active_streams": _active_streams_count,
         "commit": COMMIT_HASH,
         "disk_usage_bytes": 0,
-        "version": "2.1.1",
+        "version": "2.1.2",
     }
 
 @app.get("/api/storage")

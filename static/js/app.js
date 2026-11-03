@@ -628,22 +628,15 @@
           return res.json();
         })
         .then(data => {
-          const commit = (data && data.commit) ? String(data.commit).trim() : 'latest';
-          if (commit && commit !== 'latest') {
+          const commit = (data && data.commit) ? String(data.commit).trim() : '';
+          if (commit && commit !== 'latest' && commit !== 'unknown') {
             $commitLink.textContent = `#${commit}`;
             $commitLink.href = data.commit_url || `https://github.com/iFelzz/listen-now/commit/${commit}`;
             $commitLink.title = `Commit ${commit} on GitHub`;
-          } else {
-            $commitLink.textContent = '#latest';
-            $commitLink.href = 'https://github.com/iFelzz/listen-now';
-            $commitLink.title = 'Latest release on GitHub';
           }
         })
         .catch(err => {
-          console.warn('[Version] Could not fetch commit hash:', err);
-          if ($commitLink && $commitLink.textContent.includes('loading')) {
-            $commitLink.textContent = '#latest';
-          }
+          console.debug('[Version] Could not fetch live commit hash:', err);
         });
     }
 
