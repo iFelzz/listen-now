@@ -95,17 +95,75 @@ logger.info("FFmpeg binary selected: %s", FFMPEG_BIN)
 FFMPEG_LOCATION = str(Path(FFMPEG_BIN).parent) if Path(FFMPEG_BIN).is_file() else None
 
 # ── Git Commit Detection ─────────────────────────────────────
-# Embedded fallback hash matching the current release commit
-BUILTIN_COMMIT = "aca0fdc"
+_last_commit_check = 0.0
+_cached_commit_hash = ""
+
+def get_git_remote_commit() -> Optional[str]:
+    """Fetch latest commit hash from GitHub Git Smart HTTP protocol (no rate limits)."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "https://github.com/iFelzz/listen-now.git/info/refs?service=git-upload-pack",
+            headers={"User-Agent": "git/2.40.0"}
+        )
+        with urllib.request.urlopen(req, timeout=3.5) as resp:
+            data = resp.read().decode("utf-8", errors="ignore")
+            for line in data.splitlines():
+                if "refs/heads/main" in line:
+                    parts = line.split()
+                    raw = parts[0]
+                    sha = raw[-40:] if len(raw) >= 40 else raw
+                    if len(sha) == 40 and all(c in "0123456789abcdef" for c in sha.lower()):
+                        return sha[:7]
+    except Exception as exc:
+        logger.debug("Git smart protocol lookup error: %s", exc)
+    return None
 
 def get_commit_hash() -> str:
-    """Detect current Git commit hash from env, git CLI, .git/HEAD, version.json, or builtin."""
+    """Detect current Git commit hash dynamically from env, local .git, git CLI, or remote git protocol."""
+    global _last_commit_check, _cached_commit_hash
+    now = time.time()
+    if _cached_commit_hash and (now - _last_commit_check < 60):
+        return _cached_commit_hash
+
     # 1. Environment variable (e.g. from Docker/Portainer build args)
     env_hash = os.environ.get("COMMIT_HASH") or os.environ.get("GIT_COMMIT")
     if env_hash and env_hash.strip() not in ("latest", "unknown", ""):
-        return env_hash.strip()[:7]
+        _cached_commit_hash = env_hash.strip()[:7]
+        _last_commit_check = now
+        return _cached_commit_hash
 
-    # 2. Direct git CLI execution if git binary is present
+    # 2. Local .git directory (mounted from host via volume or present in workspace)
+    git_dir = BASE_DIR / ".git"
+    if git_dir.exists():
+        try:
+            head_file = git_dir / "HEAD"
+            if head_file.exists():
+                ref = head_file.read_text(encoding="utf-8").strip()
+                if ref.startswith("ref:"):
+                    rel_ref = ref.split(" ", 1)[1].strip()
+                    ref_path = git_dir / rel_ref
+                    if ref_path.exists():
+                        _cached_commit_hash = ref_path.read_text(encoding="utf-8").strip()[:7]
+                        _last_commit_check = now
+                        return _cached_commit_hash
+                    packed = git_dir / "packed-refs"
+                    if packed.exists():
+                        for line in packed.read_text(encoding="utf-8").splitlines():
+                            if line and not line.startswith(("#", "^")):
+                                parts = line.split()
+                                if len(parts) == 2 and parts[1] == rel_ref:
+                                    _cached_commit_hash = parts[0][:7]
+                                    _last_commit_check = now
+                                    return _cached_commit_hash
+                else:
+                    _cached_commit_hash = ref[:7]
+                    _last_commit_check = now
+                    return _cached_commit_hash
+        except Exception:
+            pass
+
+    # 3. Direct git CLI execution if git binary is present
     if shutil.which("git"):
         try:
             import subprocess
@@ -117,50 +175,35 @@ def get_commit_hash() -> str:
                 timeout=2,
             )
             if out and out.strip():
-                return out.strip()[:7]
+                _cached_commit_hash = out.strip()[:7]
+                _last_commit_check = now
+                return _cached_commit_hash
         except Exception:
             pass
 
-    # 3. Pure Python inspection of .git directory
-    git_dir = BASE_DIR / ".git"
-    if git_dir.exists():
-        try:
-            head_file = git_dir / "HEAD"
-            if head_file.exists():
-                ref = head_file.read_text(encoding="utf-8").strip()
-                if ref.startswith("ref:"):
-                    rel_ref = ref.split(" ", 1)[1].strip()
-                    ref_path = git_dir / rel_ref
-                    if ref_path.exists():
-                        return ref_path.read_text(encoding="utf-8").strip()[:7]
-                    packed = git_dir / "packed-refs"
-                    if packed.exists():
-                        for line in packed.read_text(encoding="utf-8").splitlines():
-                            if line and not line.startswith(("#", "^")):
-                                parts = line.split()
-                                if len(parts) == 2 and parts[1] == rel_ref:
-                                    return parts[0][:7]
-                else:
-                    return ref[:7]
-        except Exception:
-            pass
+    # 4. Fallback: Query live Git Smart HTTP protocol from origin main (unlimited, no auth required)
+    remote_sha = get_git_remote_commit()
+    if remote_sha:
+        _cached_commit_hash = remote_sha
+        _last_commit_check = now
+        return _cached_commit_hash
 
-    # 4. Fallback to version.json file generated during build / deployment
+    # 5. Fallback to version.json file generated during build / deployment
     vfile = BASE_DIR / "version.json"
     if vfile.exists():
         try:
             vdata = json.loads(vfile.read_text(encoding="utf-8"))
             commit = vdata.get("commit")
             if commit and commit not in ("latest", "unknown", ""):
-                return commit.strip()[:7]
+                _cached_commit_hash = commit.strip()[:7]
+                _last_commit_check = now
+                return _cached_commit_hash
         except Exception:
             pass
 
-    return BUILTIN_COMMIT
+    return _cached_commit_hash or "main"
 
 COMMIT_HASH = get_commit_hash()
-if COMMIT_HASH in ("latest", "unknown", ""):
-    COMMIT_HASH = BUILTIN_COMMIT
 logger.info("Current Git commit hash: %s", COMMIT_HASH)
 
 def _get_base_ytdl_opts() -> dict[str, Any]:
@@ -356,15 +399,12 @@ async def favicon():
 
 @app.get("/api/version")
 async def get_version():
-    """Return Git commit hash and app version."""
-    global COMMIT_HASH
-    if not COMMIT_HASH or COMMIT_HASH in ("latest", "unknown"):
-        COMMIT_HASH = get_commit_hash()
-
+    """Return Git commit hash and app version dynamically."""
+    commit = get_commit_hash()
     return {
-        "commit": COMMIT_HASH,
-        "version": "2.1.2",
-        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{COMMIT_HASH}"
+        "commit": commit,
+        "version": "2.1.3",
+        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}"
     }
 
 @app.get("/api/health")
@@ -375,9 +415,9 @@ async def health():
         "service": "Listen Now",
         "architecture": "zero-disk-stream-piping",
         "active_streams": _active_streams_count,
-        "commit": COMMIT_HASH,
+        "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.1.2",
+        "version": "2.1.3",
     }
 
 @app.get("/api/storage")
