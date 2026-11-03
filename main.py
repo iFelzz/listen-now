@@ -1,4 +1,4 @@
-"""
+﻿"""
 Listen Now – Zero-Disk Streaming Backend (Cobalt-Style Pipeline)
 ───────────────────────────────────────────────────────────────
 Architecture:
@@ -91,6 +91,49 @@ FFMPEG_BIN = get_ffmpeg_binary()
 logger.info("FFmpeg binary selected: %s", FFMPEG_BIN)
 
 FFMPEG_LOCATION = str(Path(FFMPEG_BIN).parent) if Path(FFMPEG_BIN).is_file() else None
+
+# ── Git Commit Detection ─────────────────────────────────────
+def get_commit_hash() -> str:
+    """Detect current Git commit hash from env, version.json, or .git/HEAD."""
+    env_hash = os.environ.get("COMMIT_HASH") or os.environ.get("GIT_COMMIT")
+    if env_hash:
+        return env_hash[:7]
+
+    git_dir = BASE_DIR / ".git"
+    if git_dir.exists():
+        try:
+            head_file = git_dir / "HEAD"
+            if head_file.exists():
+                ref = head_file.read_text(encoding="utf-8").strip()
+                if ref.startswith("ref:"):
+                    rel_ref = ref.split(" ", 1)[1].strip()
+                    ref_path = git_dir / rel_ref
+                    if ref_path.exists():
+                        return ref_path.read_text(encoding="utf-8").strip()[:7]
+                    packed = git_dir / "packed-refs"
+                    if packed.exists():
+                        for line in packed.read_text(encoding="utf-8").splitlines():
+                            if line and not line.startswith(("#", "^")):
+                                parts = line.split()
+                                if len(parts) == 2 and parts[1] == rel_ref:
+                                    return parts[0][:7]
+                else:
+                    return ref[:7]
+        except Exception:
+            pass
+
+    if shutil.which("git"):
+        try:
+            import subprocess
+            out = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(BASE_DIR), text=True)
+            return out.strip()
+        except Exception:
+            pass
+
+    return "latest"
+
+COMMIT_HASH = get_commit_hash()
+logger.info("Current Git commit hash: %s", COMMIT_HASH)
 
 def _get_base_ytdl_opts() -> dict[str, Any]:
     """Common base options for yt-dlp metadata extraction."""
@@ -272,6 +315,15 @@ async def favicon():
         return FileResponse(str(logo_path), media_type="image/png")
     raise HTTPException(status_code=404, detail="Favicon not found.")
 
+@app.get("/api/version")
+async def get_version():
+    """Return Git commit hash and app version."""
+    return {
+        "commit": COMMIT_HASH,
+        "version": "2.1.0",
+        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{COMMIT_HASH}" if COMMIT_HASH not in ("latest", "") else "https://github.com/iFelzz/listen-now"
+    }
+
 @app.get("/api/health")
 async def health():
     """Health & architecture check endpoint."""
@@ -280,6 +332,7 @@ async def health():
         "service": "Listen Now",
         "architecture": "zero-disk-stream-piping",
         "active_streams": _active_streams_count,
+        "commit": COMMIT_HASH,
         "disk_usage_bytes": 0,
         "version": "2.1.0",
     }

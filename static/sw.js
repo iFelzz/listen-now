@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Listen Now — Service Worker (v4)
  * Strategy:
  *   - API & Stream: Network-only, never cache
@@ -6,7 +6,7 @@
  *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'listen-now-v4';
+const CACHE_NAME = 'listen-now-v5';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
@@ -19,7 +19,7 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching app shell v4');
+      console.log('[SW] Pre-caching app shell v5');
       return cache.addAll(APP_SHELL);
     })
   );

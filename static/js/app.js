@@ -1,4 +1,4 @@
-﻿    'use strict';
+    'use strict';
 
     // ── DOM refs ──────────────────────────────────────────────
     const $form = document.getElementById('search-form');
@@ -616,3 +616,19 @@
       // Request notification permission after a short delay
       setTimeout(requestNotificationPermission, 3000);
     });
+
+    // ── Load and display Git commit hash badge ────────────────
+    function loadCommitHash() {
+      fetch('/api/version')
+        .then(res => res.json())
+        .then(data => {
+          const $commitLink = document.getElementById('commit-link');
+          if ($commitLink && data.commit) {
+            $commitLink.textContent = `#${data.commit}`;
+            $commitLink.href = data.commit_url || `https://github.com/iFelzz/listen-now/commit/${data.commit}`;
+            $commitLink.title = `Commit ${data.commit} on GitHub`;
+          }
+        })
+        .catch(() => {});
+    }
+    loadCommitHash();
