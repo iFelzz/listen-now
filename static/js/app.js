@@ -71,6 +71,8 @@
       currentPreferredQuality = localStorage.getItem('listen_now_quality') || '320';
     } catch (_) {}
 
+    let currentPlayingBtn = null;
+
     // Batch download state
     const selectedTracks = new Map(); // trackId -> trackObj
     let isBatchDownloading = false;
@@ -139,6 +141,30 @@
 
     const ICON_PLAY = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
     const ICON_PAUSE = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+
+    const TRACK_ICON_PLAY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+    const TRACK_ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+
+    function resetCurrentPlayingBtn() {
+      if (!currentPlayingBtn) return;
+      if (currentPlayingBtn.classList.contains('btn-track-play')) {
+        currentPlayingBtn.innerHTML = TRACK_ICON_PLAY;
+      } else {
+        currentPlayingBtn.innerHTML = ICON_PLAY;
+        currentPlayingBtn.classList.remove('playing');
+      }
+      currentPlayingBtn = null;
+    }
+
+    function updateCurrentPlayingBtn(isPlaying) {
+      if (!currentPlayingBtn) return;
+      if (currentPlayingBtn.classList.contains('btn-track-play')) {
+        currentPlayingBtn.innerHTML = isPlaying ? TRACK_ICON_PAUSE : TRACK_ICON_PLAY;
+      } else {
+        currentPlayingBtn.innerHTML = isPlaying ? ICON_PAUSE : ICON_PLAY;
+        currentPlayingBtn.classList.toggle('playing', isPlaying);
+      }
+    }
 
     // ── Build card HTML ───────────────────────────────────────
 
@@ -251,11 +277,7 @@
             return;
           }
 
-          if (currentPlayingBtn) {
-            currentPlayingBtn.innerHTML = ICON_PLAY;
-            currentPlayingBtn.classList.remove('playing');
-            currentPlayingBtn = null; // Clear stale ref before new song loads
-          }
+          resetCurrentPlayingBtn();
 
           btn.classList.add('loading');
           btn.innerHTML = ICON_SPIN;
@@ -693,16 +715,24 @@
           const prevUrl = btn.dataset.preview;
           if (!prevUrl) return;
 
-          if (audioPlayer.src === prevUrl && !audioPlayer.paused) {
-            audioPlayer.pause();
-            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+          // Same track button clicked: toggle play / pause
+          if (currentPlayingBtn === btn) {
+            if (audioPlayer.paused) {
+              audioPlayer.play();
+            } else {
+              audioPlayer.pause();
+            }
             return;
           }
+
+          // Different button clicked: reset previous active button icon back to PLAY
+          resetCurrentPlayingBtn();
 
           audioPlayer.src = prevUrl;
           await audioPlayer.play();
           showMiniPlayer(btn.dataset.title, btn.dataset.artist, btn.dataset.art);
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+          btn.innerHTML = TRACK_ICON_PAUSE;
+          currentPlayingBtn = btn;
         });
       });
 
@@ -920,7 +950,6 @@
     const audioPlayer = document.getElementById('global-player');
     const $volumeControl = document.getElementById('volume-control');
     const $volumeSlider = document.getElementById('volume-slider');
-    let currentPlayingBtn = null;
 
     // ── Mini Player DOM refs ──────────────────────────────────
     const $miniPlayer = document.getElementById('mini-player');
@@ -984,32 +1013,20 @@
     audioPlayer.addEventListener('play', () => {
       $volumeControl.classList.add('show');
       setMiniIcon(false); // show pause icon in mini player
-      // Restore pause icon on card button (covers Space-key resume)
-      if (currentPlayingBtn) {
-        currentPlayingBtn.innerHTML = ICON_PAUSE;
-        currentPlayingBtn.classList.add('playing');
-      }
+      updateCurrentPlayingBtn(true);
     });
 
     audioPlayer.addEventListener('ended', () => {
       $volumeControl.classList.remove('show');
       hideMiniPlayer();
-      if (currentPlayingBtn) {
-        currentPlayingBtn.innerHTML = ICON_PLAY;
-        currentPlayingBtn.classList.remove('playing');
-        currentPlayingBtn = null;
-      }
+      resetCurrentPlayingBtn();
     });
 
     audioPlayer.addEventListener('pause', () => {
       $volumeControl.classList.remove('show');
       setMiniIcon(true); // show play icon in mini player
-      // Update card button icon to PLAY, but KEEP currentPlayingBtn reference
-      // so Space bar can resume without losing track of which song is active.
-      if (currentPlayingBtn && !audioPlayer.ended) {
-        currentPlayingBtn.innerHTML = ICON_PLAY;
-        currentPlayingBtn.classList.remove('playing');
-        // NOTE: intentionally NOT setting currentPlayingBtn = null here
+      if (!audioPlayer.ended) {
+        updateCurrentPlayingBtn(false);
       }
     });
 
@@ -1168,22 +1185,13 @@
         if (currentPlayingBtn) {
           if (audioPlayer.paused) {
             audioPlayer.play();
-            currentPlayingBtn.classList.add('playing');
-            currentPlayingBtn.innerHTML = ICON_PAUSE;
+            updateCurrentPlayingBtn(true);
           } else {
             audioPlayer.pause();
           }
         }
       } else if (e.key === 'Escape') {
-        // Explicitly reset button state FIRST (before pause fires),
-        // then reset playback position. This avoids the race condition where
-        // audioPlayer.currentTime = 0 runs before the pause event, causing
-        // the pause handler's `currentTime > 0` check to fail silently.
-        if (currentPlayingBtn) {
-          currentPlayingBtn.innerHTML = ICON_PLAY;
-          currentPlayingBtn.classList.remove('playing');
-          currentPlayingBtn = null;
-        }
+        resetCurrentPlayingBtn();
         $volumeControl.classList.remove('show');
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
