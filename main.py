@@ -563,6 +563,55 @@ async def prepare_download(request: Request, body: DownloadRequest):
         "download_url": download_url,
     })
 
+def fix_id3_size_in_stream(buffer: bytearray) -> int:
+    """
+    FFmpeg cannot seek back to update the ID3v2 tag size when writing to pipe:1 (stdout).
+    This function parses the consecutive ID3v2.3 frames (TIT2, TPE1, APIC, etc.),
+    calculates the total ID3v2 payload size, and patches bytes 6-9 with the proper syncsafe integer.
+    Returns the total tag size (including 10-byte header) if successfully parsed, or 0 if more data is needed.
+    """
+    if len(buffer) < 10 or buffer[:3] != b"ID3":
+        return 0
+
+    offset = 10
+    total_len = len(buffer)
+
+    while True:
+        if offset + 10 > total_len:
+            # Need more data from pipe to read the next frame header
+            return 0
+
+        frame_id = bytes(buffer[offset:offset+4])
+        # If frame_id is padding (zeros) or MPEG audio sync word (0xFF 0xFB...), we reached the end of ID3 frames
+        if frame_id == b"\x00\x00\x00\x00" or (buffer[offset] == 0xFF and (buffer[offset+1] & 0xE0) == 0xE0):
+            break
+
+        # Check if frame_id consists of 4 alphanumeric uppercase characters (e.g. TIT2, TPE1, APIC)
+        if not (all(0x20 <= b <= 0x7E for b in frame_id) and frame_id.isalnum()):
+            break
+
+        frame_size = int.from_bytes(buffer[offset+4:offset+8], "big")
+        if frame_size <= 0:
+            break
+
+        if offset + 10 + frame_size > total_len:
+            # Full frame (e.g. large APIC image) is still arriving in upcoming chunks
+            return 0
+
+        offset += 10 + frame_size
+
+    # The ID3v2 size field represents the total tag size EXCLUDING the 10-byte header
+    id3_payload_size = offset - 10
+    if id3_payload_size > 0:
+        # Encode as 4-byte syncsafe integer (7 bits per byte)
+        buffer[6] = (id3_payload_size >> 21) & 0x7F
+        buffer[7] = (id3_payload_size >> 14) & 0x7F
+        buffer[8] = (id3_payload_size >> 7)  & 0x7F
+        buffer[9] = id3_payload_size & 0x7F
+        return offset
+
+    return 0
+
 @app.api_route("/api/stream", methods=["GET", "HEAD"])
 async def stream_audio(
     request: Request,
@@ -718,12 +767,31 @@ async def stream_audio(
         global _active_streams_count
         _active_streams_count += 1
         logger.info("Stream opened: %s (Active streams: %d)", output_filename, _active_streams_count)
+
+        header_patched = False
+        initial_buffer = bytearray()
+
         try:
             while True:
                 chunk = await process.stdout.read(64 * 1024)  # 64 KB chunks
                 if not chunk:
+                    # Stream finished: flush any remaining initial buffer
+                    if initial_buffer:
+                        if not header_patched and not is_native:
+                            fix_id3_size_in_stream(initial_buffer)
+                        yield bytes(initial_buffer)
                     break
-                yield chunk
+
+                if not header_patched and not is_native:
+                    initial_buffer.extend(chunk)
+                    patched = fix_id3_size_in_stream(initial_buffer)
+                    # Once patched or safety threshold (512 KB) reached, flush header buffer
+                    if patched > 0 or len(initial_buffer) >= 512 * 1024:
+                        header_patched = True
+                        yield bytes(initial_buffer)
+                        initial_buffer.clear()
+                else:
+                    yield chunk
         except (asyncio.CancelledError, GeneratorExit):
             logger.info("Client disconnected early from stream: %s", output_filename)
         finally:
