@@ -96,7 +96,7 @@ FFMPEG_LOCATION = str(Path(FFMPEG_BIN).parent) if Path(FFMPEG_BIN).is_file() els
 
 # ── Git Commit Detection ─────────────────────────────────────
 # Embedded fallback hash matching the current release commit
-BUILTIN_COMMIT = "e826b01"
+BUILTIN_COMMIT = "aca0fdc"
 
 def get_commit_hash() -> str:
     """Detect current Git commit hash from env, git CLI, .git/HEAD, version.json, or builtin."""
