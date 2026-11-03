@@ -42,8 +42,56 @@ _NOISE_PATTERNS = [
     r"(?i)\(\s*pre-debut\s+song\s*\)",
     r"(?i)\[\s*karaoke\s*(version)?\s*\]",
     r"(?i)\(\s*karaoke\s*(version)?\s*\)",
+    r"(?i)\b(official\s+music\s+video|official\s+video|official\s+audio|music\s+video|lyric\s+video)\b",
+    r"(?i)\b(official\s+mv|official\s+m/v)\b",
     r"(?i)\b(4k|hd|1080p|720p)\b",
 ]
+
+QUOTE_CHARS = "'\"‘“’”`"
+
+# Record label channels / publisher channels that should NEVER be attributed as the track artist
+_LABEL_CHANNELS = {
+    "smtown", "hybe labels", "hybe", "jyp entertainment", "jyp",
+    "yg entertainment", "yg", "starshiptv", "starship", "1thek", "원더케이",
+    "stone music entertainment", "stone music", "cube_official", "cube entertainment",
+    "kq entertainment", "fnc official", "fnc entertainment", "pledis entertainment",
+    "woollim", "mnet k-pop", "mnet", "all the k-pop", "studio choom", "kbs kpop",
+    "bighit music", "belift lab", "source music", "ador", "wakeone",
+    "genie music", "warnermusic", "warner records", "warner music",
+    "sony music", "universal music", "spinnin' records", "monstercat",
+    "trap nation", "lyrical lemonade", "ultra records", "vevo", "fueled by ramen",
+    "atlantic records", "columbia records", "interscope records", "rca records",
+    "def jam", "republic records", "epic records", "virgin music", "island records"
+}
+
+def clean_label_str(s: str) -> str:
+    """Keep unicode letters and digits, strip whitespace and punctuation."""
+    return re.sub(r"[^\w]", "", s, flags=re.UNICODE).lower()
+
+def is_label_channel(name: str) -> bool:
+    """Check if a channel / uploader name belongs to a record label or publisher."""
+    if not name:
+        return False
+    norm = clean_label_str(name)
+    if not norm:
+        return False
+    for label in _LABEL_CHANNELS:
+        norm_label = clean_label_str(label)
+        if not norm_label:
+            continue
+        # Exact match
+        if norm_label == norm:
+            return True
+        # Substring match only if label is sufficiently specific (>= 4 chars)
+        if len(norm_label) >= 4 and norm_label in norm:
+            return True
+        # For short 2-3 char labels like 'yg', 'jyp', match as whole token
+        if len(norm_label) < 4:
+            if re.search(rf"(?i)\b{re.escape(label)}\b", name):
+                return True
+    if re.search(r"(?i)\b(records|recordings|entertainment|labels|music group|publishing)\b", name):
+        return True
+    return False
 
 def clean_noise(text: str) -> str:
     """Strip video annotations like [MV], (Official Audio), (Lyrics), and all quote marks."""
@@ -59,25 +107,58 @@ def clean_noise(text: str) -> str:
 
 def parse_artist_and_title(raw_title: str, uploader: str = "") -> Tuple[str, str]:
     """
-    Parse 'Artist - Title' from raw YouTube video title.
-    Returns (artist, title).
+    Parse (Artist, Title) from raw YouTube video title.
+    Supports:
+      1. Dash / colon separator: "Artist - Title", "Artist — Title"
+      2. Quoted song title: "Artist 'Song Title' MV", "Artist 'Song's Title' Official Video"
+      3. Uploader in title: "Artist Song Title"
+      4. Fallback to uploader (skipping record labels)
     """
-    cleaned = clean_noise(raw_title)
-
-    # Check for separator ' - ' or ' – ' or ' — '
+    # 1. Check for separator ' - ' or ' – ' or ' — ' or ' : '
     separators = [" - ", " – ", " — ", " : "]
     for sep in separators:
-        if sep in cleaned:
-            parts = cleaned.split(sep, 1)
-            artist = clean_noise(parts[0])
-            title = clean_noise(parts[1])
-            # If artist ends with 'VEVO' or 'Official', clean it
-            artist = re.sub(r"(?i)\s*(vevo|official|channel)$", "", artist).strip()
-            return artist, title
+        if sep in raw_title:
+            parts = raw_title.split(sep, 1)
+            p_artist = clean_noise(parts[0])
+            p_title  = clean_noise(parts[1])
+            p_artist = re.sub(r"(?i)\s*(vevo|official|channel)$", "", p_artist).strip()
+            # If the artist part is a record label (e.g. "SMTOWN - Red Velvet 'Psycho'"), check quotes in title
+            if is_label_channel(p_artist):
+                quote_indices = [i for i, c in enumerate(parts[1]) if c in QUOTE_CHARS]
+                if len(quote_indices) >= 2:
+                    cand_art = parts[1][:quote_indices[0]].strip()
+                    cand_tit = parts[1][quote_indices[0]+1:quote_indices[-1]].strip()
+                    if cand_art and cand_tit:
+                        return clean_noise(cand_art), clean_noise(cand_tit)
+                return "Unknown Artist", p_title
+            return p_artist, p_title
 
-    # Fallback: clean uploader as artist
-    clean_uploader = re.sub(r"(?i)\s*(vevo|official|channel|\s*-\s*topic)$", "", uploader).strip()
-    return clean_uploader or "Unknown Artist", cleaned
+    # 2. Check for quoted song title pattern:
+    # e.g. Red Velvet 레드벨벳 'Surfin' Boy' MV
+    # e.g. Red Velvet 레드벨벳 'Psycho' MV
+    # e.g. aespa 에스파 'Supernova' MV
+    # e.g. NewJeans (뉴진스) 'Super Shy' Official MV
+    quote_indices = [i for i, c in enumerate(raw_title) if c in QUOTE_CHARS]
+    if len(quote_indices) >= 2:
+        q_start = quote_indices[0]
+        q_end = quote_indices[-1]
+        cand_artist = raw_title[:q_start].strip()
+        cand_title  = raw_title[q_start+1:q_end].strip()
+        if cand_artist and cand_title and len(cand_artist) <= 80:
+            return clean_noise(cand_artist), clean_noise(cand_title)
+
+    cleaned = clean_noise(raw_title)
+
+    # 3. If uploader is known and not a record label
+    if uploader and not is_label_channel(uploader):
+        clean_up = clean_noise(re.sub(r"(?i)\s*(vevo|official|channel|\s*-\s*topic)$", "", uploader))
+        if clean_up and clean_up.lower() in cleaned.lower():
+            sub_title = re.sub(rf"(?i)\b{re.escape(clean_up)}\b", "", cleaned).strip()
+            if sub_title:
+                return clean_up, sub_title
+        return clean_up or "Unknown Artist", cleaned
+
+    return "Unknown Artist", cleaned
 
 def fetch_itunes_metadata(artist: str, title: str) -> Optional[Dict[str, Any]]:
     """
@@ -191,6 +272,10 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
     query_artist = official_artist or parsed_artist
     query_title  = official_track or parsed_title
 
+    # Never allow a record label channel name (e.g. SMTOWN, HYBE, JYP) to be the artist query
+    if is_label_channel(query_artist):
+        query_artist = official_artist or (parsed_artist if not is_label_channel(parsed_artist) else "Unknown Artist")
+
     # 2. Query iTunes Search API for official studio cover & metadata
     itunes_data = fetch_itunes_metadata(query_artist, query_title)
     if itunes_data and itunes_data.get("poster_url"):
@@ -202,11 +287,13 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
     upload_date = yt_info.get("upload_date") or ""
     year = upload_date[:4] if len(upload_date) >= 4 else ""
 
-    logger.info("Using YouTube thumbnail fallback for: %s - %s", query_artist, query_title)
+    final_artist = query_artist if not is_label_channel(query_artist) else "Unknown Artist"
+
+    logger.info("Using YouTube thumbnail fallback for: %s - %s", final_artist, query_title)
     return {
         "title":      query_title,
-        "artist":     query_artist,
-        "album":      official_album or f"{query_title} - Single",
+        "artist":     final_artist,
+        "album":      official_album or (f"{query_title} - Single" if final_artist != "Unknown Artist" else ""),
         "year":       year,
         "poster_url": fallback_poster,
         "source":     "youtube",

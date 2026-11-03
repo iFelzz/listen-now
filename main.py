@@ -365,10 +365,18 @@ def _extract_stream_info(url: str, raw_title: str = "") -> dict:
         # Resolve rich official metadata (cover art, clean title, artist, album, year)
         rich_meta = metadata_resolver.resolve_rich_metadata(info, yt_raw_title)
 
+        resolved_artist = rich_meta.get("artist")
+        if not resolved_artist or resolved_artist == "Unknown Artist":
+            uploader = info.get("uploader") or ""
+            if uploader and not metadata_resolver.is_label_channel(uploader):
+                resolved_artist = uploader
+            else:
+                resolved_artist = "Unknown Artist"
+
         return {
             "stream_url": stream_url,
             "title":      rich_meta.get("title") or info.get("title") or "audio",
-            "artist":     rich_meta.get("artist") or info.get("uploader") or "Unknown Artist",
+            "artist":     resolved_artist,
             "album":      rich_meta.get("album") or "",
             "year":       rich_meta.get("year") or "",
             "poster_url": rich_meta.get("poster_url") or "",
@@ -576,7 +584,10 @@ async def prepare_download(request: Request, body: DownloadRequest):
     }
 
     ext = "m4a" if quality in ("native", "m4a") else "mp3"
-    if clean_artist and clean_artist.lower() not in clean_title.lower() and clean_artist != "Unknown Artist":
+    if (clean_artist
+        and clean_artist != "Unknown Artist"
+        and clean_artist.lower() not in clean_title.lower()
+        and not metadata_resolver.is_label_channel(clean_artist)):
         display_name = f"{clean_artist} - {clean_title}"
     else:
         display_name = clean_title
@@ -717,7 +728,10 @@ async def stream_audio(
     is_native = stream_quality in ("native", "m4a")
     ext = "m4a" if is_native else "mp3"
     media_type = "audio/mp4" if is_native else "audio/mpeg"
-    if stream_artist and stream_artist.lower() not in stream_title.lower() and stream_artist != "Unknown Artist":
+    if (stream_artist
+        and stream_artist != "Unknown Artist"
+        and stream_artist.lower() not in stream_title.lower()
+        and not metadata_resolver.is_label_channel(stream_artist)):
         display_filename = f"{stream_artist} - {stream_title}"
     else:
         display_filename = stream_title
