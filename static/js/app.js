@@ -27,6 +27,10 @@
     let allSearchResults = [];
     let currentPage = 1;
     let itemsPerPage = 10;
+    let currentPreferredQuality = '320';
+    try {
+      currentPreferredQuality = localStorage.getItem('listen_now_quality') || '320';
+    } catch (_) {}
 
     // ── Helpers ───────────────────────────────────────────────
 
@@ -95,6 +99,10 @@
       const cardId = `card-${index}`;
       const btnId = `btn-dl-${index}`;
 
+      const is128 = currentPreferredQuality === '128';
+      const is192 = currentPreferredQuality === '192';
+      const is320 = currentPreferredQuality === '320';
+
       return `
     <article class="card" id="${cardId}" role="listitem" aria-label="${esc(item.title)}">
       <div class="card-thumb-wrap">
@@ -127,16 +135,16 @@
 
       <div class="card-action">
         <div class="quality-selector" role="group" aria-label="Audio quality">
-          <button class="quality-btn" data-card="${index}" data-q="128" aria-pressed="false">128k</button>
-          <button class="quality-btn active" data-card="${index}" data-q="192" aria-pressed="true">192k</button>
-          <button class="quality-btn" data-card="${index}" data-q="320" aria-pressed="false">320k</button>
+          <button class="quality-btn ${is128 ? 'active' : ''}" data-card="${index}" data-q="128" aria-pressed="${is128}">128k</button>
+          <button class="quality-btn ${is192 ? 'active' : ''}" data-card="${index}" data-q="192" aria-pressed="${is192}">192k</button>
+          <button class="quality-btn ${is320 ? 'active' : ''}" data-card="${index}" data-q="320" aria-pressed="${is320}">320k</button>
         </div>
         <button
           class="btn-download"
           id="${btnId}"
           data-url="${esc(item.url)}"
           data-title="${esc(item.title)}"
-          data-quality="192"
+          data-quality="${currentPreferredQuality}"
           aria-label="Download MP3: ${esc(item.title)}"
           title="Download as MP3"
         >
@@ -173,17 +181,10 @@
 
       $paginationControls.style.display = allSearchResults.length > itemsPerPage ? 'flex' : 'none';
 
-      // Attach quality selector handlers
+      // Attach quality selector handlers (Smart sync: clicking any card syncs all cards + header)
       document.querySelectorAll('.quality-btn').forEach(qBtn => {
         qBtn.addEventListener('click', () => {
-          const cardIdx = qBtn.dataset.card;
-          const quality = qBtn.dataset.q;
-          document.querySelectorAll(`.quality-btn[data-card="${cardIdx}"]`).forEach(b => {
-            b.classList.toggle('active', b === qBtn);
-            b.setAttribute('aria-pressed', b === qBtn ? 'true' : 'false');
-          });
-          const dlBtn = document.getElementById(`btn-dl-${cardIdx}`);
-          if (dlBtn) dlBtn.dataset.quality = quality;
+          setGlobalQuality(qBtn.dataset.q);
         });
       });
 
@@ -263,6 +264,45 @@
       currentPage = 1;
       renderPage();
     });
+
+    // ── Global Quality Sync ───────────────────────────────────
+
+    function setGlobalQuality(quality) {
+      if (!quality) return;
+      currentPreferredQuality = String(quality);
+      try {
+        localStorage.setItem('listen_now_quality', currentPreferredQuality);
+      } catch (_) {}
+
+      // 1. Sync header toggle buttons
+      document.querySelectorAll('.global-q-btn').forEach(btn => {
+        const isActive = btn.dataset.quality === currentPreferredQuality;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      // 2. Sync all card quality buttons
+      document.querySelectorAll('.quality-btn').forEach(btn => {
+        const isActive = btn.dataset.q === currentPreferredQuality;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      // 3. Update all card download buttons
+      document.querySelectorAll('.btn-download').forEach(dlBtn => {
+        dlBtn.dataset.quality = currentPreferredQuality;
+      });
+    }
+
+    // Attach listeners to header global quality buttons
+    document.querySelectorAll('.global-q-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setGlobalQuality(btn.dataset.quality);
+      });
+    });
+
+    // Initialize UI with preferred quality
+    setGlobalQuality(currentPreferredQuality);
 
     // ── Search ───────────────────────────────────────────────
 
@@ -455,7 +495,7 @@
 
       const btnText = btn.querySelector('.btn-text');
       const progressFill = btn.querySelector('.progress-fill');
-      const quality = btn.dataset.quality || '192';
+      const quality = btn.dataset.quality || currentPreferredQuality || '320';
       const label = quality === 'm4a' ? 'M4A' : 'MP3';
 
       btnText.innerHTML = `${ICON_SPIN} Connecting…`;

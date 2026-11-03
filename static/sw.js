@@ -1,12 +1,12 @@
 /**
- * Listen Now — Service Worker (v8)
+ * Listen Now — Service Worker (v9)
  * Strategy:
  *   - API & Stream: Network-only, never cache
  *   - Navigation (HTML): Network-first with cache fallback
  *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'listen-now-v8';
+const CACHE_NAME = 'listen-now-v9';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
