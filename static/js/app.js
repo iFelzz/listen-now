@@ -23,7 +23,46 @@
     const $pageCurrent = document.getElementById('page-current');
     const $pageTotal = document.getElementById('page-total');
 
+    // Artist & Mode DOM refs
+    const $tabModeSongs = document.getElementById('tab-mode-songs');
+    const $tabModeArtists = document.getElementById('tab-mode-artists');
+    const $artistSearchResults = document.getElementById('artist-search-results');
+    const $artistResultsGrid = document.getElementById('artist-results-grid');
+    const $artistResultsCount = document.getElementById('artist-results-count');
+
+    // Artist Discography DOM refs
+    const $artistView = document.getElementById('artist-view');
+    const $btnBackArtist = document.getElementById('btn-back-artist');
+    const $artistAvatar = document.getElementById('artist-avatar');
+    const $artistName = document.getElementById('artist-name');
+    const $artistGenre = document.getElementById('artist-genre');
+    const $artistStats = document.getElementById('artist-stats');
+    const $tabTopSongs = document.getElementById('tab-top-songs');
+    const $tabAlbums = document.getElementById('tab-albums');
+    const $panelTopSongs = document.getElementById('panel-top-songs');
+    const $panelAlbums = document.getElementById('panel-albums');
+    const $topSongsList = document.getElementById('top-songs-list');
+    const $albumsGrid = document.getElementById('albums-grid');
+    const $btnSelectAllTop = document.getElementById('btn-select-all-top');
+
+    // Batch Action Bar DOM refs
+    const $batchActionBar = document.getElementById('batch-action-bar');
+    const $batchCount = document.getElementById('batch-count');
+    const $btnBatchClear = document.getElementById('btn-batch-clear');
+    const $btnBatchDownload = document.getElementById('btn-batch-download');
+    const $btnBatchDlText = document.getElementById('btn-batch-dl-text');
+
+    // Batch Progress Widget DOM refs
+    const $batchProgressWidget = document.getElementById('batch-progress-widget');
+    const $batchProgressTitle = document.getElementById('batch-progress-title');
+    const $batchProgressSub = document.getElementById('batch-progress-sub');
+    const $batchProgressFill = document.getElementById('batch-progress-fill');
+    const $batchProgressCount = document.getElementById('batch-progress-count');
+    const $batchProgressStatus = document.getElementById('batch-progress-status');
+    const $btnBatchCancel = document.getElementById('btn-batch-cancel');
+
     // Global state
+    let searchMode = 'songs'; // 'songs' | 'artists'
     let allSearchResults = [];
     let currentPage = 1;
     let itemsPerPage = 10;
@@ -31,6 +70,13 @@
     try {
       currentPreferredQuality = localStorage.getItem('listen_now_quality') || '320';
     } catch (_) {}
+
+    // Batch download state
+    const selectedTracks = new Map(); // trackId -> trackObj
+    let isBatchDownloading = false;
+    let cancelBatchDownload = false;
+    let lastArtistSearchResults = [];
+    let currentDiscography = null;
 
     // ── Helpers ───────────────────────────────────────────────
 
@@ -49,6 +95,8 @@
       $noResults.style.display = state === 'no-results' ? '' : 'none';
       $results.classList.toggle('visible', state === 'results');
       $loading.classList.toggle('visible', state === 'loading');
+      if ($artistSearchResults) $artistSearchResults.style.display = state === 'artists' ? '' : 'none';
+      if ($artistView) $artistView.style.display = state === 'artist-view' ? '' : 'none';
     }
 
     /** Render a toast notification */
@@ -304,15 +352,58 @@
     // Initialize UI with preferred quality
     setGlobalQuality(currentPreferredQuality);
 
+    // ── Search Mode Switcher ──────────────────────────────────
+    if ($tabModeSongs && $tabModeArtists) {
+      $tabModeSongs.addEventListener('click', () => {
+        searchMode = 'songs';
+        $tabModeSongs.classList.add('active');
+        $tabModeSongs.setAttribute('aria-selected', 'true');
+        $tabModeArtists.classList.remove('active');
+        $tabModeArtists.setAttribute('aria-selected', 'false');
+        $input.placeholder = 'Type the Song Title, or Paste a YouTube URL...';
+        clearSelection();
+        if (allSearchResults.length > 0) {
+          showState('results');
+        } else {
+          showState('empty');
+        }
+      });
+
+      $tabModeArtists.addEventListener('click', () => {
+        searchMode = 'artists';
+        $tabModeArtists.classList.add('active');
+        $tabModeArtists.setAttribute('aria-selected', 'true');
+        $tabModeSongs.classList.remove('active');
+        $tabModeSongs.setAttribute('aria-selected', 'false');
+        $input.placeholder = 'Ketik nama artis atau band (contoh: Red Velvet, Coldplay)…';
+        clearSelection();
+        if (currentDiscography) {
+          showState('artist-view');
+        } else if (lastArtistSearchResults.length > 0) {
+          showState('artists');
+        } else {
+          showState('empty');
+        }
+      });
+    }
+
     // ── Search ───────────────────────────────────────────────
 
     async function performSearch(query) {
+      if (!query || !query.trim()) return;
+      const q = query.trim();
+
+      if (searchMode === 'artists') {
+        await performArtistSearch(q);
+        return;
+      }
+
       showState('loading');
       $loadingText.textContent = 'Searching for songs…';
       $searchBtn.disabled = true;
 
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=50`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=50`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -339,6 +430,480 @@
       } finally {
         $searchBtn.disabled = false;
       }
+    }
+
+    // ── Artist Search & Discography ───────────────────────────
+
+    async function performArtistSearch(query) {
+      showState('loading');
+      $loadingText.textContent = `Mencari katalog diskografi ${query}…`;
+      $searchBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/artist/search?q=${encodeURIComponent(query)}&limit=8`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+        const artists = data.results || [];
+        lastArtistSearchResults = artists;
+
+        if (artists.length === 0) {
+          showState('no-results');
+          return;
+        }
+
+        if (artists.length === 1) {
+          await loadArtistDiscography(artists[0].artist_id);
+          return;
+        }
+
+        renderArtistResults(artists);
+      } catch (err) {
+        console.error('[Artist Search Error]', err);
+        $errorMsg.textContent = err.message || 'Gagal mencari artis. Silakan coba lagi.';
+        showState('error');
+      } finally {
+        $searchBtn.disabled = false;
+      }
+    }
+
+    function renderArtistResults(artists) {
+      $artistResultsCount.textContent = `${artists.length} artis ditemukan`;
+      $artistResultsGrid.innerHTML = artists.map(art => `
+        <div class="artist-card" data-artist-id="${art.artist_id}">
+          <div class="artist-card-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.6rem;">🎤</div>
+          <div class="artist-card-info">
+            <div class="artist-card-name" title="${esc(art.name)}">${esc(art.name)}</div>
+            <div class="artist-card-genre">${esc(art.genre)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      $artistResultsGrid.querySelectorAll('.artist-card').forEach(card => {
+        card.addEventListener('click', () => {
+          loadArtistDiscography(card.dataset.artistId);
+        });
+      });
+
+      showState('artists');
+    }
+
+    async function loadArtistDiscography(artistId) {
+      showState('loading');
+      $loadingText.textContent = 'Memuat diskografi & seluruh lagu…';
+      $searchBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/artist/${artistId}/discography`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+        currentDiscography = data;
+        renderDiscography(data);
+        showState('artist-view');
+      } catch (err) {
+        console.error('[Discography Error]', err);
+        $errorMsg.textContent = err.message || 'Gagal memuat diskografi artis.';
+        showState('error');
+      } finally {
+        $searchBtn.disabled = false;
+      }
+    }
+
+    if ($btnBackArtist) {
+      $btnBackArtist.addEventListener('click', () => {
+        if (lastArtistSearchResults.length > 1) {
+          showState('artists');
+        } else if (allSearchResults.length > 0) {
+          searchMode = 'songs';
+          $tabModeSongs.classList.add('active');
+          $tabModeArtists.classList.remove('active');
+          showState('results');
+        } else {
+          showState('empty');
+        }
+      });
+    }
+
+    // Discography Sub-tabs (Top Songs vs Albums)
+    if ($tabTopSongs && $tabAlbums) {
+      $tabTopSongs.addEventListener('click', () => {
+        $tabTopSongs.classList.add('active');
+        $tabAlbums.classList.remove('active');
+        $panelTopSongs.style.display = 'block';
+        $panelAlbums.style.display = 'none';
+      });
+
+      $tabAlbums.addEventListener('click', () => {
+        $tabAlbums.classList.add('active');
+        $tabTopSongs.classList.remove('active');
+        $panelTopSongs.style.display = 'none';
+        $panelAlbums.style.display = 'block';
+      });
+    }
+
+    function renderDiscography(disco) {
+      $artistName.textContent = disco.name;
+      $artistGenre.textContent = disco.genre || 'Music';
+      $artistStats.textContent = `${disco.top_songs.length} Lagu Terpopuler • ${disco.albums.length} Album / EP`;
+      $artistAvatar.src = disco.artwork_url || '/static/logo.png';
+      $artistAvatar.onerror = () => { $artistAvatar.src = '/static/logo.png'; };
+
+      // Render Top Songs List
+      $topSongsList.innerHTML = disco.top_songs.map(track => buildTrackRow(track)).join('');
+      attachTrackRowListeners($topSongsList);
+
+      // Render Albums List
+      $albumsGrid.innerHTML = disco.albums.map(album => `
+        <div class="album-card" id="album-card-${album.album_id}" data-album-id="${album.album_id}">
+          <div class="album-header" data-album-id="${album.album_id}">
+            <img class="album-art" src="${album.artwork_url || '/static/logo.png'}" alt="Cover" loading="lazy" onerror="this.src='/static/logo.png'">
+            <div class="album-info">
+              <div class="album-title" title="${esc(album.title)}">${esc(album.title)}</div>
+              <div class="album-meta-text">${album.year ? album.year + ' • ' : ''}${album.track_count} Lagu • ${esc(album.genre)}</div>
+            </div>
+            <div class="album-actions">
+              <button type="button" class="btn-select-album" data-album-id="${album.album_id}">
+                Pilih Album
+              </button>
+              <svg class="album-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="album-tracks-container" id="album-tracks-${album.album_id}">
+            <div class="tracks-list" id="album-list-${album.album_id}">
+              <div style="font-size: 0.8rem; color: var(--clr-text-muted); padding: 8px 0;">Memuat daftar lagu...</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Attach Album Header click listeners (accordion toggle & lazy load tracks)
+      $albumsGrid.querySelectorAll('.album-header').forEach(header => {
+        header.addEventListener('click', async (e) => {
+          if (e.target.closest('.btn-select-album')) return; // handled separately
+          const albumId = header.dataset.albumId;
+          const card = document.getElementById(`album-card-${albumId}`);
+          card.classList.toggle('open');
+          if (card.classList.contains('open')) {
+            await ensureAlbumTracksLoaded(albumId);
+          }
+        });
+      });
+
+      // Attach "Pilih Album" click listeners
+      $albumsGrid.querySelectorAll('.btn-select-album').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const albumId = btn.dataset.albumId;
+          const card = document.getElementById(`album-card-${albumId}`);
+          if (!card.classList.contains('open')) {
+            card.classList.add('open');
+          }
+          const tracks = await ensureAlbumTracksLoaded(albumId);
+          if (tracks && tracks.length > 0) {
+            // Check if all are already selected
+            const allSelected = tracks.every(t => selectedTracks.has(t.track_id));
+            tracks.forEach(t => toggleTrackSelection(t, !allSelected));
+            btn.textContent = !allSelected ? 'Batal Pilih' : 'Pilih Album';
+          }
+        });
+      });
+
+      // "Pilih Semua Lagu Populer" button
+      if ($btnSelectAllTop) {
+        $btnSelectAllTop.onclick = () => {
+          if (!currentDiscography || !currentDiscography.top_songs) return;
+          const songs = currentDiscography.top_songs;
+          const allSelected = songs.every(t => selectedTracks.has(t.track_id));
+          songs.forEach(t => toggleTrackSelection(t, !allSelected));
+          $btnSelectAllTop.textContent = !allSelected ? 'Batal Pilih Semua' : 'Pilih Semua Lagu Populer';
+        };
+      }
+    }
+
+    async function ensureAlbumTracksLoaded(albumId) {
+      const listEl = document.getElementById(`album-list-${albumId}`);
+      if (!listEl) return [];
+      if (listEl.dataset.loaded === 'true') {
+        const albumObj = currentDiscography.albums.find(a => a.album_id === albumId);
+        return albumObj ? albumObj.tracks || [] : [];
+      }
+
+      try {
+        const res = await fetch(`/api/album/${albumId}/tracks`);
+        const data = await res.json();
+        const tracks = data.tracks || [];
+        const albumObj = currentDiscography.albums.find(a => a.album_id === albumId);
+        if (albumObj) albumObj.tracks = tracks;
+
+        listEl.innerHTML = tracks.map(t => buildTrackRow(t)).join('');
+        listEl.dataset.loaded = 'true';
+        attachTrackRowListeners(listEl);
+        return tracks;
+      } catch (err) {
+        console.error('Failed to load album tracks:', err);
+        listEl.innerHTML = '<div style="font-size:0.8rem; color:#ff6b6b;">Gagal memuat lagu album.</div>';
+        return [];
+      }
+    }
+
+    function buildTrackRow(track) {
+      const isChecked = selectedTracks.has(track.track_id);
+      return `
+        <div class="track-row ${isChecked ? 'selected' : ''}" id="track-row-${track.track_id}" data-id="${track.track_id}">
+          <div class="track-cb-wrap">
+            <input type="checkbox" class="track-checkbox" data-id="${track.track_id}" ${isChecked ? 'checked' : ''} aria-label="Pilih lagu ${esc(track.title)}">
+          </div>
+          <img class="track-art" src="${track.artwork_url || '/static/logo.png'}" alt="Art" loading="lazy" onerror="this.src='/static/logo.png'">
+          <div class="track-main">
+            <div class="track-title" title="${esc(track.title)}">${esc(track.title)}</div>
+            <div class="track-sub">${esc(track.album || '')}${track.year ? ' • ' + track.year : ''}</div>
+          </div>
+          <div class="track-dur">${track.duration || ''}</div>
+          <div class="track-actions">
+            ${track.preview_url ? `
+            <button type="button" class="btn-track-action btn-track-play" data-preview="${esc(track.preview_url)}" data-title="${esc(track.title)}" data-artist="${esc(track.artist)}" data-art="${esc(track.artwork_url)}" title="Dengarkan Cuplikan">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>` : ''}
+            <button type="button" class="btn-track-action btn-track-download" data-id="${track.track_id}" title="Download Lagu Ini">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachTrackRowListeners(container) {
+      // Checkbox click
+      container.querySelectorAll('.track-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const trackId = cb.dataset.id;
+          const track = findTrackInDiscography(trackId);
+          if (track) toggleTrackSelection(track, cb.checked);
+        });
+      });
+
+      // Play preview click
+      container.querySelectorAll('.btn-track-play').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const prevUrl = btn.dataset.preview;
+          if (!prevUrl) return;
+
+          if (audioPlayer.src === prevUrl && !audioPlayer.paused) {
+            audioPlayer.pause();
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+            return;
+          }
+
+          audioPlayer.src = prevUrl;
+          await audioPlayer.play();
+          showMiniPlayer(btn.dataset.title, btn.dataset.artist, btn.dataset.art);
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+        });
+      });
+
+      // Single track download
+      container.querySelectorAll('.btn-track-download').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const trackId = btn.dataset.id;
+          const track = findTrackInDiscography(trackId);
+          if (!track) return;
+
+          btn.innerHTML = `<div class="spinner-small" style="margin:auto;"></div>`;
+          btn.disabled = true;
+
+          try {
+            const res = await fetch('/api/download', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: '',
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                year: track.year,
+                poster_url: track.artwork_url,
+                quality: currentPreferredQuality
+              })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+            triggerDownload(data.download_url, data.filename);
+            toast('success', `Mengunduh <strong>${esc(track.artist)} - ${esc(track.title)}</strong>`);
+          } catch (err) {
+            console.error(err);
+            toast('error', `Gagal mengunduh: ${err.message}`);
+          } finally {
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    function findTrackInDiscography(trackId) {
+      if (!currentDiscography) return null;
+      let found = currentDiscography.top_songs.find(t => t.track_id === trackId);
+      if (found) return found;
+      for (const alb of currentDiscography.albums) {
+        if (alb.tracks) {
+          found = alb.tracks.find(t => t.track_id === trackId);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    // ── Multi-Select & Batch Actions ──────────────────────────
+
+    function toggleTrackSelection(track, forceVal = null) {
+      const isSelected = forceVal !== null ? forceVal : !selectedTracks.has(track.track_id);
+      if (isSelected) {
+        selectedTracks.set(track.track_id, track);
+      } else {
+        selectedTracks.delete(track.track_id);
+      }
+
+      document.querySelectorAll(`.track-row[data-id="${track.track_id}"]`).forEach(row => {
+        row.classList.toggle('selected', isSelected);
+        const cb = row.querySelector('.track-checkbox');
+        if (cb) cb.checked = isSelected;
+      });
+
+      updateBatchActionBar();
+    }
+
+    function clearSelection() {
+      selectedTracks.clear();
+      document.querySelectorAll('.track-row.selected').forEach(r => r.classList.remove('selected'));
+      document.querySelectorAll('.track-checkbox:checked').forEach(c => c.checked = false);
+      if ($batchActionBar) $batchActionBar.style.display = 'none';
+      if ($btnSelectAllTop) $btnSelectAllTop.textContent = 'Pilih Semua Lagu Populer';
+    }
+
+    function updateBatchActionBar() {
+      const count = selectedTracks.size;
+      if (count > 0 && !isBatchDownloading) {
+        $batchActionBar.style.display = 'flex';
+        $batchCount.textContent = count;
+        $btnBatchDlText.textContent = `Unduh Batch (${count})`;
+      } else {
+        $batchActionBar.style.display = 'none';
+      }
+    }
+
+    if ($btnBatchClear) {
+      $btnBatchClear.addEventListener('click', clearSelection);
+    }
+
+    // ── Sequential Batch Downloader (Option A) ────────────────
+
+    if ($btnBatchDownload) {
+      $btnBatchDownload.addEventListener('click', startBatchDownload);
+    }
+
+    if ($btnBatchCancel) {
+      $btnBatchCancel.addEventListener('click', () => {
+        cancelBatchDownload = true;
+        $batchProgressStatus.textContent = 'Membatalkan...';
+      });
+    }
+
+    async function startBatchDownload() {
+      if (selectedTracks.size === 0) return;
+      if (isBatchDownloading) {
+        toast('info', 'Download batch sedang berjalan!');
+        return;
+      }
+
+      const queue = Array.from(selectedTracks.values());
+      const total = queue.length;
+      isBatchDownloading = true;
+      cancelBatchDownload = false;
+
+      // Show progress widget & hide bottom bar
+      $batchProgressWidget.style.display = 'block';
+      $batchActionBar.style.display = 'none';
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < total; i++) {
+        if (cancelBatchDownload) {
+          toast('info', 'Batch download dibatalkan.');
+          break;
+        }
+
+        const track = queue[i];
+        const trackNum = i + 1;
+
+        // Update UI progress
+        $batchProgressTitle.textContent = `Mengunduh (${trackNum}/${total})`;
+        $batchProgressSub.textContent = `${track.artist} - ${track.title}`;
+        $batchProgressFill.style.width = `${Math.round(((i) / total) * 100)}%`;
+        $batchProgressCount.textContent = `${trackNum} / ${total}`;
+        $batchProgressStatus.textContent = 'Menyiapkan stream audio…';
+
+        try {
+          const res = await fetch('/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: '',
+              title: track.title,
+              artist: track.artist,
+              album: track.album,
+              year: track.year,
+              poster_url: track.artwork_url,
+              quality: currentPreferredQuality
+            })
+          });
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (!data.download_url) throw new Error('Download URL missing');
+
+          // Trigger browser / FDM / IDM download cleanly
+          triggerDownload(data.download_url, data.filename);
+          successCount++;
+          $batchProgressStatus.textContent = 'File berhasil dikirim!';
+        } catch (err) {
+          console.warn(`[Batch DL Skip] ${track.title}:`, err);
+          failCount++;
+          $batchProgressStatus.textContent = 'Dilewati (Error)';
+        }
+
+        // Safe inter-download delay (~1.5s) to avoid 429 rate limit
+        if (i < total - 1 && !cancelBatchDownload) {
+          $batchProgressStatus.textContent = 'Jeda 1.5 detik…';
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      $batchProgressFill.style.width = '100%';
+      $batchProgressTitle.textContent = 'Selesai!';
+      $batchProgressSub.textContent = `Berhasil mengunduh ${successCount} lagu${failCount > 0 ? ` (${failCount} dilewati)` : ''}.`;
+      $batchProgressStatus.textContent = 'Semua antrean selesai';
+      toast('success', `Selesai mengunduh ${successCount} lagu!`);
+
+      setTimeout(() => {
+        $batchProgressWidget.style.display = 'none';
+        isBatchDownloading = false;
+        clearSelection();
+      }, 4000);
+    }
+
+    function triggerDownload(url, filename) {
+      const a = document.createElement('a');
+      a.href = url;
+      if (filename) a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 1000);
     }
 
     // ── Global Player Setup ───────────────────────────────────

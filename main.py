@@ -237,6 +237,11 @@ _PREVIEW_TTL_SECONDS = 600   # 10 minutes
 _search_cache: dict[str, dict] = {}
 _SEARCH_TTL_SECONDS = 300    # 5 minutes
 
+_artist_search_cache: dict[str, dict] = {}
+_artist_disco_cache:  dict[str, dict] = {}
+_album_tracks_cache:  dict[str, dict] = {}
+_ARTIST_CACHE_TTL = 7200     # 2 hours
+
 _stream_tokens: dict[str, dict] = {}
 _TOKEN_TTL_SECONDS = 900     # 15 minutes (allows download managers to reconnect & probe)
 
@@ -320,9 +325,13 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 ALLOWED_QUALITIES = {"128", "192", "320", "native", "m4a"}
 
 class DownloadRequest(BaseModel):
-    url:       str
-    title:     Optional[str] = "audio"
-    quality:   Optional[str] = "192"
+    url:        Optional[str] = ""
+    title:      Optional[str] = "audio"
+    artist:     Optional[str] = None
+    album:      Optional[str] = None
+    year:       Optional[str] = None
+    poster_url: Optional[str] = None
+    quality:    Optional[str] = "192"
 
     @field_validator("quality")
     @classmethod
@@ -338,18 +347,24 @@ def sanitise_filename(name: str) -> str:
     name = re.sub(r"\s+", " ", name).strip()
     return name[:150] if name else "audio"
 
-def _extract_stream_info(url: str, raw_title: str = "") -> dict:
+def _extract_stream_info(url: str, raw_title: str = "", explicit_meta: Optional[dict] = None) -> dict:
     """
     Extract direct audio stream URL and video metadata synchronously via yt-dlp,
     then automatically resolve clean song tags and high-res cover art.
+    Supports direct YouTube URLs as well as YouTube search queries (e.g. ytsearch1:Artist - Title).
     """
+    explicit_meta = explicit_meta or {}
+    clean_target = url.strip()
+    if not (clean_target.startswith("http://") or clean_target.startswith("https://")):
+        clean_target = clean_target if clean_target.startswith("ytsearch") else f"ytsearch1:{clean_target} audio"
+
     ydl_opts = {
         **_get_base_ytdl_opts(),
         "format": "bestaudio/best",
         "extract_flat": False,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+        info = ydl.extract_info(clean_target, download=False)
         if not info:
             raise ValueError("No video information found.")
         if "entries" in info and info["entries"]:
@@ -360,26 +375,36 @@ def _extract_stream_info(url: str, raw_title: str = "") -> dict:
             raise ValueError("Direct audio stream URL could not be resolved.")
 
         headers = info.get("http_headers") or {}
-        yt_raw_title = raw_title or info.get("title") or "audio"
+        yt_raw_title = explicit_meta.get("title") or raw_title or info.get("title") or "audio"
 
-        # Resolve rich official metadata (cover art, clean title, artist, album, year)
-        rich_meta = metadata_resolver.resolve_rich_metadata(info, yt_raw_title)
-
-        resolved_artist = rich_meta.get("artist")
-        if not resolved_artist or resolved_artist == "Unknown Artist":
-            uploader = info.get("uploader") or ""
-            if uploader and not metadata_resolver.is_label_channel(uploader):
-                resolved_artist = uploader
-            else:
-                resolved_artist = "Unknown Artist"
+        # If explicit official metadata was passed from artist discography, prioritize it!
+        if explicit_meta.get("artist") and explicit_meta.get("title"):
+            resolved_title  = explicit_meta["title"]
+            resolved_artist = explicit_meta["artist"]
+            resolved_album  = explicit_meta.get("album") or ""
+            resolved_year   = explicit_meta.get("year") or ""
+            resolved_poster = explicit_meta.get("poster_url") or metadata_resolver.resolve_best_poster(info)
+        else:
+            rich_meta = metadata_resolver.resolve_rich_metadata(info, yt_raw_title)
+            resolved_title  = rich_meta.get("title") or info.get("title") or "audio"
+            resolved_artist = rich_meta.get("artist")
+            if not resolved_artist or resolved_artist == "Unknown Artist":
+                uploader = info.get("uploader") or ""
+                if uploader and not metadata_resolver.is_label_channel(uploader):
+                    resolved_artist = uploader
+                else:
+                    resolved_artist = "Unknown Artist"
+            resolved_album  = rich_meta.get("album") or ""
+            resolved_year   = rich_meta.get("year") or ""
+            resolved_poster = rich_meta.get("poster_url") or ""
 
         return {
             "stream_url": stream_url,
-            "title":      rich_meta.get("title") or info.get("title") or "audio",
+            "title":      resolved_title,
             "artist":     resolved_artist,
-            "album":      rich_meta.get("album") or "",
-            "year":       rich_meta.get("year") or "",
-            "poster_url": rich_meta.get("poster_url") or "",
+            "album":      resolved_album,
+            "year":       resolved_year,
+            "poster_url": resolved_poster,
             "duration":   info.get("duration") or 0,
             "user_agent": headers.get("User-Agent"),
         }
@@ -411,7 +436,7 @@ async def get_version():
     commit = get_commit_hash()
     return {
         "commit": commit,
-        "version": "2.1.4",
+        "version": "2.2.0",
         "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}"
     }
 
@@ -425,7 +450,7 @@ async def health():
         "active_streams": _active_streams_count,
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.1.4",
+        "version": "2.2.0",
     }
 
 @app.get("/api/storage")
@@ -545,21 +570,87 @@ async def preview(request: Request, url: str):
         logger.error("Preview error: %s", exc)
         raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
 
-@app.post("/api/download")
+# ── Artist Discovery & Discography Endpoints ────────────────
+
+@app.get("/api/artist/search")
+@limiter.limit("40/minute")
+async def search_artist(request: Request, q: str, limit: int = 5):
+    """Search music artists via iTunes API."""
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
+    
+    q_clean = q.strip().lower()
+    cached = _artist_search_cache.get(q_clean)
+    if cached and (time.time() - cached["ts"]) < _ARTIST_CACHE_TTL:
+        return JSONResponse(content={"results": cached["data"]})
+
+    results = await asyncio.to_thread(metadata_resolver.search_artists, q.strip(), limit)
+    _artist_search_cache[q_clean] = {"data": results, "ts": time.time()}
+    return JSONResponse(content={"results": results})
+
+@app.get("/api/artist/{artist_id}/discography")
 @limiter.limit("30/minute")
+async def get_artist_discography(request: Request, artist_id: str):
+    """Get artist top songs and albums list."""
+    if not artist_id.strip():
+        raise HTTPException(status_code=400, detail="Artist ID is required.")
+
+    aid = artist_id.strip()
+    cached = _artist_disco_cache.get(aid)
+    if cached and (time.time() - cached["ts"]) < _ARTIST_CACHE_TTL:
+        return JSONResponse(content=cached["data"])
+
+    disco = await asyncio.to_thread(metadata_resolver.get_artist_discography, aid)
+    if not disco or not disco.get("name"):
+        raise HTTPException(status_code=404, detail="Artist not found.")
+
+    _artist_disco_cache[aid] = {"data": disco, "ts": time.time()}
+    return JSONResponse(content=disco)
+
+@app.get("/api/album/{album_id}/tracks")
+@limiter.limit("40/minute")
+async def get_album_tracks(request: Request, album_id: str):
+    """Get full tracklist of an album."""
+    if not album_id.strip():
+        raise HTTPException(status_code=400, detail="Album ID is required.")
+
+    al_id = album_id.strip()
+    cached = _album_tracks_cache.get(al_id)
+    if cached and (time.time() - cached["ts"]) < _ARTIST_CACHE_TTL:
+        return JSONResponse(content={"tracks": cached["data"]})
+
+    tracks = await asyncio.to_thread(metadata_resolver.get_album_tracks, al_id)
+    _album_tracks_cache[al_id] = {"data": tracks, "ts": time.time()}
+    return JSONResponse(content={"tracks": tracks})
+
+@app.post("/api/download")
+@limiter.limit("60/minute")
 async def prepare_download(request: Request, body: DownloadRequest):
     """
     Resolve YouTube audio stream in ~0.5s, auto-fetch official poster artwork & clean metadata,
     and return resilient direct streaming download link.
     """
-    url     = body.url.strip()
-    quality = body.quality or "192"
+    target_url = (body.url or "").strip()
+    quality    = body.quality or "192"
 
-    if not url:
-        raise HTTPException(status_code=400, detail="URL is required.")
+    if not target_url:
+        if body.artist and body.title:
+            target_url = f"{body.artist} - {body.title}"
+        else:
+            raise HTTPException(status_code=400, detail="URL or Artist+Title is required.")
+
+    explicit_meta = {}
+    if body.artist and body.title:
+        explicit_meta = {
+            "artist": body.artist,
+            "title": body.title,
+            "album": body.album or "",
+            "year": body.year or "",
+            "poster_url": body.poster_url or "",
+        }
 
     try:
-        info = await asyncio.to_thread(_extract_stream_info, url, body.title or "")
+        info = await asyncio.to_thread(_extract_stream_info, target_url, body.title or "", explicit_meta)
     except Exception as exc:
         logger.error("Stream extraction failed: %s", exc)
         raise HTTPException(status_code=502, detail=f"Failed to resolve audio: {str(exc)}")

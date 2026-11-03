@@ -299,3 +299,169 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
         "source":     "youtube",
     }
 
+# ── Artist Discovery & Discography APIs ───────────────────────
+
+def search_artists(query: str, limit: int = 5) -> list:
+    """
+    Search artists via iTunes Search API.
+    Returns list of artist profiles with ID, name, genre, and artwork.
+    """
+    clean_q = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", query).strip()
+    if not clean_q:
+        return []
+    encoded = urllib.parse.quote_plus(clean_q[:60])
+    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(1, limit), 10)}"
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            if resp.status != 200:
+                return []
+            data = json.loads(resp.read().decode("utf-8"))
+            results = []
+            for r in data.get("results", []):
+                aid = r.get("artistId")
+                name = r.get("artistName")
+                if not aid or not name:
+                    continue
+                results.append({
+                    "artist_id": str(aid),
+                    "name": name,
+                    "genre": r.get("primaryGenreName") or "Music",
+                    "artist_url": r.get("artistLinkUrl") or "",
+                })
+            return results
+    except Exception as exc:
+        logger.warning("Artist search error for '%s': %s", query, exc)
+        return []
+
+def get_artist_discography(artist_id: str, limit_songs: int = 40, limit_albums: int = 35) -> dict:
+    """
+    Fetch top songs and albums for a given Apple Music artist ID.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    discography = {
+        "artist_id": str(artist_id),
+        "name": "",
+        "genre": "",
+        "artwork_url": "",
+        "top_songs": [],
+        "albums": []
+    }
+
+    # 1. Fetch Top Songs
+    songs_url = f"https://itunes.apple.com/lookup?id={artist_id}&entity=song&limit={limit_songs}"
+    try:
+        req = urllib.request.Request(songs_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4.5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                for item in data.get("results", []):
+                    wtype = item.get("wrapperType")
+                    if wtype == "artist":
+                        discography["name"] = item.get("artistName") or discography["name"]
+                        discography["genre"] = item.get("primaryGenreName") or discography["genre"]
+                    elif wtype == "track" and item.get("kind") == "song":
+                        raw_art = item.get("artworkUrl100", "")
+                        hi_art = raw_art.replace("100x100bb.jpg", "800x800bb.jpg") if raw_art else ""
+                        if not discography["artwork_url"] and hi_art:
+                            discography["artwork_url"] = hi_art
+
+                        dur_sec = int(item.get("trackTimeMillis", 0) / 1000)
+                        m, s = divmod(dur_sec, 60)
+                        rel = item.get("releaseDate", "")
+                        year = rel[:4] if rel and len(rel) >= 4 else ""
+
+                        discography["top_songs"].append({
+                            "track_id": str(item.get("trackId", "")),
+                            "title": item.get("trackName") or "",
+                            "artist": item.get("artistName") or discography["name"],
+                            "album": item.get("collectionName") or "",
+                            "year": year,
+                            "duration": f"{m}:{s:02d}",
+                            "duration_sec": dur_sec,
+                            "preview_url": item.get("previewUrl") or "",
+                            "artwork_url": hi_art,
+                            "track_number": item.get("trackNumber") or 1,
+                        })
+    except Exception as exc:
+        logger.warning("Error fetching top songs for artist %s: %s", artist_id, exc)
+
+    # 2. Fetch Albums
+    albums_url = f"https://itunes.apple.com/lookup?id={artist_id}&entity=album&limit={limit_albums}"
+    try:
+        req = urllib.request.Request(albums_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4.5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                for item in data.get("results", []):
+                    if item.get("wrapperType") == "collection":
+                        raw_art = item.get("artworkUrl100", "")
+                        hi_art = raw_art.replace("100x100bb.jpg", "800x800bb.jpg") if raw_art else ""
+                        rel = item.get("releaseDate", "")
+                        year = rel[:4] if rel and len(rel) >= 4 else ""
+
+                        discography["albums"].append({
+                            "album_id": str(item.get("collectionId", "")),
+                            "title": item.get("collectionName") or "",
+                            "artist": item.get("artistName") or discography["name"],
+                            "track_count": item.get("trackCount") or 0,
+                            "year": year,
+                            "genre": item.get("primaryGenreName") or discography["genre"],
+                            "artwork_url": hi_art,
+                        })
+    except Exception as exc:
+        logger.warning("Error fetching albums for artist %s: %s", artist_id, exc)
+
+    discography["albums"].sort(key=lambda a: a.get("year", ""), reverse=True)
+    return discography
+
+def get_album_tracks(album_id: str) -> list:
+    """
+    Fetch all tracks for a specific album collection ID.
+    """
+    url = f"https://itunes.apple.com/lookup?id={album_id}&entity=song"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    tracks = []
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            if resp.status != 200:
+                return []
+            data = json.loads(resp.read().decode("utf-8"))
+            album_art = ""
+            album_name = ""
+            album_artist = ""
+            album_year = ""
+            for item in data.get("results", []):
+                if item.get("wrapperType") == "collection":
+                    raw_art = item.get("artworkUrl100", "")
+                    album_art = raw_art.replace("100x100bb.jpg", "800x800bb.jpg") if raw_art else ""
+                    album_name = item.get("collectionName") or ""
+                    album_artist = item.get("artistName") or ""
+                    rel = item.get("releaseDate", "")
+                    album_year = rel[:4] if rel and len(rel) >= 4 else ""
+                elif item.get("wrapperType") == "track":
+                    raw_art = item.get("artworkUrl100", "")
+                    hi_art = (raw_art.replace("100x100bb.jpg", "800x800bb.jpg") if raw_art else "") or album_art
+                    dur_sec = int(item.get("trackTimeMillis", 0) / 1000)
+                    m, s = divmod(dur_sec, 60)
+                    tracks.append({
+                        "track_id": str(item.get("trackId", "")),
+                        "track_number": item.get("trackNumber") or 1,
+                        "title": item.get("trackName") or "",
+                        "artist": item.get("artistName") or album_artist,
+                        "album": item.get("collectionName") or album_name,
+                        "year": album_year,
+                        "duration": f"{m}:{s:02d}",
+                        "duration_sec": dur_sec,
+                        "preview_url": item.get("previewUrl") or "",
+                        "artwork_url": hi_art,
+                    })
+            return tracks
+    except Exception as exc:
+        logger.warning("Error fetching album tracks for album %s: %s", album_id, exc)
+        return []
+

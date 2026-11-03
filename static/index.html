@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=2.1.4" />
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2.0" />
 </head>
 
 <body>
@@ -40,6 +40,18 @@
       <p class="hero-tagline">
         Find your favorite songs on YouTube, then download directly as high-quality MP3 — free and instant.
       </p>
+
+      <!-- Search Mode Tabs -->
+      <div class="search-mode-tabs" role="tablist" aria-label="Search Mode">
+        <button type="button" class="search-mode-tab active" data-mode="songs" id="tab-mode-songs" role="tab" aria-selected="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          Lagu
+        </button>
+        <button type="button" class="search-mode-tab" data-mode="artists" id="tab-mode-artists" role="tab" aria-selected="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Artis (Diskografi)
+        </button>
+      </div>
 
       <!-- Search form -->
       <form class="search-form" id="search-form" role="search" aria-label="Search songs on YouTube">
@@ -132,6 +144,61 @@
           </div>
         </section>
 
+        <!-- Artist Search Results List -->
+        <section id="artist-search-results" class="artist-search-section" style="display: none;" aria-label="Artist search results">
+          <div class="results-header-wrap">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="results-title">Artis Ditemukan</span>
+              <span class="results-count" id="artist-results-count">0 artis</span>
+            </div>
+          </div>
+          <div class="artist-results-grid" id="artist-results-grid"></div>
+        </section>
+
+        <!-- Artist Discography View -->
+        <section id="artist-view" class="artist-discography-section" style="display: none;" aria-label="Artist Discography">
+          <button type="button" class="btn-back-artist" id="btn-back-artist">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Kembali ke Hasil Pencarian
+          </button>
+
+          <!-- Artist Hero Banner -->
+          <div class="artist-banner" id="artist-banner">
+            <img class="artist-avatar" id="artist-avatar" src="" alt="Artist Photo">
+            <div class="artist-meta">
+              <span class="artist-genre-badge" id="artist-genre">Genre</span>
+              <h2 class="artist-name" id="artist-name">Nama Artis</h2>
+              <p class="artist-stats" id="artist-stats">Memuat diskografi...</p>
+            </div>
+          </div>
+
+          <!-- Discography Sub Tabs: Top Songs vs Albums -->
+          <div class="disco-nav-tabs" role="tablist">
+            <button type="button" class="disco-tab active" data-view="top-songs" id="tab-top-songs">
+              🔥 Lagu Terpopuler
+            </button>
+            <button type="button" class="disco-tab" data-view="albums" id="tab-albums">
+              💿 Semua Album &amp; EP
+            </button>
+          </div>
+
+          <!-- Top Songs Panel -->
+          <div class="disco-panel" id="panel-top-songs">
+            <div class="disco-panel-header">
+              <span class="panel-subtitle">Paling sering didengarkan</span>
+              <button type="button" class="btn-select-all-top" id="btn-select-all-top">
+                Pilih Semua Lagu Populer
+              </button>
+            </div>
+            <div class="tracks-list" id="top-songs-list"></div>
+          </div>
+
+          <!-- Albums Panel -->
+          <div class="disco-panel" id="panel-albums" style="display: none;">
+            <div class="albums-grid" id="albums-grid"></div>
+          </div>
+        </section>
+
       </div><!-- /container -->
     </main>
 
@@ -192,10 +259,44 @@
     </div>
   </div>
 
+  <!-- Floating Batch Action Bar -->
+  <div id="batch-action-bar" class="batch-action-bar" style="display: none;">
+    <div class="batch-bar-left">
+      <span class="batch-count-badge" id="batch-count">0</span>
+      <span class="batch-count-label">Lagu dipilih</span>
+    </div>
+    <div class="batch-bar-actions">
+      <button type="button" class="btn-batch-clear" id="btn-batch-clear">Batal Pilih</button>
+      <button type="button" class="btn-batch-download" id="btn-batch-download">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span id="btn-batch-dl-text">Unduh Batch (0)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Batch Download Progress Drawer -->
+  <div id="batch-progress-widget" class="batch-progress-widget" style="display: none;">
+    <div class="batch-progress-header">
+      <div class="batch-progress-title-wrap">
+        <div class="spinner-small" id="batch-spinner"></div>
+        <span class="batch-progress-title" id="batch-progress-title">Sedang Mengunduh Batch...</span>
+      </div>
+      <button type="button" class="btn-batch-cancel" id="btn-batch-cancel" title="Batalkan Antrean">✕</button>
+    </div>
+    <div class="batch-progress-sub" id="batch-progress-sub">Menyiapkan antrean...</div>
+    <div class="batch-progress-track">
+      <div class="batch-progress-fill" id="batch-progress-fill" style="width: 0%;"></div>
+    </div>
+    <div class="batch-progress-footer">
+      <span id="batch-progress-count">0 / 0</span>
+      <span id="batch-progress-status">Berjalan berurutan</span>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=2.1.4" defer></script>
+  <script src="/static/js/app.js?v=2.2.0" defer></script>
 </body>
 
 </html>
