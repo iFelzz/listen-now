@@ -448,53 +448,41 @@
       }
     });
 
-    // ── Download ──────────────────────────────────────────────
+    // ── Download (Zero-Disk Stream Piping, Cobalt-Style) ──────
 
     async function handleDownload(btn, item) {
-      // Set loading state
       btn.classList.add('loading');
 
       const btnText = btn.querySelector('.btn-text');
       const progressFill = btn.querySelector('.progress-fill');
+      const quality = btn.dataset.quality || '192';
+      const label = quality === 'm4a' ? 'M4A' : 'MP3';
 
-      btnText.innerHTML = `${ICON_SPIN} Processing…`;
-      btn.setAttribute('aria-label', `Downloading ${item.title}…`);
-      $loadingText.textContent = `Downloading: ${item.title}`;
-
-      // Generate random ID for progress tracking (fallback for non-HTTPS)
-      const clientId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/progress/${clientId}`);
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.status === 'downloading') {
-          btnText.innerHTML = `${ICON_SPIN} ${data.percent}`;
-          progressFill.style.width = data.percent;
-        } else if (data.status === 'converting') {
-          btnText.innerHTML = `${ICON_SPIN} Converting…`;
-          progressFill.style.width = '100%';
-        }
-      };
+      btnText.innerHTML = `${ICON_SPIN} Connecting…`;
+      progressFill.style.width = '35%';
+      btn.setAttribute('aria-label', `Connecting stream for ${item.title}…`);
+      $loadingText.textContent = `Streaming: ${item.title}`;
 
       try {
-        const quality = btn.dataset.quality || '192';
+        // Fast URL stream resolution (~0.5s)
         const res = await fetch('/api/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: item.url, title: item.title, quality, client_id: clientId }),
+          body: JSON.stringify({ url: item.url, title: item.title, quality }),
         });
         const data = await res.json();
 
         if (!res.ok) {
-          // Handle rate limit specifically
           if (res.status === 429) {
             throw new Error('Too many requests. Please wait a moment and try again.');
           }
           throw new Error(data.detail || `HTTP ${res.status}`);
         }
 
-        // Trigger browser download
+        // Trigger native browser stream download immediately
+        progressFill.style.width = '100%';
+        btnText.innerHTML = `${ICON_CHECK} Streaming…`;
+
         const link = document.createElement('a');
         link.href = data.download_url;
         link.download = data.filename;
@@ -502,24 +490,24 @@
         link.click();
         document.body.removeChild(link);
 
-        // Success state
         btn.classList.remove('loading');
         btn.classList.add('done');
-        progressFill.style.width = '0%';
-        btnText.innerHTML = `${ICON_CHECK} Done!`;
-        btn.setAttribute('aria-label', `Download complete: ${item.title}`);
+        toast('success', `🎵 Mengalirkan <strong>${esc(item.title)}</strong> langsung ke browser!`);
 
-        toast('success', `🎵 <strong>${esc(item.title)}</strong> downloaded successfully!`);
-
-        // ── Browser notification (even if user switched tabs) ──
         if (Notification.permission === 'granted') {
-          new Notification('✅ Download Complete!', {
+          new Notification('✅ Download Started!', {
             body: item.title,
             icon: item.thumbnail || '/static/logo.png',
             badge: '/static/logo.png',
             tag: 'listen-now-download',
           });
         }
+
+        setTimeout(() => {
+          btn.classList.remove('done');
+          progressFill.style.width = '0%';
+          btnText.innerHTML = `${ICON_DOWNLOAD} ${label}`;
+        }, 3000);
 
       } catch (err) {
         console.error('[Download Error]', err);
@@ -530,19 +518,15 @@
         btnText.innerHTML = `${ICON_DOWNLOAD} Try Again`;
         btn.setAttribute('aria-label', `Retry download ${item.title}`);
 
-        // Re-enable retry
-        btn.classList.remove('error-state');
         setTimeout(() => {
-          btnText.innerHTML = `${ICON_DOWNLOAD} MP3`;
+          btn.classList.remove('error-state');
+          btnText.innerHTML = `${ICON_DOWNLOAD} ${label}`;
           btn.removeAttribute('disabled');
         }, 2500);
 
         toast('error', `Download failed: ${err.message}`);
-      } finally {
-        ws.close();
       }
     }
-
     // ── Form submit ───────────────────────────────────────────
 
     $form.addEventListener('submit', (e) => {
