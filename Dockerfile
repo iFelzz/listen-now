@@ -1,12 +1,12 @@
 # ─────────────────────────────────────────────────────────────
 #  Listen Now – Dockerfile
-#  Base: python:3.10-slim  |  Includes: ffmpeg, yt-dlp, FastAPI
+#  Base: python:3.12-slim  |  Includes: ffmpeg, yt-dlp, FastAPI
 # ─────────────────────────────────────────────────────────────
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Metadata
 LABEL maintainer="Listen Now"
-LABEL description="YouTube MP3 Downloader powered by yt-dlp & FastAPI"
+LABEL description="YouTube MP3 Downloader powered by yt-dlp & FastAPI (Zero-Disk Streaming Engine)"
 
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -31,9 +31,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # ── Application source ──
 COPY . .
-
-# ── Create downloads directory ──
-RUN mkdir -p /app/downloads
 
 # ── Expose port ──
 EXPOSE 8000

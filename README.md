@@ -65,7 +65,7 @@ listen-now/
 
 ### ✅ Option 1 – Windows (Easiest) ⭐
 
-Make sure **Python 3.10+** is installed, then:
+Make sure **Python 3.11+** is installed, then:
 
 ```
 Double-click → start.bat
@@ -132,7 +132,7 @@ To bypass YouTube bot detection or rate limits on cloud VPS hosts:
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.10+, FastAPI, Uvicorn, SlowAPI |
+| Backend | Python 3.11+, FastAPI, Uvicorn, SlowAPI |
 | Streaming Engine | yt-dlp + FFmpeg In-Memory Pipes (`pipe:1`) |
 | Frontend | HTML5, Vanilla CSS3, Vanilla JS, PWA Service Worker |
 | Container | Docker, Docker Compose |

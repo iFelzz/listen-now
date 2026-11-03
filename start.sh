@@ -16,7 +16,7 @@ echo ""
 
 # ── Cek Python ──────────────────────────────────────────
 if ! command -v python3 &>/dev/null; then
-    echo "[ERROR] Python3 tidak ditemukan. Install Python 3.10+ terlebih dahulu."
+    echo "[ERROR] Python3 tidak ditemukan. Install Python 3.11+ terlebih dahulu."
     exit 1
 fi
 
