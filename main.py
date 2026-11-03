@@ -1,9 +1,11 @@
-﻿"""
+"""
 Listen Now – Zero-Disk Streaming Backend (Cobalt-Style Pipeline)
 ───────────────────────────────────────────────────────────────
 Architecture:
   - Zero-Disk Storage: 0 bytes written to disk. All media is processed in-memory.
   - On-The-Fly Stream Piping: YouTube CDN → FFmpeg stream pipe → FastAPI StreamingResponse → Browser.
+  - Rich Music Metadata & Studio Artwork: Auto-fetches official 800x800 square cover art (iTunes/YouTube)
+    and embeds ID3v2 APIC cover art + title + artist + album + year into the MP3 stream on the fly.
   - Ultra-Low Resource Usage: Tiny RAM buffer (~64 KB chunks), no disk I/O thrashing.
   - Instant Response: Browser download starts within ~0.5 - 1.0 second.
   - Safe Process Lifecycle: FFmpeg subprocesses terminate cleanly on client disconnect.
@@ -13,9 +15,10 @@ Endpoints:
   GET  /                     → Frontend UI (index.html)
   GET  /favicon.ico          → App favicon
   GET  /api/health           → Health & architecture status
+  GET  /api/version          → Git commit hash & version
   GET  /api/search           → Fast YouTube search (rate-limited: 30/min per IP)
   GET  /api/preview          → Direct audio stream preview (rate-limited: 20/min per IP)
-  POST /api/download         → Pre-validate & issue resilient stream token
+  POST /api/download         → Pre-validate, resolve rich metadata & issue resilient stream token
   GET/HEAD /api/stream       → Stream on-the-fly MP3 directly to browser (Zero-disk)
   GET  /api/storage          → System status & active stream statistics
 """
@@ -41,6 +44,8 @@ from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+
+import metadata_resolver
 
 # ── Logging ─────────────────────────────────────────────────
 logging.basicConfig(
@@ -70,18 +75,15 @@ if YTDLP_PROXY:
 # ── FFmpeg Detection ─────────────────────────────────────────
 def get_ffmpeg_binary() -> str:
     """Detect and return path to ffmpeg executable."""
-    # 1. Bundled inside project (ffmpeg/bin/)
     bundled_exe = BASE_DIR / "ffmpeg" / "bin" / "ffmpeg.exe"
     if bundled_exe.exists():
         return str(bundled_exe)
     bundled_bin = BASE_DIR / "ffmpeg" / "bin" / "ffmpeg"
     if bundled_bin.exists():
         return str(bundled_bin)
-    # 2. System PATH
     sys_ffmpeg = shutil.which("ffmpeg")
     if sys_ffmpeg:
         return sys_ffmpeg
-    # 3. Winget install path
     winget = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe"
     if winget.exists():
         return str(winget)
@@ -211,7 +213,7 @@ async def _cache_maintenance_loop():
 # ── Lifespan ──────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing Listen Now (Zero-Disk Streaming Engine)...")
+    logger.info("Initializing Listen Now (Zero-Disk Streaming Engine v2.1)...")
     try:
         ver = yt_dlp.version.__version__
         logger.info("yt-dlp version: %s", ver)
@@ -228,7 +230,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["400/day"])
 # ── FastAPI App ───────────────────────────────────────────────
 app = FastAPI(
     title="Listen Now",
-    description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style)",
+    description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style) & Auto-Cover Art",
     version="2.1.0",
     lifespan=lifespan,
 )
@@ -267,8 +269,11 @@ def sanitise_filename(name: str) -> str:
     name = re.sub(r"\s+", " ", name).strip()
     return name[:150] if name else "audio"
 
-def _extract_stream_info(url: str) -> dict:
-    """Extract direct audio stream URL and video metadata synchronously via yt-dlp."""
+def _extract_stream_info(url: str, raw_title: str = "") -> dict:
+    """
+    Extract direct audio stream URL and video metadata synchronously via yt-dlp,
+    then automatically resolve clean song tags and high-res cover art.
+    """
     ydl_opts = {
         **_get_base_ytdl_opts(),
         "format": "bestaudio/best",
@@ -286,10 +291,18 @@ def _extract_stream_info(url: str) -> dict:
             raise ValueError("Direct audio stream URL could not be resolved.")
 
         headers = info.get("http_headers") or {}
+        yt_raw_title = raw_title or info.get("title") or "audio"
+
+        # Resolve rich official metadata (cover art, clean title, artist, album, year)
+        rich_meta = metadata_resolver.resolve_rich_metadata(info, yt_raw_title)
+
         return {
             "stream_url": stream_url,
-            "title":      info.get("title") or "audio",
-            "artist":     info.get("uploader") or info.get("channel") or "Unknown Artist",
+            "title":      rich_meta.get("title") or info.get("title") or "audio",
+            "artist":     rich_meta.get("artist") or info.get("uploader") or "Unknown Artist",
+            "album":      rich_meta.get("album") or "",
+            "year":       rich_meta.get("year") or "",
+            "poster_url": rich_meta.get("poster_url") or "",
             "duration":   info.get("duration") or 0,
             "user_agent": headers.get("User-Agent"),
         }
@@ -458,9 +471,8 @@ async def preview(request: Request, url: str):
 @limiter.limit("30/minute")
 async def prepare_download(request: Request, body: DownloadRequest):
     """
-    Resolve YouTube audio stream in ~0.5s, create an in-memory stream token,
+    Resolve YouTube audio stream in ~0.5s, auto-fetch official poster artwork & clean metadata,
     and return resilient direct streaming download link.
-    Includes fallback parameters to guarantee download managers (FDM, IDM) never fail.
     """
     url     = body.url.strip()
     quality = body.quality or "192"
@@ -469,18 +481,25 @@ async def prepare_download(request: Request, body: DownloadRequest):
         raise HTTPException(status_code=400, detail="URL is required.")
 
     try:
-        info = await asyncio.to_thread(_extract_stream_info, url)
+        info = await asyncio.to_thread(_extract_stream_info, url, body.title or "")
     except Exception as exc:
         logger.error("Stream extraction failed: %s", exc)
         raise HTTPException(status_code=502, detail=f"Failed to resolve audio: {str(exc)}")
 
-    clean_title = sanitise_filename(body.title or info["title"])
-    token = secrets.token_urlsafe(16)
+    clean_title  = sanitise_filename(info["title"])
+    clean_artist = sanitise_filename(info["artist"])
+    clean_album  = sanitise_filename(info.get("album", ""))
+    year         = info.get("year", "")
+    poster_url   = info.get("poster_url", "")
+    token        = secrets.token_urlsafe(16)
 
     _stream_tokens[token] = {
         "stream_url": info["stream_url"],
         "title":      clean_title,
-        "artist":     info["artist"],
+        "artist":     clean_artist,
+        "album":      clean_album,
+        "year":       year,
+        "poster_url": poster_url,
         "quality":    quality,
         "user_agent": info["user_agent"],
         "created_at": time.time(),
@@ -490,15 +509,27 @@ async def prepare_download(request: Request, body: DownloadRequest):
     filename = f"{clean_title}.{ext}"
 
     # Embed token AND fallback query params so the URL never 400s under multiple connections or retries
-    encoded_url = urllib.parse.quote(url)
-    encoded_title = urllib.parse.quote(clean_title)
-    download_url = f"/api/stream?token={token}&url={encoded_url}&quality={quality}&title={encoded_title}"
+    encoded_url    = urllib.parse.quote(url)
+    encoded_title  = urllib.parse.quote(clean_title)
+    encoded_artist = urllib.parse.quote(clean_artist)
+    encoded_album  = urllib.parse.quote(clean_album)
+    encoded_year   = urllib.parse.quote(year)
+    encoded_poster = urllib.parse.quote(poster_url)
 
-    logger.info("Stream token created: %s (%s, %s kbps)", token, clean_title, quality)
+    download_url = (
+        f"/api/stream?token={token}&url={encoded_url}&quality={quality}"
+        f"&title={encoded_title}&artist={encoded_artist}&album={encoded_album}&year={encoded_year}&poster={encoded_poster}"
+    )
+
+    logger.info("Stream token created: %s (%s by %s, %s kbps)", token, clean_title, clean_artist, quality)
 
     return JSONResponse(content={
         "success":      True,
         "filename":     filename,
+        "title":        clean_title,
+        "artist":       clean_artist,
+        "album":        clean_album,
+        "poster_url":   poster_url,
         "download_url": download_url,
     })
 
@@ -508,19 +539,26 @@ async def stream_audio(
     token: Optional[str] = None,
     url: Optional[str] = None,
     quality: Optional[str] = "192",
-    title: Optional[str] = None
+    title: Optional[str] = None,
+    artist: Optional[str] = None,
+    album: Optional[str] = None,
+    year: Optional[str] = None,
+    poster: Optional[str] = None,
 ):
     """
     On-The-Fly Real-Time Audio Streaming (Cobalt-Style Pipeline).
     Pipes YouTube CDN audio through FFmpeg stdout directly to HTTP client response.
+    Embeds official album artwork (APIC attached pic) and ID3 tags on the fly.
     Zero disk writes. Zero storage footprint. Instant playback & download.
-    Fully compatible with Download Managers (FDM, IDM, aria2, curl, browsers).
     """
-    stream_url = None
-    stream_title = "audio"
+    stream_url    = None
+    stream_title  = "audio"
     stream_artist = "Listen Now"
+    stream_album  = ""
+    stream_year   = ""
+    poster_url    = None
     stream_quality = quality or "192"
-    user_agent = None
+    user_agent    = None
 
     # Option 1: Retrieve from token without popping (token stays active for 15 mins for multi-connection managers)
     if token and token in _stream_tokens:
@@ -529,16 +567,22 @@ async def stream_audio(
             stream_url     = token_data["stream_url"]
             stream_title   = token_data["title"]
             stream_artist  = token_data["artist"]
+            stream_album   = token_data.get("album", "")
+            stream_year    = token_data.get("year", "")
+            poster_url     = token_data.get("poster_url")
             stream_quality = token_data["quality"]
             user_agent     = token_data["user_agent"]
 
     # Option 2: Fallback to direct resolution if token expired or missing
     if not stream_url and url:
         try:
-            info = await asyncio.to_thread(_extract_stream_info, url.strip())
+            info = await asyncio.to_thread(_extract_stream_info, url.strip(), title or "")
             stream_url     = info["stream_url"]
             stream_title   = sanitise_filename(title or info["title"])
-            stream_artist  = info["artist"]
+            stream_artist  = artist or info["artist"]
+            stream_album   = album or info.get("album", "")
+            stream_year    = year or info.get("year", "")
+            poster_url     = poster or info.get("poster_url")
             stream_quality = quality or "192"
             user_agent     = info["user_agent"]
         except Exception as exc:
@@ -569,6 +613,8 @@ async def stream_audio(
         )
 
     # Build FFmpeg command for in-memory stream piping
+    has_poster = bool(poster_url and not is_native)
+
     cmd = [
         FFMPEG_BIN,
         "-reconnect", "1",
@@ -578,32 +624,55 @@ async def stream_audio(
     if user_agent:
         cmd.extend(["-user_agent", user_agent])
 
-    cmd.extend([
-        "-i", stream_url,
-        "-vn",
-    ])
+    cmd.extend(["-i", stream_url])
+
+    if has_poster:
+        # Dual-input: Input 0 = audio stream, Input 1 = cover art poster image
+        cmd.extend([
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "5",
+            "-i", poster_url,
+            "-map", "0:a",
+            "-map", "1:v",
+            "-c:a", "libmp3lame",
+            "-b:a", f"{stream_quality}k",
+            "-c:v", "mjpeg",
+            "-disposition:v:0", "attached_pic",
+        ])
+    elif not is_native:
+        cmd.extend([
+            "-vn",
+            "-c:a", "libmp3lame",
+            "-b:a", f"{stream_quality}k",
+        ])
 
     if is_native:
         # Native direct stream copy: 0% CPU usage
         cmd.extend([
+            "-vn",
             "-c:a", "copy",
             "-movflags", "frag_keyframe+empty_moov+default_base_moof",
             "-f", "mp4",
             "pipe:1"
         ])
     else:
-        # On-the-fly MP3 conversion with standard ID3 tags
+        # Standard ID3v2.3 tags with rich metadata
         cmd.extend([
-            "-c:a", "libmp3lame",
-            "-b:a", f"{stream_quality}k",
             "-id3v2_version", "3",
             "-metadata", f"title={stream_title}",
             "-metadata", f"artist={stream_artist}",
+        ])
+        if stream_album:
+            cmd.extend(["-metadata", f"album={stream_album}"])
+        if stream_year:
+            cmd.extend(["-metadata", f"date={stream_year}"])
+        cmd.extend([
             "-f", "mp3",
             "pipe:1"
         ])
 
-    logger.info("Spawning stream pipe: %s (%s)", output_filename, stream_quality)
+    logger.info("Spawning stream pipe: %s (%s) [has_poster=%s]", output_filename, stream_quality, has_poster)
 
     try:
         process = await asyncio.create_subprocess_exec(
