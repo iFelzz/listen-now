@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Listen Now — Service Worker
  * Strategy:
  *   - App Shell (HTML, fonts): Cache-first, fallback to network
@@ -6,9 +6,11 @@
  *   - Static assets (CSS, JS, images): Cache-first with background update
  */
 
-const CACHE_NAME = 'listen-now-v1';
+const CACHE_NAME = 'listen-now-v2';
 const APP_SHELL = [
   '/',
+  '/static/css/style.css',
+  '/static/js/app.js',
   '/static/logo.png',
   '/static/manifest.json',
 ];

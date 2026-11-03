@@ -1,8 +1,8 @@
 # 🎵 Listen Now – YouTube MP3 Downloader
 
-A full-stack web application to search for songs on YouTube and download them as high-quality MP3 files (192 kbps). Built with **FastAPI** + **yt-dlp** + **FFmpeg**.
+A modern full-stack web application to search for songs on YouTube, preview audio directly in the browser, and download high-quality MP3 files (128 / 192 / 320 kbps) with embedded cover art and metadata. Built with **FastAPI** + **yt-dlp** + **FFmpeg**.
 
-> ✅ **Self-contained** – FFmpeg is bundled inside the project. Just copy the folder and run `start.bat`.
+> ✅ **Self-contained** – FFmpeg is bundled inside the project for Windows. Just clone/copy the folder and run `start.bat`.
 
 ---
 
@@ -10,11 +10,11 @@ A full-stack web application to search for songs on YouTube and download them as
 
 ```
 listen-now/
-├── main.py                 # FastAPI backend (all API endpoints)
+├── main.py                 # FastAPI backend (API endpoints & background workers)
 ├── requirements.txt        # Python dependencies
-├── start.bat               # ⚡ Windows launcher (double-click to start)
+├── start.bat               # ⚡ Windows launcher (auto-setup & launch)
 ├── start.sh                # ⚡ Linux / macOS launcher
-├── Dockerfile              # Docker image (includes FFmpeg)
+├── Dockerfile              # Docker image (includes FFmpeg & Python)
 ├── docker-compose.yml      # Docker Compose configuration
 ├── .gitignore
 ├── ffmpeg/
@@ -25,8 +25,14 @@ listen-now/
 ├── downloads/              # Downloaded MP3 files (auto-cleaned)
 │   └── README.md
 └── static/
-    ├── index.html          # Frontend (HTML + CSS + JS)
-    └── logo.png            # App logo
+    ├── index.html          # Clean modular HTML structure
+    ├── css/
+    │   └── style.css       # Design tokens, responsive & dark theme styles
+    ├── js/
+    │   └── app.js          # Player, search, pagination, WebSocket logic
+    ├── logo.png            # App logo
+    ├── manifest.json       # PWA manifest
+    └── sw.js               # Service Worker for offline app-shell caching
 ```
 
 ---
@@ -95,19 +101,21 @@ docker-compose up --build
 
 ## 📡 API Endpoints
 
-| Method | Endpoint             | Description                                    |
-|--------|----------------------|------------------------------------------------|
-| `GET`  | `/`                  | Main page (frontend)                           |
-| `GET`  | `/api/health`        | Health check                                   |
-| `GET`  | `/api/search?q=`     | Search YouTube (returns top 6 results)         |
-| `POST` | `/api/download`      | Download audio as MP3 (192 kbps)               |
-| `GET`  | `/api/storage`       | Storage usage info & cleanup configuration     |
-| `POST` | `/api/cleanup`       | Manually trigger file cleanup                  |
-| `GET`  | `/downloads/{file}`  | Serve a downloaded MP3 file                    |
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Main page (frontend) |
+| `GET` | `/api/health` | Health check endpoint |
+| `GET` | `/api/search?q=&limit=` | Search YouTube (default 10, max 50 results) |
+| `GET` | `/api/preview?url=` | Extract direct audio stream URL for in-browser preview |
+| `POST` | `/api/download` | Download audio and convert to MP3 (128 / 192 / 320 kbps) |
+| `GET` | `/api/storage` | Storage usage statistics & cleanup configuration |
+| `POST` | `/api/cleanup` | Manually trigger file & memory cache cleanup |
+| `GET` | `/api/file/{filename}` | Safely serve downloaded MP3 with path traversal protection |
+| `WS` | `/api/ws/progress/{client_id}` | WebSocket for real-time download and conversion progress |
 
 ### Example – Search Request
 ```http
-GET /api/search?q=bohemian+rhapsody&limit=6
+GET /api/search?q=bohemian+rhapsody&limit=10
 ```
 
 ### Example – Download Request
@@ -117,44 +125,41 @@ Content-Type: application/json
 
 {
   "url": "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
-  "title": "Bohemian Rhapsody"
+  "title": "Bohemian Rhapsody",
+  "quality": "192",
+  "client_id": "optional-uuid"
 }
 ```
 
 ---
 
-## 🧹 Auto-Cleanup
+## 🧹 Auto-Cleanup & Storage Management
 
-Downloaded files are automatically managed to prevent storage from filling up:
+Downloaded files and temporary caches are managed automatically to keep storage lean:
 
 | Setting | Default | Description |
-|---------|---------|-------------|
-| `MAX_AGE_HOURS` | `1` | Delete files older than 1 hour |
-| `MAX_STORAGE_MB` | `500` | Delete oldest files if folder exceeds 500 MB |
-| `CLEANUP_INTERVAL` | `30` | Run cleanup every 30 minutes |
+|---|---|---|
+| `MAX_AGE_HOURS` | `1` | Delete MP3 files older than 1 hour |
+| `MAX_STORAGE_MB` | `500` | Delete oldest files if total folder exceeds 500 MB |
+| `CLEANUP_INTERVAL` | `30` | Run background cleanup every 30 minutes |
+| `CLEANUP_TOKEN` | *(optional)* | Secret token required to trigger `POST /api/cleanup` |
 
-You can override these via environment variables:
-```bash
-MAX_AGE_HOURS=2 MAX_STORAGE_MB=1000 uvicorn main:app ...
-```
+---
+
+## 🌐 Advanced Configuration (Proxy & Cookies)
+
+To bypass YouTube bot detection or rate limits on cloud VPS hosts:
+- **Cookies**: Place a `cookies.txt` file in the project root directory, or set the `YTDLP_COOKIES_FILE=/path/to/cookies.txt` environment variable.
+- **Proxy**: Set the `YTDLP_PROXY=http://user:pass@host:port` environment variable.
 
 ---
 
 ## ⚙️ Tech Stack
 
-| Layer      | Technology                            |
-|------------|---------------------------------------|
-| Backend    | Python 3.10+, FastAPI, Uvicorn        |
-| Downloader | yt-dlp                                |
-| Converter  | FFmpeg 8.1.1 (bundled in `ffmpeg/`)   |
-| Frontend   | HTML5, Vanilla CSS, Vanilla JS        |
-| Container  | Docker, Docker Compose                |
-
----
-
-## 📝 Notes
-
-- MP3 files are saved in the `downloads/` folder and auto-cleaned after 1 hour.
-- FFmpeg is **bundled** in `ffmpeg/bin/` — no separate FFmpeg installation needed on Windows.
-- If a file has already been downloaded, the server serves it directly without re-processing (cache hit).
-- To use on another PC: copy the entire folder, make sure Python is installed, then run `start.bat`.
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.10+, FastAPI, Uvicorn, SlowAPI |
+| Downloader | yt-dlp |
+| Converter | FFmpeg (bundled in `ffmpeg/` for Windows) |
+| Frontend | HTML5, Vanilla CSS3, Vanilla JS, WebSockets, PWA Service Worker |
+| Container | Docker, Docker Compose |
