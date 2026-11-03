@@ -619,16 +619,37 @@
 
     // ── Load and display Git commit hash badge ────────────────
     function loadCommitHash() {
-      fetch('/api/version')
-        .then(res => res.json())
+      const $commitLink = document.getElementById('commit-link');
+      if (!$commitLink) return;
+
+      fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
         .then(data => {
-          const $commitLink = document.getElementById('commit-link');
-          if ($commitLink && data.commit) {
-            $commitLink.textContent = `#${data.commit}`;
-            $commitLink.href = data.commit_url || `https://github.com/iFelzz/listen-now/commit/${data.commit}`;
-            $commitLink.title = `Commit ${data.commit} on GitHub`;
+          const commit = (data && data.commit) ? String(data.commit).trim() : 'latest';
+          if (commit && commit !== 'latest') {
+            $commitLink.textContent = `#${commit}`;
+            $commitLink.href = data.commit_url || `https://github.com/iFelzz/listen-now/commit/${commit}`;
+            $commitLink.title = `Commit ${commit} on GitHub`;
+          } else {
+            $commitLink.textContent = '#latest';
+            $commitLink.href = 'https://github.com/iFelzz/listen-now';
+            $commitLink.title = 'Latest release on GitHub';
           }
         })
-        .catch(() => {});
+        .catch(err => {
+          console.warn('[Version] Could not fetch commit hash:', err);
+          if ($commitLink && $commitLink.textContent.includes('loading')) {
+            $commitLink.textContent = '#latest';
+          }
+        });
     }
-    loadCommitHash();
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadCommitHash);
+    } else {
+      loadCommitHash();
+    }
+    window.addEventListener('load', loadCommitHash);

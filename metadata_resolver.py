@@ -177,3 +177,4 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
         "poster_url": fallback_poster,
         "source":     "youtube",
     }
+

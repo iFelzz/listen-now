@@ -96,11 +96,29 @@ FFMPEG_LOCATION = str(Path(FFMPEG_BIN).parent) if Path(FFMPEG_BIN).is_file() els
 
 # ── Git Commit Detection ─────────────────────────────────────
 def get_commit_hash() -> str:
-    """Detect current Git commit hash from env, version.json, or .git/HEAD."""
+    """Detect current Git commit hash from env, git CLI, .git/HEAD, or version.json."""
+    # 1. Environment variable (e.g. from Docker/Portainer build args)
     env_hash = os.environ.get("COMMIT_HASH") or os.environ.get("GIT_COMMIT")
     if env_hash:
-        return env_hash[:7]
+        return env_hash.strip()[:7]
 
+    # 2. Direct git CLI execution if git binary is present
+    if shutil.which("git"):
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=str(BASE_DIR),
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+            )
+            if out and out.strip():
+                return out.strip()[:7]
+        except Exception:
+            pass
+
+    # 3. Pure Python inspection of .git directory
     git_dir = BASE_DIR / ".git"
     if git_dir.exists():
         try:
@@ -124,11 +142,14 @@ def get_commit_hash() -> str:
         except Exception:
             pass
 
-    if shutil.which("git"):
+    # 4. Fallback to version.json file generated during build / deployment
+    vfile = BASE_DIR / "version.json"
+    if vfile.exists():
         try:
-            import subprocess
-            out = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(BASE_DIR), text=True)
-            return out.strip()
+            vdata = json.loads(vfile.read_text(encoding="utf-8"))
+            commit = vdata.get("commit")
+            if commit and commit not in ("latest", "unknown", ""):
+                return commit.strip()[:7]
         except Exception:
             pass
 
