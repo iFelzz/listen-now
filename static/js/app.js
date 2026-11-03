@@ -44,6 +44,8 @@
     const $topSongsList = document.getElementById('top-songs-list');
     const $albumsGrid = document.getElementById('albums-grid');
     const $btnSelectAllTop = document.getElementById('btn-select-all-top');
+    const $topSongsLimitSelect = document.getElementById('top-songs-limit-select');
+    const $topSongsSubtitle = document.getElementById('top-songs-subtitle');
 
     // Batch Action Bar DOM refs
     const $batchActionBar = document.getElementById('batch-action-bar');
@@ -567,6 +569,43 @@
       });
     }
 
+    function getVisibleTopSongs() {
+      if (!currentDiscography || !currentDiscography.top_songs) return [];
+      const allSongs = currentDiscography.top_songs;
+      const limitVal = $topSongsLimitSelect ? $topSongsLimitSelect.value : '100';
+      const limit = limitVal === 'all' ? allSongs.length : (parseInt(limitVal, 10) || 100);
+      return allSongs.slice(0, limit);
+    }
+
+    function renderTopSongsList() {
+      if (!currentDiscography || !currentDiscography.top_songs) return;
+      const allSongs = currentDiscography.top_songs;
+      const visibleSongs = getVisibleTopSongs();
+
+      if ($topSongsSubtitle) {
+        $topSongsSubtitle.textContent = `Menampilkan ${visibleSongs.length} dari ${allSongs.length} lagu terpopuler`;
+      }
+
+      $topSongsList.innerHTML = visibleSongs.map(track => buildTrackRow(track)).join('');
+      attachTrackRowListeners($topSongsList);
+      updateSelectAllTopButton();
+    }
+
+    function updateSelectAllTopButton() {
+      if (!$btnSelectAllTop || !currentDiscography || !currentDiscography.top_songs) return;
+      const visibleSongs = getVisibleTopSongs();
+      if (visibleSongs.length === 0) return;
+
+      const allSelected = visibleSongs.every(t => selectedTracks.has(t.track_id));
+      $btnSelectAllTop.textContent = allSelected ? 'Batal Pilih Semua' : 'Pilih Semua Lagu Populer';
+    }
+
+    if ($topSongsLimitSelect) {
+      $topSongsLimitSelect.addEventListener('change', () => {
+        renderTopSongsList();
+      });
+    }
+
     function renderDiscography(disco) {
       $artistName.textContent = disco.name;
       $artistGenre.textContent = disco.genre || 'Music';
@@ -574,9 +613,8 @@
       $artistAvatar.src = disco.artwork_url || '/static/logo.png';
       $artistAvatar.onerror = () => { $artistAvatar.src = '/static/logo.png'; };
 
-      // Render Top Songs List
-      $topSongsList.innerHTML = disco.top_songs.map(track => buildTrackRow(track)).join('');
-      attachTrackRowListeners($topSongsList);
+      // Render Top Songs List according to display limit
+      renderTopSongsList();
 
       // Render Albums List
       $albumsGrid.innerHTML = disco.albums.map(album => `
@@ -638,10 +676,12 @@
       if ($btnSelectAllTop) {
         $btnSelectAllTop.onclick = () => {
           if (!currentDiscography || !currentDiscography.top_songs) return;
-          const songs = currentDiscography.top_songs;
-          const allSelected = songs.every(t => selectedTracks.has(t.track_id));
-          songs.forEach(t => toggleTrackSelection(t, !allSelected));
-          $btnSelectAllTop.textContent = !allSelected ? 'Batal Pilih Semua' : 'Pilih Semua Lagu Populer';
+          const visibleSongs = getVisibleTopSongs();
+          if (visibleSongs.length === 0) return;
+
+          const allSelected = visibleSongs.every(t => selectedTracks.has(t.track_id));
+          visibleSongs.forEach(t => toggleTrackSelection(t, !allSelected));
+          updateSelectAllTopButton();
         };
       }
     }
@@ -811,6 +851,7 @@
       });
 
       updateBatchActionBar();
+      updateSelectAllTopButton();
     }
 
     function clearSelection() {
@@ -818,7 +859,7 @@
       document.querySelectorAll('.track-row.selected').forEach(r => r.classList.remove('selected'));
       document.querySelectorAll('.track-checkbox:checked').forEach(c => c.checked = false);
       if ($batchActionBar) $batchActionBar.style.display = 'none';
-      if ($btnSelectAllTop) $btnSelectAllTop.textContent = 'Pilih Semua Lagu Populer';
+      updateSelectAllTopButton();
     }
 
     function updateBatchActionBar() {

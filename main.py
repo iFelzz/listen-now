@@ -305,7 +305,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["400/day"])
 app = FastAPI(
     title="Listen Now",
     description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style) & Auto-Cover Art",
-    version="2.1.0",
+    version="2.2.4",
     lifespan=lifespan,
 )
 app.state.limiter = limiter

@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=2.2.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2.4" />
 </head>
 
 <body>
@@ -185,10 +185,21 @@
           <!-- Top Songs Panel -->
           <div class="disco-panel" id="panel-top-songs">
             <div class="disco-panel-header">
-              <span class="panel-subtitle">Paling sering didengarkan</span>
-              <button type="button" class="btn-select-all-top" id="btn-select-all-top">
-                Pilih Semua Lagu Populer
-              </button>
+              <span class="panel-subtitle" id="top-songs-subtitle">Paling sering didengarkan</span>
+              <div class="disco-top-actions">
+                <div class="disco-limit-wrap">
+                  <label for="top-songs-limit-select">Tampilkan:</label>
+                  <select id="top-songs-limit-select" class="disco-select">
+                    <option value="25">25 lagu</option>
+                    <option value="50">50 lagu</option>
+                    <option value="100" selected>100 lagu</option>
+                    <option value="all">Semua lagu</option>
+                  </select>
+                </div>
+                <button type="button" class="btn-select-all-top" id="btn-select-all-top">
+                  Pilih Semua Lagu Populer
+                </button>
+              </div>
             </div>
             <div class="tracks-list" id="top-songs-list"></div>
           </div>
@@ -296,7 +307,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=2.2.3" defer></script>
+  <script src="/static/js/app.js?v=2.2.4" defer></script>
 </body>
 
 </html>

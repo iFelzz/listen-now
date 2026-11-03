@@ -367,9 +367,18 @@ def search_artists(query: str, limit: int = 5) -> list:
         logger.warning("Artist search error for '%s': %s", query, exc)
         return []
 
-def get_artist_discography(artist_id: str, limit_songs: int = 40, limit_albums: int = 35) -> dict:
+def normalize_track_key(title: str) -> str:
+    """Normalize song title for deduplication while preserving distinct variations (remix, acoustic, live, etc.)."""
+    s = title.lower().strip()
+    s = re.sub(r"\s*(\[|\()(explicit|clean|remastered|remaster|digital\s+remaster|deluxe\s+edition|\d{4}\s+remaster)(\]|\))\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s*[-–—]\s*(explicit|clean|remastered|remaster|\d{4}\s+remaster)\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"[\'\"‘’“”`]", "", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+def get_artist_discography(artist_id: str, limit_songs: int = 200, limit_albums: int = 50) -> dict:
     """
     Fetch top songs and albums for a given Apple Music artist ID.
+    Supports up to 200 songs with smart deduplication favoring studio albums over singles.
     """
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     discography = {
@@ -388,6 +397,7 @@ def get_artist_discography(artist_id: str, limit_songs: int = 40, limit_albums: 
         with urllib.request.urlopen(req, timeout=4.5) as resp:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
+                raw_songs = []
                 for item in data.get("results", []):
                     wtype = item.get("wrapperType")
                     if wtype == "artist":
@@ -404,7 +414,7 @@ def get_artist_discography(artist_id: str, limit_songs: int = 40, limit_albums: 
                         rel = item.get("releaseDate", "")
                         year = rel[:4] if rel and len(rel) >= 4 else ""
 
-                        discography["top_songs"].append({
+                        raw_songs.append({
                             "track_id": str(item.get("trackId", "")),
                             "title": item.get("trackName") or "",
                             "artist": item.get("artistName") or discography["name"],
@@ -416,6 +426,23 @@ def get_artist_discography(artist_id: str, limit_songs: int = 40, limit_albums: 
                             "artwork_url": hi_art,
                             "track_number": item.get("trackNumber") or 1,
                         })
+
+                unique_songs = {}
+                for song in raw_songs:
+                    key = normalize_track_key(song["title"])
+                    album = (song.get("album") or "").lower()
+                    if key not in unique_songs:
+                        unique_songs[key] = song
+                    else:
+                        existing = unique_songs[key]
+                        ex_album = (existing.get("album") or "").lower()
+                        # Prefer studio album version over '- single' or '- ep'
+                        if " - single" in ex_album and " - single" not in album:
+                            unique_songs[key] = song
+                        elif " - ep" in ex_album and (" - single" not in album and " - ep" not in album):
+                            unique_songs[key] = song
+
+                discography["top_songs"] = list(unique_songs.values())
     except Exception as exc:
         logger.warning("Error fetching top songs for artist %s: %s", artist_id, exc)
 
