@@ -731,8 +731,12 @@
                 quality: currentPreferredQuality
               })
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+            let data = null;
+            try {
+              data = await res.json();
+            } catch (_) {}
+            if (!res.ok) throw new Error((data && data.detail) || `Server error (${res.status})`);
+            if (!data || !data.download_url) throw new Error('Download URL tidak ditemukan.');
 
             triggerDownload(data.download_url, data.filename);
             toast('success', `Mengunduh <strong>${esc(track.artist)} - ${esc(track.title)}</strong>`);
@@ -865,9 +869,12 @@
             })
           });
 
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          if (!data.download_url) throw new Error('Download URL missing');
+          let data = null;
+          try {
+            data = await res.json();
+          } catch (_) {}
+          if (!res.ok) throw new Error((data && data.detail) || `Server error (${res.status})`);
+          if (!data || !data.download_url) throw new Error('Download URL missing');
 
           // Trigger browser / FDM / IDM download cleanly
           triggerDownload(data.download_url, data.filename);

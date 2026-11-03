@@ -399,14 +399,15 @@ def _extract_stream_info(url: str, raw_title: str = "", explicit_meta: Optional[
             resolved_poster = rich_meta.get("poster_url") or ""
 
         return {
-            "stream_url": stream_url,
-            "title":      resolved_title,
-            "artist":     resolved_artist,
-            "album":      resolved_album,
-            "year":       resolved_year,
-            "poster_url": resolved_poster,
-            "duration":   info.get("duration") or 0,
-            "user_agent": headers.get("User-Agent"),
+            "stream_url":  stream_url,
+            "webpage_url": info.get("webpage_url") or info.get("original_url") or clean_target,
+            "title":       resolved_title,
+            "artist":      resolved_artist,
+            "album":       resolved_album,
+            "year":        resolved_year,
+            "poster_url":  resolved_poster,
+            "duration":    info.get("duration") or 0,
+            "user_agent":  headers.get("User-Agent"),
         }
 
 # ── Routes ────────────────────────────────────────────────────
@@ -436,7 +437,7 @@ async def get_version():
     commit = get_commit_hash()
     return {
         "commit": commit,
-        "version": "2.2.1",
+        "version": "2.2.2",
         "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}"
     }
 
@@ -450,7 +451,7 @@ async def health():
         "active_streams": _active_streams_count,
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.2.1",
+        "version": "2.2.2",
     }
 
 @app.get("/api/storage")
@@ -685,7 +686,8 @@ async def prepare_download(request: Request, body: DownloadRequest):
     filename = f"{display_name}.{ext}"
 
     # Embed token AND fallback query params so the URL never 400s under multiple connections or retries
-    encoded_url    = urllib.parse.quote(url)
+    webpage_url    = info.get("webpage_url") or target_url
+    encoded_url    = urllib.parse.quote(webpage_url)
     encoded_title  = urllib.parse.quote(clean_title)
     encoded_artist = urllib.parse.quote(clean_artist)
     encoded_album  = urllib.parse.quote(clean_album)
