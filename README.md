@@ -145,11 +145,11 @@ For Portainer:
 | `GET` | `/api/album/{id}/tracks` | Fetch full tracklist of a specific album/EP |
 | `GET` | `/api/preview?url=` | Extract audio stream URL for in-browser preview |
 | `POST` | `/api/download` | Pre-resolve stream in ~0.5s, fetch cover art & issue token |
-| `GET` | `/api/stream?token=&url=&quality=` | Real-time on-the-fly MP3 audio streaming pipe (`pipe:1`) |
+| `GET` | `/api/stream?token=&quality=` | Token-authorized on-the-fly MP3 audio streaming pipe (`pipe:1`) |
 
 ---
 
-## 🌐 Advanced Configuration (Proxy & Cookies)
+## 🌐 Advanced Configuration (Proxy, Cookies & Security)
 
 To bypass YouTube bot checks or datacenter IP restrictions on cloud VPS:
 * **Cookies**: Place a `cookies.txt` file in the project root directory, or set the environment variable:
@@ -159,6 +159,10 @@ To bypass YouTube bot checks or datacenter IP restrictions on cloud VPS:
 * **Proxy**: Set the HTTP/SOCKS5 proxy environment variable:
   ```env
   YTDLP_PROXY=http://user:pass@host:port
+  ```
+* **Custom Allowed CORS Origins**: By default `listennow.ifelz.my.id` and `localhost` are allowed. To add custom domains:
+  ```env
+  ALLOWED_ORIGINS=https://listennow.ifelz.my.id,https://yourdomain.com
   ```
 
 ---
