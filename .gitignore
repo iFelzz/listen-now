@@ -27,14 +27,15 @@ ffmpeg/
 # Logs
 *.log
 
-# Downloads folder (konten user)
-downloads/*.mp3
-downloads/*.webm
-downloads/*.m4a
-downloads/*.opus
-downloads/*.part
-downloads/*.ytdl
-downloads/*.3gp
+# Media & user files (Zero-Disk architecture keeps these off server)
+*.mp3
+*.webm
+*.m4a
+*.opus
+*.part
+*.ytdl
+*.3gp
+downloads/
 
 # Docker
 .dockerignore

@@ -9,8 +9,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Mount hanya folder downloads agar MP3 tersimpan di host
-      - ./downloads:/app/downloads
       # Mount folder .git host agar commit hash selalu live dan sinkron dengan Portainer Git
       - ./.git:/app/.git:ro
     # Hapus opsi --reload karena ini sudah masuk fase Production
