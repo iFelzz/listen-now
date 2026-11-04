@@ -74,3 +74,4 @@ Whenever you bump the version in `VERSION` (e.g., from `1.0.0` to `1.0.1`):
 - The version badge in the footer displays the current version dynamically (`v1.0.0`), fetched via `/api/version`.
 - Artist search must **never auto-jump** into discography without user selection; always render the matching artist cards first.
 - In batch downloads, successful downloads are automatically deselected; failed tracks remain selected and the drawer displays a **Retry Failed Tracks** button.
+

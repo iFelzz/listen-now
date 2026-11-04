@@ -1208,33 +1208,28 @@
       }
     }
 
-/* Version & Commit Badge in Footer */
+/* Version & Commit in Footer (Simple text) */
 .commit-badge,
 .version-badge {
   display: inline-flex;
   align-items: center;
   margin-left: 6px;
+  color: var(--clr-text-dim);
 }
 
 .commit-badge a,
 .version-badge a {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.72rem;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(124, 58, 237, 0.15);
-  border: 1px solid rgba(124, 58, 237, 0.35);
-  color: var(--clr-accent);
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--clr-text-dim);
   text-decoration: none;
   transition: var(--transition);
 }
 
 .commit-badge a:hover,
 .version-badge a:hover {
-  background: rgba(124, 58, 237, 0.35);
-  border-color: var(--clr-accent);
-  color: #fff;
-  text-decoration: none;
+  color: var(--clr-accent);
+  text-decoration: underline;
 }
 
 /* ═══════════════════════════════════════════════════
