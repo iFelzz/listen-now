@@ -540,8 +540,15 @@ async def health():
     }
 
 @app.get("/api/storage")
-async def storage_info():
-    """System information & stream statistics (0 disk usage guaranteed)."""
+async def storage_info(request: Request, key: Optional[str] = None):
+    """System information & stream statistics (Admin authentication required)."""
+    admin_header = request.headers.get("X-Admin-Key")
+    provided_key = (key or admin_header or "").strip()
+    if provided_key != ADMIN_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Admin authentication required. Access denied."
+        )
     return JSONResponse(content={
         "mode": "Zero-Disk Streaming (Cobalt-Style Pipeline)",
         "disk_usage_mb": 0.0,
