@@ -1407,6 +1407,11 @@
         $btnUpdateReload.textContent = 'Updating…';
         $btnUpdateReload.disabled = true;
 
+        const targetVer = $updateNewVersion ? $updateNewVersion.textContent.trim() : '';
+        try {
+          sessionStorage.setItem('melodyxx_just_updated', targetVer || 'true');
+        } catch (_) {}
+
         if (newWorkerWaiting) {
           try {
             newWorkerWaiting.postMessage({ action: 'skipWaiting' });
@@ -1479,6 +1484,45 @@
       setTimeout(requestNotificationPermission, 3000);
     });
 
+    // ── Post-Update Success Feedback ──────────────────────────
+    let hasCheckedPostUpdate = false;
+
+    function checkPostUpdateFeedback(currentVer) {
+      if (hasCheckedPostUpdate) return;
+      hasCheckedPostUpdate = true;
+
+      let justUpdated = null;
+      try {
+        justUpdated = sessionStorage.getItem('melodyxx_just_updated');
+        if (justUpdated) {
+          sessionStorage.removeItem('melodyxx_just_updated');
+        }
+      } catch (_) {}
+
+      let lastSeenVer = null;
+      try {
+        lastSeenVer = localStorage.getItem('melodyxx_last_seen_ver');
+        if (currentVer) {
+          localStorage.setItem('melodyxx_last_seen_ver', currentVer);
+        }
+      } catch (_) {}
+
+      // Show update celebration toast if explicitly reloaded from update banner OR version incremented
+      if (justUpdated || (lastSeenVer && currentVer && lastSeenVer !== currentVer)) {
+        setTimeout(() => {
+          const displayVer = currentVer || (justUpdated && justUpdated !== 'true' ? justUpdated : '');
+          const verLabel = displayVer ? ` to <strong>${esc(displayVer)}</strong>` : '';
+          toast('success', `Update successful${verLabel}! Melodyxx is running the latest version.`, 5000);
+
+          const $versionBadge = document.getElementById('version-badge');
+          if ($versionBadge) {
+            $versionBadge.classList.add('badge-highlight-pulse');
+            setTimeout(() => $versionBadge.classList.remove('badge-highlight-pulse'), 6000);
+          }
+        }, 600);
+      }
+    }
+
     // ── Load and display version badge ─────────────────────────
     function loadVersion() {
       const $versionLink = document.getElementById('version-link') || document.getElementById('commit-link');
@@ -1495,6 +1539,8 @@
           $versionLink.textContent = formatted;
           $versionLink.href = data.version_url || 'https://github.com/iFelzz/listen-now';
           $versionLink.title = `Melodyxx ${formatted}`;
+
+          checkPostUpdateFeedback(formatted);
 
           if (!currentAppVersion) {
             currentAppVersion = formatted;

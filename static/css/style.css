@@ -1274,6 +1274,24 @@
   text-decoration: underline;
 }
 
+.version-badge.badge-highlight-pulse a {
+  color: #34d399 !important;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  font-weight: 700;
+  animation: badge-pulse 1.6s infinite ease-in-out;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
 /* ═══════════════════════════════════════════════════
    SEARCH MODE TABS (Lagu vs Artis)
 ═══════════════════════════════════════════════════ */
