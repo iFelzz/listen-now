@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.2.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.2.1" />
 </head>
 
 <body>
@@ -109,21 +109,39 @@
 
         <!-- Empty state (default) -->
         <div class="state-msg" id="empty-state">
-          <div class="icon" aria-hidden="true">🎵</div>
+          <div class="state-icon-wrap" aria-hidden="true">
+            <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </div>
           <h3>Start searching</h3>
           <p>Type a song title, artist name, or lyrics in the search box above.</p>
         </div>
 
         <!-- Error state -->
         <div class="state-msg" id="error-state" style="display:none;" role="alert">
-          <div class="icon" aria-hidden="true">⚠️</div>
+          <div class="state-icon-wrap state-icon-error" aria-hidden="true">
+            <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
           <h3>Search failed</h3>
           <p id="error-msg">An error occurred. Please try again.</p>
         </div>
 
         <!-- No results state -->
         <div class="state-msg" id="no-results-state" style="display:none;">
-          <div class="icon" aria-hidden="true">🔍</div>
+          <div class="state-icon-wrap" aria-hidden="true">
+            <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </div>
           <h3>No results found</h3>
           <p>Try a different keyword.</p>
         </div>
@@ -199,10 +217,17 @@
           <!-- Discography Sub Tabs: Top Songs vs Albums -->
           <div class="disco-nav-tabs" role="tablist">
             <button type="button" class="disco-tab active" data-view="top-songs" id="tab-top-songs">
-              🔥 Popular Songs
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+              </svg>
+              Popular Songs
             </button>
             <button type="button" class="disco-tab" data-view="albums" id="tab-albums">
-              💿 All Albums &amp; EPs
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              All Albums &amp; EPs
             </button>
           </div>
 
@@ -316,7 +341,9 @@
         <div class="spinner-small" id="batch-spinner"></div>
         <span class="batch-progress-title" id="batch-progress-title">Downloading Batch...</span>
       </div>
-      <button type="button" class="btn-batch-cancel" id="btn-batch-cancel" title="Cancel Queue">✕</button>
+      <button type="button" class="btn-batch-cancel" id="btn-batch-cancel" title="Cancel Queue" aria-label="Cancel Queue">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
     </div>
     <div class="batch-progress-sub" id="batch-progress-sub">Preparing queue...</div>
     <div class="batch-progress-track">
@@ -338,7 +365,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.2.0" defer></script>
+  <script src="/static/js/app.js?v=1.2.1" defer></script>
 </body>
 
 </html>

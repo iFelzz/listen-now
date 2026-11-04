@@ -478,6 +478,40 @@
       color: var(--clr-text-muted);
     }
 
+    .state-icon-wrap {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(124, 58, 237, 0.06) 70%, transparent 100%);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      box-shadow: 0 0 28px rgba(168, 85, 247, 0.2), inset 0 0 16px rgba(168, 85, 247, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px auto;
+      color: #c084fc;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    }
+
+    .state-icon-wrap:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(168, 85, 247, 0.35), inset 0 0 20px rgba(168, 85, 247, 0.2);
+    }
+
+    .state-icon-wrap.state-icon-error {
+      background: radial-gradient(circle, rgba(239, 68, 68, 0.22) 0%, rgba(220, 38, 38, 0.06) 70%, transparent 100%);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      box-shadow: 0 0 28px rgba(239, 68, 68, 0.2), inset 0 0 16px rgba(239, 68, 68, 0.12);
+      color: #f87171;
+    }
+
+    .state-icon-wrap .state-icon {
+      width: 36px;
+      height: 36px;
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+
     .state-msg .icon {
       font-size: 3rem;
       margin-bottom: 12px;
@@ -868,6 +902,14 @@
     .toast-icon {
       font-size: 1.2rem;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast-icon svg {
+      width: 20px;
+      height: 20px;
     }
 
     .toast-msg {
@@ -1486,7 +1528,7 @@
 
 .disco-tab {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
@@ -1495,6 +1537,15 @@
   border-radius: 8px;
   cursor: pointer;
   transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disco-tab .tab-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .disco-tab:hover {
@@ -1914,8 +1965,12 @@
   color: var(--clr-text-muted);
   font-size: 0.9rem;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
 }
 
 .btn-batch-cancel:hover {

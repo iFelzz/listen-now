@@ -75,4 +75,5 @@ Whenever you bump the version in `VERSION` (e.g., from `1.0.0` to `1.0.1`):
 - Artist search must **never auto-jump** into discography without user selection; always render the matching artist cards first.
 - In batch downloads, successful downloads are automatically deselected; failed tracks remain selected and the drawer displays a **Retry Failed Tracks** button.
 - **In-App Auto-Update Notification**: When a new version is detected (via Service Worker or periodic polling), a floating top banner `#update-notification-banner` prompts the user to refresh with one click (`btn-update-reload`).
+- **Strict Iconography & Theme Standards**: **NEVER** use default OS/system emojis (`🎵`, `⚠️`, `🔍`, `🎤`, `🔥`, `💿`, `✅`, `❌`, etc.) anywhere in the user interface. All iconography, empty/error state illustrations, tab headers, actions, artist placeholders, and toast notifications MUST use custom vector SVGs specifically styled according to Melodyxx's glowing violet/purple neon glassmorphism design system.
 

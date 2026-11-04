@@ -110,12 +110,16 @@
 
     /** Render a toast notification */
     function toast(type, msg, duration = 4000) {
-      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      const icons = {
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+        error: `<svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+        info: `<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+      };
       const el = document.createElement('div');
       el.className = `toast ${type}`;
       el.setAttribute('role', 'status');
       el.innerHTML = `
-      <span class="toast-icon" aria-hidden="true">${icons[type] || 'ℹ️'}</span>
+      <span class="toast-icon" aria-hidden="true">${icons[type] || icons.info}</span>
       <span class="toast-msg">${msg}</span>`;
       $toastWrap.appendChild(el);
       setTimeout(() => {
@@ -491,6 +495,8 @@
       }
     }
 
+    const ARTIST_PLACEHOLDER_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`;
+
     function renderArtistResults(artists) {
       $artistResultsCount.textContent = `${artists.length} artist${artists.length === 1 ? '' : 's'} found`;
       $artistResultsGrid.innerHTML = artists.map(art => {
@@ -498,8 +504,8 @@
           ? `<span class="artist-card-country" title="${esc(art.country)}">${art.flag ? `${esc(art.flag)} ` : ''}${esc(art.country)}</span>`
           : '';
         const photoHtml = art.photo
-          ? `<img src="${esc(art.photo)}" alt="${esc(art.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="artist-card-placeholder" style="display:none;">🎤</div>`
-          : `<div class="artist-card-placeholder">🎤</div>`;
+          ? `<img src="${esc(art.photo)}" alt="${esc(art.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="artist-card-placeholder" style="display:none;">${ARTIST_PLACEHOLDER_SVG}</div>`
+          : `<div class="artist-card-placeholder">${ARTIST_PLACEHOLDER_SVG}</div>`;
 
         return `
           <div class="artist-card" data-artist-id="${art.artist_id}">
@@ -1245,10 +1251,10 @@
 
         btn.classList.remove('loading');
         btn.classList.add('done');
-        toast('success', `🎵 Mengalirkan <strong>${esc(item.title)}</strong> langsung ke browser!`);
+        toast('success', `Streaming <strong>${esc(item.title)}</strong> directly to browser!`);
 
         if (Notification.permission === 'granted') {
-          new Notification('✅ Download Started!', {
+          new Notification('Download Started!', {
             body: item.title,
             icon: item.thumbnail || '/static/logo.png',
             badge: '/static/logo.png',
@@ -1366,7 +1372,7 @@
         $updateBanner.style.display = 'flex';
       }
 
-      toast('info', `✨ New update available (${newVersion})! Click Refresh to update.`);
+      toast('info', `New update available (${newVersion})! Click Refresh to update.`);
     }
 
     function checkForUpdates() {
