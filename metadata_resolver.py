@@ -13,6 +13,7 @@ import json
 import logging
 import urllib.parse
 import urllib.request
+import concurrent.futures
 from typing import Optional, Tuple, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -301,9 +302,146 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
 
 # ── Artist Discovery & Discography APIs ───────────────────────
 
+def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> dict:
+    """
+    Resolve artist portrait photo and country origin.
+    Uses Deezer for high-res portrait images and MusicBrainz / Wikidata for country and national flag emoji.
+    """
+    photo = ""
+    country_name = ""
+    country_code = ""
+    flag = ""
+
+    clean_name = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", name).strip()
+    if not clean_name:
+        return {"photo": "", "country": "", "country_code": "", "flag": ""}
+
+    # 1. Deezer for high-res artist portrait photo
+    try:
+        d_url = f"https://api.deezer.com/search/artist?q={urllib.parse.quote(clean_name)}&limit=1"
+        req = urllib.request.Request(d_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            if resp.status == 200:
+                d_data = json.loads(resp.read().decode("utf-8"))
+                items = d_data.get("data", [])
+                if items:
+                    top_d = items[0]
+                    top_name = top_d.get("name", "").lower()
+                    if clean_name.lower() in top_name or top_name in clean_name.lower():
+                        photo = top_d.get("picture_medium") or top_d.get("picture") or ""
+    except Exception:
+        pass
+
+    # Fallback to Apple Music latest release artwork if Deezer portrait unavailable
+    if not photo and itunes_id:
+        try:
+            it_url = f"https://itunes.apple.com/lookup?id={itunes_id}&entity=album&limit=1"
+            it_req = urllib.request.Request(it_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(it_req, timeout=2.0) as resp:
+                if resp.status == 200:
+                    it_data = json.loads(resp.read().decode("utf-8"))
+                    for r in it_data.get("results", []):
+                        if r.get("wrapperType") == "collection":
+                            raw_art = r.get("artworkUrl100", "")
+                            if raw_art:
+                                photo = raw_art.replace("100x100bb.jpg", "300x300bb.jpg")
+                                break
+        except Exception:
+            pass
+
+    # 2. MusicBrainz for Country
+    try:
+        mb_url = f'https://musicbrainz.org/ws/2/artist/?query=artist:%22{urllib.parse.quote(clean_name)}%22&fmt=json&limit=1'
+        req = urllib.request.Request(mb_url, headers={"User-Agent": "Melodyxx/1.1.0 (melodyxx@app.local)"})
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            if resp.status == 200:
+                mb_data = json.loads(resp.read().decode("utf-8"))
+                mb_artists = mb_data.get("artists", [])
+                if mb_artists:
+                    ar = mb_artists[0]
+                    country_code = ar.get("country") or ""
+                    country_name = ar.get("area", {}).get("name") or ""
+                    # Handle city/subdivision without explicit country code
+                    if not country_code and country_name:
+                        us_areas = {"brooklyn", "new york", "los angeles", "chicago", "houston", "nashville", "atlanta", "miami", "seattle"}
+                        uk_areas = {"london", "manchester", "liverpool", "birmingham", "glasgow"}
+                        if country_name.lower() in us_areas:
+                            country_code = "US"
+                            country_name = f"{country_name}, United States"
+                        elif country_name.lower() in uk_areas:
+                            country_code = "GB"
+                            country_name = f"{country_name}, United Kingdom"
+    except Exception:
+        pass
+
+    if country_code and len(country_code) == 2:
+        flag = "".join(chr(127397 + ord(c)) for c in country_code.upper() if "A" <= c <= "Z")
+    elif not country_name:
+        # Fallback to Wikidata
+        try:
+            w_url = f"https://www.wikidata.org/w/api.php?action=wbsearchentities&search={urllib.parse.quote(clean_name)}&language=en&format=json&limit=1"
+            w_req = urllib.request.Request(w_url, headers={"User-Agent": "Melodyxx/1.1.0"})
+            with urllib.request.urlopen(w_req, timeout=1.8) as resp:
+                if resp.status == 200:
+                    w_res = json.loads(resp.read().decode("utf-8")).get("search", [])
+                    if w_res:
+                        desc = w_res[0].get("description", "").lower()
+                        nationalities = [
+                            ("indonesian", "ID", "Indonesia"),
+                            ("south korean", "KR", "South Korea"),
+                            ("korean", "KR", "South Korea"),
+                            ("american", "US", "United States"),
+                            ("british", "GB", "United Kingdom"),
+                            ("english", "GB", "United Kingdom"),
+                            ("russian", "RU", "Russia"),
+                            ("japanese", "JP", "Japan"),
+                            ("brazilian", "BR", "Brazil"),
+                            ("canadian", "CA", "Canada"),
+                            ("australian", "AU", "Australia"),
+                            ("thai", "TH", "Thailand"),
+                            ("mexican", "MX", "Mexico"),
+                            ("spanish", "ES", "Spain"),
+                            ("german", "DE", "Germany"),
+                            ("french", "FR", "France"),
+                            ("italian", "IT", "Italy"),
+                            ("swedish", "SE", "Sweden"),
+                            ("norwegian", "NO", "Norway"),
+                            ("chinese", "CN", "China"),
+                            ("taiwanese", "TW", "Taiwan"),
+                        ]
+                        for nat, ccode, cname in nationalities:
+                            if nat in desc:
+                                country_code = ccode
+                                country_name = cname
+                                flag = "".join(chr(127397 + ord(c)) for c in ccode.upper())
+                                break
+        except Exception:
+            pass
+
+    # Fallback to distinctive regional genre tags if country is still unknown
+    if not country_name and genre:
+        g_low = genre.lower()
+        if "cantopop" in g_low or "hk-pop" in g_low or "hong kong" in g_low:
+            country_code, country_name, flag = "HK", "Hong Kong", "🇭🇰"
+        elif "k-pop" in g_low or "korean" in g_low:
+            country_code, country_name, flag = "KR", "South Korea", "🇰🇷"
+        elif "j-pop" in g_low or "j-rock" in g_low or "japanese" in g_low:
+            country_code, country_name, flag = "JP", "Japan", "🇯🇵"
+        elif "mandopop" in g_low or "chinese" in g_low:
+            country_code, country_name, flag = "CN", "China", "🇨🇳"
+        elif "dangdut" in g_low or "indonesian" in g_low:
+            country_code, country_name, flag = "ID", "Indonesia", "🇮🇩"
+
+    return {
+        "photo": photo or "",
+        "country": country_name or "",
+        "country_code": country_code or "",
+        "flag": flag or "",
+    }
+
 def search_artists(query: str, limit: int = 10) -> list:
     """
-    Search artists via iTunes Search API.
+    Search artists via iTunes Search API and enrich with photos & country.
     Deduplicates identical artist names (keeping the top-ranked verified artist)
     and sorts exact/strong keyword matches first.
     """
@@ -362,7 +500,19 @@ def search_artists(query: str, limit: int = 10) -> list:
             else:
                 combined = other_matches
 
-            return combined[:limit]
+            final_results = combined[:limit]
+
+            # Enrich artists concurrently with high-res portrait photos & country
+            if final_results:
+                try:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(final_results), 8)) as executor:
+                        extras_list = list(executor.map(lambda it: resolve_artist_extras(it["name"], it.get("artist_id", ""), it.get("genre", "")), final_results))
+                        for item, extras in zip(final_results, extras_list):
+                            item.update(extras)
+                except Exception as enrich_err:
+                    logger.warning("Artist extras enrichment error: %s", enrich_err)
+
+            return final_results
     except Exception as exc:
         logger.warning("Artist search error for '%s': %s", query, exc)
         return []
@@ -473,6 +623,19 @@ def get_artist_discography(artist_id: str, limit_songs: int = 200, limit_albums:
         logger.warning("Error fetching albums for artist %s: %s", artist_id, exc)
 
     discography["albums"].sort(key=lambda a: a.get("year", ""), reverse=True)
+
+    # Enrich with artist country, flag, and portrait photo
+    if discography["name"]:
+        try:
+            extras = resolve_artist_extras(discography["name"], str(artist_id), discography.get("genre", ""))
+            discography["country"] = extras.get("country", "")
+            discography["country_code"] = extras.get("country_code", "")
+            discography["flag"] = extras.get("flag", "")
+            if extras.get("photo"):
+                discography["photo"] = extras["photo"]
+        except Exception:
+            pass
+
     return discography
 
 def get_album_tracks(album_id: str) -> list:

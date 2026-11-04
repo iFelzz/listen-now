@@ -493,15 +493,29 @@
 
     function renderArtistResults(artists) {
       $artistResultsCount.textContent = `${artists.length} artist${artists.length === 1 ? '' : 's'} found`;
-      $artistResultsGrid.innerHTML = artists.map(art => `
-        <div class="artist-card" data-artist-id="${art.artist_id}">
-          <div class="artist-card-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.6rem;">🎤</div>
-          <div class="artist-card-info">
-            <div class="artist-card-name" title="${esc(art.name)}">${esc(art.name)}</div>
-            <div class="artist-card-genre">${esc(art.genre)}</div>
+      $artistResultsGrid.innerHTML = artists.map(art => {
+        const countryLabel = art.country
+          ? `<span class="artist-card-country" title="${esc(art.country)}">${art.flag ? `${esc(art.flag)} ` : ''}${esc(art.country)}</span>`
+          : '';
+        const photoHtml = art.photo
+          ? `<img src="${esc(art.photo)}" alt="${esc(art.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="artist-card-placeholder" style="display:none;">🎤</div>`
+          : `<div class="artist-card-placeholder">🎤</div>`;
+
+        return `
+          <div class="artist-card" data-artist-id="${art.artist_id}">
+            <div class="artist-card-avatar">
+              ${photoHtml}
+            </div>
+            <div class="artist-card-info">
+              <div class="artist-card-name" title="${esc(art.name)}">${esc(art.name)}</div>
+              <div class="artist-card-meta">
+                ${countryLabel}
+                <span class="artist-card-genre">${esc(art.genre || 'Music')}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       $artistResultsGrid.querySelectorAll('.artist-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -608,8 +622,19 @@
       $artistName.textContent = disco.name;
       $artistGenre.textContent = disco.genre || 'Music';
       $artistStats.textContent = `${disco.top_songs.length} Popular Tracks • ${disco.albums.length} Albums & EPs`;
-      $artistAvatar.src = disco.artwork_url || '/static/logo.png';
-      $artistAvatar.onerror = () => { $artistAvatar.src = '/static/logo.png'; };
+
+      const $artistCountry = document.getElementById('artist-country');
+      if ($artistCountry) {
+        if (disco.country) {
+          $artistCountry.textContent = `${disco.flag ? `${disco.flag} ` : ''}${disco.country}`;
+          $artistCountry.style.display = 'inline-flex';
+        } else {
+          $artistCountry.style.display = 'none';
+        }
+      }
+
+      $artistAvatar.src = disco.photo || disco.artwork_url || '/static/logo.png';
+      $artistAvatar.onerror = () => { $artistAvatar.src = disco.artwork_url || '/static/logo.png'; };
 
       // Render Top Songs List according to display limit
       renderTopSongsList();
