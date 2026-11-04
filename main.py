@@ -46,6 +46,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 import metadata_resolver
+from analytics import analytics
 
 # ── Logging ─────────────────────────────────────────────────
 logging.basicConfig(
@@ -62,6 +63,7 @@ STATIC_DIR = BASE_DIR / "static"
 # ── Environment & External Config ────────────────────────────
 CLEANUP_TOKEN = os.environ.get("CLEANUP_TOKEN")
 YTDLP_PROXY   = os.environ.get("YTDLP_PROXY")
+ADMIN_KEY     = os.environ.get("ADMIN_KEY", "melodyxx-admin")
 
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE")
 if not COOKIES_FILE and (BASE_DIR / "cookies.txt").exists():
@@ -549,6 +551,41 @@ async def storage_info():
         "active_tokens": len(_stream_tokens),
     })
 
+# ── Internal Analytics & Metrics ─────────────────────────────
+
+@app.get("/stats", include_in_schema=False)
+async def stats_view():
+    """Serve the internal analytics & metrics dashboard."""
+    stats_path = STATIC_DIR / "stats.html"
+    if not stats_path.exists():
+        raise HTTPException(status_code=404, detail="Stats page not found.")
+    return FileResponse(str(stats_path))
+
+@app.get("/api/stats")
+async def get_stats(request: Request, key: Optional[str] = None):
+    """
+    Return comprehensive stream & bandwidth analytics.
+    Accepts optional admin key for full metrics access.
+    """
+    admin_header = request.headers.get("X-Admin-Key")
+    is_admin = bool(
+        (key and key.strip() == ADMIN_KEY) or
+        (admin_header and admin_header.strip() == ADMIN_KEY)
+    )
+    summary = analytics.get_summary(current_active_streams=_active_streams_count)
+    summary["is_admin"] = is_admin
+    return JSONResponse(content=summary)
+
+@app.post("/api/stats/reset")
+async def reset_stats(request: Request, key: Optional[str] = None):
+    """Reset accumulated analytics metrics (Admin authentication required)."""
+    admin_header = request.headers.get("X-Admin-Key")
+    provided_key = (key or admin_header or "").strip()
+    if provided_key != ADMIN_KEY:
+        raise HTTPException(status_code=401, detail="Invalid admin key. Access denied.")
+    analytics.reset()
+    return JSONResponse(content={"success": True, "message": "Analytics metrics have been reset successfully."})
+
 @app.get("/api/search")
 @limiter.limit("30/minute")
 async def search(request: Request, q: str, limit: int = 10):
@@ -558,6 +595,8 @@ async def search(request: Request, q: str, limit: int = 10):
     """
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
+
+    analytics.record_search(q.strip())
 
     limit = min(max(1, limit), 50)
     q_stripped = q.strip()
@@ -629,6 +668,8 @@ async def preview(request: Request, url: str):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL is required")
 
+    analytics.record_preview()
+
     cached = _preview_cache.get(url)
     if cached and (time.time() - cached["ts"]) < _PREVIEW_TTL_SECONDS:
         return {"stream_url": cached["stream_url"]}
@@ -666,6 +707,7 @@ async def search_artist(request: Request, q: str, limit: int = 10):
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
     
+    analytics.record_artist_search(q.strip())
     limit = min(max(1, limit), 25)
     q_clean = q.strip().lower()
     cache_key = f"{q_clean}:{limit}"
@@ -1065,8 +1107,10 @@ async def stream_audio(
         global _active_streams_count
         async with _STREAM_SEMAPHORE:
             _active_streams_count += 1
+            analytics.record_concurrency(_active_streams_count)
             logger.info("Stream opened: %s (Active streams: %d)", output_filename, _active_streams_count)
 
+            total_streamed_bytes = 0
             header_patched = False
             initial_buffer = bytearray()
             initial_buffer.extend(initial_chunk)
@@ -1075,7 +1119,10 @@ async def stream_audio(
                 patched = fix_id3_size_in_stream(initial_buffer)
                 if patched > 0:
                     header_patched = True
-                    yield bytes(initial_buffer)
+                    b = bytes(initial_buffer)
+                    total_streamed_bytes += len(b)
+                    analytics.record_stream_chunk(len(b))
+                    yield b
                     initial_buffer.clear()
 
             try:
@@ -1085,10 +1132,16 @@ async def stream_audio(
                             if len(initial_buffer) >= 512 * 1024:
                                 header_patched = True
                                 fix_id3_size_in_stream(initial_buffer)
-                                yield bytes(initial_buffer)
+                                b = bytes(initial_buffer)
+                                total_streamed_bytes += len(b)
+                                analytics.record_stream_chunk(len(b))
+                                yield b
                                 initial_buffer.clear()
                         else:
-                            yield bytes(initial_buffer)
+                            b = bytes(initial_buffer)
+                            total_streamed_bytes += len(b)
+                            analytics.record_stream_chunk(len(b))
+                            yield b
                             initial_buffer.clear()
 
                     chunk = await process.stdout.read(64 * 1024)  # 64 KB chunks
@@ -1097,7 +1150,10 @@ async def stream_audio(
                         if initial_buffer:
                             if not header_patched and not is_native:
                                 fix_id3_size_in_stream(initial_buffer)
-                            yield bytes(initial_buffer)
+                            b = bytes(initial_buffer)
+                            total_streamed_bytes += len(b)
+                            analytics.record_stream_chunk(len(b))
+                            yield b
                         break
 
                     if not header_patched and not is_native:
@@ -1106,15 +1162,22 @@ async def stream_audio(
                         # Once patched or safety threshold (512 KB) reached, flush header buffer
                         if patched > 0 or len(initial_buffer) >= 512 * 1024:
                             header_patched = True
-                            yield bytes(initial_buffer)
+                            b = bytes(initial_buffer)
+                            total_streamed_bytes += len(b)
+                            analytics.record_stream_chunk(len(b))
+                            yield b
                             initial_buffer.clear()
                     else:
+                        total_streamed_bytes += len(chunk)
+                        analytics.record_stream_chunk(len(chunk))
                         yield chunk
             except (asyncio.CancelledError, GeneratorExit):
                 logger.info("Client disconnected early from stream: %s", output_filename)
             finally:
                 _active_streams_count = max(0, _active_streams_count - 1)
-                logger.info("Stream closed: %s (Remaining active: %d)", output_filename, _active_streams_count)
+                analytics.record_stream_complete(stream_title, stream_artist, total_streamed_bytes)
+                logger.info("Stream closed: %s (Remaining active: %d, Streamed: %d bytes)",
+                            output_filename, _active_streams_count, total_streamed_bytes)
                 if process.returncode is None:
                     try:
                         process.terminate()

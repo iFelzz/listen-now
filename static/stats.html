@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melodyxx — Internal Analytics &amp; Metrics</title>
+  <meta name="theme-color" content="#0a0a14" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="/static/css/style.css?v=1.3.0" />
+
+  <style>
+    body {
+      background-color: var(--clr-bg);
+      color: var(--clr-text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stats-page-wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 36px 20px 80px;
+      width: 100%;
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .stats-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .stats-brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      box-shadow: 0 0 16px rgba(124, 58, 237, 0.35);
+    }
+
+    .stats-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stats-subtitle {
+      font-size: 0.82rem;
+      color: var(--clr-text-muted);
+      margin: 2px 0 0;
+    }
+
+    .stats-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-stats-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--clr-border);
+      color: var(--clr-text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .btn-stats-back:hover {
+      background: rgba(124, 58, 237, 0.15);
+      border-color: var(--clr-primary);
+      color: #fff;
+    }
+
+    .btn-refresh-stats {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      color: var(--clr-text-muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-refresh-stats:hover {
+      color: #fff;
+      border-color: var(--clr-primary);
+    }
+
+    .btn-refresh-stats.spinning svg {
+      animation: spin 0.8s linear infinite;
+    }
+
+    .admin-key-input {
+      background: rgba(10, 10, 20, 0.8);
+      border: 1px solid var(--clr-border);
+      color: #fff;
+      font-size: 0.82rem;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      width: 150px;
+      transition: var(--transition);
+    }
+
+    .admin-key-input:focus {
+      outline: none;
+      border-color: var(--clr-primary);
+      box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .metric-card {
+      background: rgba(18, 18, 36, 0.7);
+      border: 1px solid var(--clr-border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(124, 58, 237, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(124, 58, 237, 0.15);
+    }
+
+    .metric-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--clr-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-icon-wrap {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--clr-primary-light);
+    }
+
+    .metric-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--clr-text-dim);
+    }
+
+    .metric-sub strong {
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* Live pulse badge */
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(52, 211, 153, 0.15);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      color: #34d399;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+      animation: pulse-ring 1.8s infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.4;
+        transform: scale(0.8);
+      }
+    }
+
+    /* Section Panels */
+    .tables-split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .section-panel {
+      background: rgba(18, 18, 36, 0.7);
+      border: 1px solid var(--clr-border);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--clr-border);
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-count-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--clr-primary-light);
+      background: rgba(124, 58, 237, 0.18);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    /* Ranking Lists */
+    .rank-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      transition: var(--transition);
+      font-size: 0.85rem;
+    }
+
+    .rank-item:hover {
+      background: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.25);
+    }
+
+    .rank-item-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .rank-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--clr-text-dim);
+      width: 20px;
+      flex-shrink: 0;
+    }
+
+    .rank-item:nth-child(1) .rank-number {
+      color: #fbbf24;
+    }
+
+    .rank-item:nth-child(2) .rank-number {
+      color: #e2e8f0;
+    }
+
+    .rank-item:nth-child(3) .rank-number {
+      color: #f97316;
+    }
+
+    .rank-item-name {
+      color: var(--clr-text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rank-item-stat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--clr-accent);
+      padding-left: 10px;
+      flex-shrink: 0;
+    }
+
+    .empty-rank-msg {
+      text-align: center;
+      padding: 30px 10px;
+      color: var(--clr-text-dim);
+      font-size: 0.85rem;
+    }
+
+    /* Daily History Table */
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .history-table th {
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--clr-text-dim);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--clr-border);
+    }
+
+    .history-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--clr-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .history-table tr:hover td {
+      background: rgba(124, 58, 237, 0.05);
+    }
+
+    /* Danger zone */
+    .danger-zone {
+      margin-top: 36px;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px dashed rgba(239, 68, 68, 0.3);
+      background: rgba(239, 68, 68, 0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .danger-zone-info h4 {
+      margin: 0 0 4px;
+      font-size: 0.92rem;
+      color: #f87171;
+    }
+
+    .danger-zone-info p {
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--clr-text-dim);
+    }
+
+    .btn-reset-metrics {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-reset-metrics:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .tables-split-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .stats-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="stats-page-wrap">
+
+    <!-- Header -->
+    <header class="stats-header">
+      <div class="stats-title-group">
+        <img src="/static/logo.png" alt="Melodyxx" class="stats-brand-logo" />
+        <div>
+          <h1 class="stats-title">
+            Melodyxx Analytics
+            <span class="live-indicator"><span class="pulse-dot"></span> Live</span>
+          </h1>
+          <p class="stats-subtitle">Internal real-time bandwidth &amp; stream metrics</p>
+        </div>
+      </div>
+
+      <div class="stats-controls">
+        <input type="password" id="admin-key-input" class="admin-key-input" placeholder="Admin Key" title="Optional: Enter Admin Key for full analytics and resets" />
+        <button type="button" class="btn-refresh-stats" id="btn-refresh-stats" title="Refresh metrics">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+        <a href="/" class="btn-stats-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Melodyxx App</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Metrics Cards Grid -->
+    <div class="metrics-grid">
+      <!-- Total Streams -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Songs Streamed</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-total-streams">0</div>
+        <div class="metric-sub">Today: <strong id="val-today-streams">0</strong> songs</div>
+      </div>
+
+      <!-- Bandwidth -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Stream Bandwidth</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-bandwidth">0 MB</div>
+        <div class="metric-sub">Today: <strong id="val-today-bandwidth">0 MB</strong> piped</div>
+      </div>
+
+      <!-- Concurrency -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Active Streams</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-active-streams">0</div>
+        <div class="metric-sub">Peak concurrent: <strong id="val-peak-concurrency">0</strong></div>
+      </div>
+
+      <!-- Total Searches -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Total Searches</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-total-searches">0</div>
+        <div class="metric-sub">Artists queried: <strong id="val-artist-searches">0</strong></div>
+      </div>
+
+      <!-- Audio Previews -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">In-Browser Previews</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="10 8 16 12 10 16 10 8" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-total-previews">0</div>
+        <div class="metric-sub">Today: <strong id="val-today-previews">0</strong> plays</div>
+      </div>
+
+      <!-- Uptime -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Server Uptime</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" style="font-size: 1.45rem;" id="val-uptime">0m</div>
+        <div class="metric-sub">Disk usage: <strong>0 MB (Zero-Disk)</strong></div>
+      </div>
+    </div>
+
+    <!-- Rankings Grid -->
+    <div class="tables-split-grid">
+      <!-- Top Tracks -->
+      <div class="section-panel">
+        <div class="panel-head">
+          <span class="panel-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            Top Streamed Tracks
+          </span>
+          <span class="panel-count-tag" id="top-tracks-count">0 tracks</span>
+        </div>
+        <ul class="rank-list" id="top-tracks-list">
+          <li class="empty-rank-msg">No streaming records yet. Start downloading tracks to populate ranking!</li>
+        </ul>
+      </div>
+
+      <!-- Top Artists -->
+      <div class="section-panel">
+        <div class="panel-head">
+          <span class="panel-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            Top Searched Artists
+          </span>
+          <span class="panel-count-tag" id="top-artists-count">0 artists</span>
+        </div>
+        <ul class="rank-list" id="top-artists-list">
+          <li class="empty-rank-msg">No artist searches recorded yet.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Daily Activity History -->
+    <div class="section-panel">
+      <div class="panel-head">
+        <span class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          Recent Activity Breakdown
+        </span>
+        <span class="panel-count-tag" id="history-days-count">Recent days</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Streams</th>
+              <th>Bandwidth</th>
+              <th>Searches</th>
+              <th>Previews</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Danger Zone: Reset -->
+    <div class="danger-zone">
+      <div class="danger-zone-info">
+        <h4>Reset Analytics Database</h4>
+        <p>Clear all accumulated stream counters, ranking statistics, and daily history (Requires Admin Key).</p>
+      </div>
+      <button type="button" class="btn-reset-metrics" id="btn-reset-metrics">Reset Metrics</button>
+    </div>
+
+  </div>
+
+  <script>
+    const $adminKey = document.getElementById('admin-key-input');
+    const $btnRefresh = document.getElementById('btn-refresh-stats');
+    const $btnReset = document.getElementById('btn-reset-metrics');
+
+    // Load saved admin key from sessionStorage
+    try {
+      const savedKey = sessionStorage.getItem('melodyxx_admin_key');
+      if (savedKey) $adminKey.value = savedKey;
+    } catch (_) {}
+
+    $adminKey.addEventListener('change', () => {
+      try {
+        sessionStorage.setItem('melodyxx_admin_key', $adminKey.value.trim());
+      } catch (_) {}
+      fetchStats();
+    });
+
+    function esc(str) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(str || '').replace(/[&<>"']/g, c => map[c]);
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return '0 MB';
+      if (bytes >= 1024 * 1024 * 1024) {
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+      }
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    async function fetchStats() {
+      $btnRefresh.classList.add('spinning');
+      const key = $adminKey.value.trim();
+      const url = `/api/stats?_t=${Date.now()}${key ? `&key=${encodeURIComponent(key)}` : ''}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderMetrics(data);
+      } catch (err) {
+        console.error('Failed to fetch analytics:', err);
+      } finally {
+        setTimeout(() => $btnRefresh.classList.remove('spinning'), 400);
+      }
+    }
+
+    function renderMetrics(data) {
+      document.getElementById('val-total-streams').textContent = Number(data.total_streams || 0).toLocaleString();
+      document.getElementById('val-today-streams').textContent = Number(data.today?.streams || 0).toLocaleString();
+
+      document.getElementById('val-bandwidth').textContent = formatBytes(data.total_bytes_streamed);
+      document.getElementById('val-today-bandwidth').textContent = formatBytes((data.today?.mb_streamed || 0) * 1024 * 1024);
+
+      document.getElementById('val-active-streams').textContent = data.active_streams || 0;
+      document.getElementById('val-peak-concurrency').textContent = data.peak_concurrency || 0;
+
+      document.getElementById('val-total-searches').textContent = Number(data.total_searches || 0).toLocaleString();
+      document.getElementById('val-artist-searches').textContent = Number(data.total_artist_searches || 0).toLocaleString();
+
+      document.getElementById('val-total-previews').textContent = Number(data.total_previews || 0).toLocaleString();
+      document.getElementById('val-today-previews').textContent = Number(data.today?.previews || 0).toLocaleString();
+
+      document.getElementById('val-uptime').textContent = data.uptime_human || '0m';
+
+      // Top Tracks
+      const $topTracksList = document.getElementById('top-tracks-list');
+      const tracks = data.top_tracks || [];
+      document.getElementById('top-tracks-count').textContent = `${tracks.length} tracks`;
+
+      if (tracks.length === 0) {
+        $topTracksList.innerHTML = '<li class="empty-rank-msg">No streaming records yet.</li>';
+      } else {
+        $topTracksList.innerHTML = tracks.map((t, idx) => `
+          <li class="rank-item">
+            <div class="rank-item-info">
+              <span class="rank-number">#${idx + 1}</span>
+              <span class="rank-item-name" title="${esc(t.name)}">${esc(t.name)}</span>
+            </div>
+            <span class="rank-item-stat">${Number(t.streams).toLocaleString()} streams</span>
+          </li>
+        `).join('');
+      }
+
+      // Top Artists
+      const $topArtistsList = document.getElementById('top-artists-list');
+      const artists = data.top_artists || [];
+      document.getElementById('top-artists-count').textContent = `${artists.length} artists`;
+
+      if (artists.length === 0) {
+        $topArtistsList.innerHTML = '<li class="empty-rank-msg">No artist searches recorded yet.</li>';
+      } else {
+        $topArtistsList.innerHTML = artists.map((a, idx) => `
+          <li class="rank-item">
+            <div class="rank-item-info">
+              <span class="rank-number">#${idx + 1}</span>
+              <span class="rank-item-name" title="${esc(a.name)}">${esc(a.name)}</span>
+            </div>
+            <span class="rank-item-stat">${Number(a.searches).toLocaleString()} queries</span>
+          </li>
+        `).join('');
+      }
+
+      // Daily Breakdown
+      const $historyBody = document.getElementById('history-table-body');
+      const recent = data.recent_days || {};
+      const dates = Object.keys(recent).sort().reverse();
+      document.getElementById('history-days-count').textContent = `${dates.length} days recorded`;
+
+      if (dates.length === 0) {
+        $historyBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td></tr>';
+      } else {
+        $historyBody.innerHTML = dates.map(d => {
+          const row = recent[d];
+          return `
+            <tr>
+              <td style="color: #fff; font-weight: 600;">${esc(d)}</td>
+              <td>${Number(row.streams || 0).toLocaleString()}</td>
+              <td>${formatBytes(row.bytes || 0)}</td>
+              <td>${Number(row.searches || 0).toLocaleString()}</td>
+              <td>${Number(row.previews || 0).toLocaleString()}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    $btnRefresh.addEventListener('click', fetchStats);
+
+    // Auto-refresh every 10 seconds
+    setInterval(fetchStats, 10000);
+
+    // Reset button
+    $btnReset.addEventListener('click', async () => {
+      const key = $adminKey.value.trim();
+      if (!key) {
+        alert('Please enter your Admin Key in the top input box first.');
+        $adminKey.focus();
+        return;
+      }
+
+      if (!confirm('Are you sure you want to completely reset all analytics data? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/stats/reset?key=${encodeURIComponent(key)}`, { method: 'POST' });
+        const resData = await res.json();
+        if (!res.ok) {
+          alert('Reset failed: ' + (resData.detail || 'Unauthorized'));
+          return;
+        }
+        alert('Analytics metrics have been reset successfully.');
+        fetchStats();
+      } catch (err) {
+        alert('Failed to connect to reset endpoint: ' + err.message);
+      }
+    });
+
+    // Initial load
+    fetchStats();
+  </script>
+</body>
+
+</html>
