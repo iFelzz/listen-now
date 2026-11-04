@@ -565,15 +565,17 @@ async def stats_view():
 async def get_stats(request: Request, key: Optional[str] = None):
     """
     Return comprehensive stream & bandwidth analytics.
-    Accepts optional admin key for full metrics access.
+    Strictly requires valid Admin Key authentication.
     """
     admin_header = request.headers.get("X-Admin-Key")
-    is_admin = bool(
-        (key and key.strip() == ADMIN_KEY) or
-        (admin_header and admin_header.strip() == ADMIN_KEY)
-    )
+    provided_key = (key or admin_header or "").strip()
+    if provided_key != ADMIN_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Admin authentication required. Access denied."
+        )
     summary = analytics.get_summary(current_active_streams=_active_streams_count)
-    summary["is_admin"] = is_admin
+    summary["is_admin"] = True
     return JSONResponse(content=summary)
 
 @app.post("/api/stats/reset")

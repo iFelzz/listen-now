@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.3.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.4.0" />
 
   <style>
     body {
@@ -122,22 +122,228 @@
       animation: spin 0.8s linear infinite;
     }
 
-    .admin-key-input {
-      background: rgba(10, 10, 20, 0.8);
-      border: 1px solid var(--clr-border);
-      color: #fff;
-      font-size: 0.82rem;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      width: 150px;
-      transition: var(--transition);
+    /* ═══════════════════════════════════════════════════
+       ADMIN AUTH GATE OVERLAY
+    ═══════════════════════════════════════════════════ */
+    .admin-gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: radial-gradient(circle at 50% 25%, rgba(124, 58, 237, 0.16) 0%, rgba(10, 10, 20, 0.98) 75%);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
-    .admin-key-input:focus {
+    .admin-gate-card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(18, 18, 36, 0.92);
+      border: 1px solid rgba(168, 85, 247, 0.28);
+      border-radius: 20px;
+      padding: 36px 30px;
+      text-align: center;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 32px rgba(124, 58, 237, 0.18);
+      animation: gate-appear 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes gate-appear {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .gate-logo-wrap {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 18px;
+      border-radius: 16px;
+      background: rgba(124, 58, 237, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.35);
+    }
+
+    .gate-logo-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
+    .gate-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .gate-subtitle {
+      font-size: 0.84rem;
+      color: var(--clr-text-muted);
+      line-height: 1.5;
+      margin: 0 0 24px;
+    }
+
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .gate-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .gate-input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--clr-text-dim);
+      pointer-events: none;
+    }
+
+    .gate-input {
+      width: 100%;
+      height: 46px;
+      padding: 0 14px 0 40px;
+      background: rgba(10, 10, 22, 0.85);
+      border: 1px solid var(--clr-border);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      transition: all 0.2s ease;
       outline: none;
+    }
+
+    .gate-input:focus {
       border-color: var(--clr-primary);
-      box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2), 0 0 16px rgba(124, 58, 237, 0.25);
+    }
+
+    .gate-error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 8px;
+      color: #f87171;
+      font-size: 0.82rem;
+      font-weight: 500;
+      animation: shake 0.35s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    .btn-gate-unlock {
+      height: 46px;
+      background: linear-gradient(135deg, var(--clr-primary) 0%, #6d28d9 100%);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 18px rgba(124, 58, 237, 0.45);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-gate-unlock:hover {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      box-shadow: 0 6px 22px rgba(124, 58, 237, 0.65);
+      transform: translateY(-1px);
+    }
+
+    .btn-gate-unlock:active {
+      transform: translateY(0);
+    }
+
+    .btn-gate-unlock:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .gate-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--clr-text-dim);
+      font-size: 0.82rem;
+      text-decoration: none;
+      margin-top: 20px;
+      transition: color 0.2s ease;
+    }
+
+    .gate-back-link:hover {
+      color: var(--clr-primary-light);
+    }
+
+    /* Admin Authenticated status pill in header */
+    .admin-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      color: #34d399;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .admin-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+    }
+
+    .btn-admin-lock {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-admin-lock:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #f87171;
+      color: #fff;
     }
 
     /* Cards Grid */
@@ -457,37 +663,89 @@
 
 <body>
 
-  <div class="stats-page-wrap">
-
-    <!-- Header -->
-    <header class="stats-header">
-      <div class="stats-title-group">
-        <img src="/static/logo.png" alt="Melodyxx" class="stats-brand-logo" />
-        <div>
-          <h1 class="stats-title">
-            Melodyxx Analytics
-            <span class="live-indicator"><span class="pulse-dot"></span> Live</span>
-          </h1>
-          <p class="stats-subtitle">Internal real-time bandwidth &amp; stream metrics</p>
+  <!-- ── ADMIN AUTHENTICATION GATE ── -->
+  <div id="admin-gate" class="admin-gate-overlay">
+    <div class="admin-gate-card">
+      <div class="gate-logo-wrap">
+        <img src="/static/logo.png" alt="Melodyxx" class="gate-logo-img" />
+      </div>
+      <h2 class="gate-title">Admin Access Required</h2>
+      <p class="gate-subtitle">Enter your secret Admin Key to view real-time streaming analytics and system metrics.</p>
+      
+      <form id="gate-form" class="gate-form">
+        <div class="gate-input-wrap">
+          <svg class="gate-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <input type="password" id="gate-key-input" class="gate-input" placeholder="Enter Admin Key..." autocomplete="current-password" required />
         </div>
-      </div>
+        
+        <div id="gate-error" class="gate-error" style="display: none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="gate-error-text">Invalid Admin Key. Access denied.</span>
+        </div>
 
-      <div class="stats-controls">
-        <input type="password" id="admin-key-input" class="admin-key-input" placeholder="Admin Key" title="Optional: Enter Admin Key for full analytics and resets" />
-        <button type="button" class="btn-refresh-stats" id="btn-refresh-stats" title="Refresh metrics">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        <button type="submit" id="btn-gate-unlock" class="btn-gate-unlock">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-6 6l7-7M3 10l6-6 4 4-6 6H3v-4z"/>
           </svg>
-          <span>Refresh</span>
+          <span>Unlock Dashboard</span>
         </button>
-        <a href="/" class="btn-stats-back">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          <span>Melodyxx App</span>
-        </a>
-      </div>
-    </header>
+      </form>
+
+      <a href="/" class="gate-back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span>Return to Melodyxx App</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD (Hidden until admin key verified) ── -->
+  <div id="stats-dashboard" style="display: none;">
+    <div class="stats-page-wrap">
+
+      <!-- Header -->
+      <header class="stats-header">
+        <div class="stats-title-group">
+          <img src="/static/logo.png" alt="Melodyxx" class="stats-brand-logo" />
+          <div>
+            <h1 class="stats-title">
+              Melodyxx Analytics
+              <span class="live-indicator"><span class="pulse-dot"></span> Live</span>
+            </h1>
+            <p class="stats-subtitle">Internal real-time bandwidth &amp; stream metrics</p>
+          </div>
+        </div>
+
+        <div class="stats-controls">
+          <div class="admin-status-pill">
+            <span class="admin-status-dot"></span>
+            <span>Admin Active</span>
+          </div>
+          <button type="button" class="btn-admin-lock" id="btn-admin-lock" title="Lock &amp; sign out">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>Lock</span>
+          </button>
+          <button type="button" class="btn-refresh-stats" id="btn-refresh-stats" title="Refresh metrics">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
+          <a href="/" class="btn-stats-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>Melodyxx App</span>
+          </a>
+        </div>
+      </header>
 
     <!-- Metrics Cards Grid -->
     <div class="metrics-grid">
@@ -660,25 +918,24 @@
       <button type="button" class="btn-reset-metrics" id="btn-reset-metrics">Reset Metrics</button>
     </div>
 
+    </div>
   </div>
 
   <script>
-    const $adminKey = document.getElementById('admin-key-input');
+    let currentAdminKey = '';
+    let autoRefreshTimer = null;
+
+    const $adminGate = document.getElementById('admin-gate');
+    const $gateForm = document.getElementById('gate-form');
+    const $gateInput = document.getElementById('gate-key-input');
+    const $gateBtn = document.getElementById('btn-gate-unlock');
+    const $gateError = document.getElementById('gate-error');
+    const $gateErrorText = document.getElementById('gate-error-text');
+
+    const $dashboard = document.getElementById('stats-dashboard');
+    const $btnLock = document.getElementById('btn-admin-lock');
     const $btnRefresh = document.getElementById('btn-refresh-stats');
     const $btnReset = document.getElementById('btn-reset-metrics');
-
-    // Load saved admin key from sessionStorage
-    try {
-      const savedKey = sessionStorage.getItem('melodyxx_admin_key');
-      if (savedKey) $adminKey.value = savedKey;
-    } catch (_) {}
-
-    $adminKey.addEventListener('change', () => {
-      try {
-        sessionStorage.setItem('melodyxx_admin_key', $adminKey.value.trim());
-      } catch (_) {}
-      fetchStats();
-    });
 
     function esc(str) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -693,13 +950,88 @@
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    async function fetchStats() {
-      $btnRefresh.classList.add('spinning');
-      const key = $adminKey.value.trim();
-      const url = `/api/stats?_t=${Date.now()}${key ? `&key=${encodeURIComponent(key)}` : ''}`;
+    // Attempt authentication
+    async function authenticateAndLoad(key) {
+      $gateError.style.display = 'none';
+      $gateBtn.disabled = true;
+      const $btnSpan = $gateBtn.querySelector('span');
+      const origText = $btnSpan ? $btnSpan.textContent : 'Unlock Dashboard';
+      if ($btnSpan) $btnSpan.textContent = 'Verifying...';
 
       try {
-        const res = await fetch(url);
+        const res = await fetch(`/api/stats?_t=${Date.now()}&key=${encodeURIComponent(key)}`, {
+          headers: { 'X-Admin-Key': key }
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Access denied. Invalid Admin Key.');
+        }
+
+        const data = await res.json();
+        currentAdminKey = key;
+        try {
+          sessionStorage.setItem('melodyxx_admin_key', key);
+        } catch (_) {}
+
+        // Hide gate, show dashboard
+        $adminGate.style.display = 'none';
+        $dashboard.style.display = 'block';
+
+        renderMetrics(data);
+
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(fetchStats, 10000);
+
+      } catch (err) {
+        $gateErrorText.textContent = err.message || 'Invalid Admin Key. Access denied.';
+        $gateError.style.display = 'flex';
+        $gateInput.focus();
+        $gateInput.select();
+        try {
+          sessionStorage.removeItem('melodyxx_admin_key');
+        } catch (_) {}
+      } finally {
+        $gateBtn.disabled = false;
+        if ($btnSpan) $btnSpan.textContent = origText;
+      }
+    }
+
+    // Form submit
+    $gateForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const entered = $gateInput.value.trim();
+      if (!entered) return;
+      authenticateAndLoad(entered);
+    });
+
+    // Lock button
+    $btnLock.addEventListener('click', () => {
+      currentAdminKey = '';
+      try {
+        sessionStorage.removeItem('melodyxx_admin_key');
+      } catch (_) {}
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      $dashboard.style.display = 'none';
+      $adminGate.style.display = 'flex';
+      $gateInput.value = '';
+      $gateError.style.display = 'none';
+      $gateInput.focus();
+    });
+
+    async function fetchStats() {
+      if (!currentAdminKey) return;
+      $btnRefresh.classList.add('spinning');
+      const url = `/api/stats?_t=${Date.now()}&key=${encodeURIComponent(currentAdminKey)}`;
+
+      try {
+        const res = await fetch(url, {
+          headers: { 'X-Admin-Key': currentAdminKey }
+        });
+        if (res.status === 401) {
+          $btnLock.click();
+          return;
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         renderMetrics(data);
@@ -792,15 +1124,10 @@
 
     $btnRefresh.addEventListener('click', fetchStats);
 
-    // Auto-refresh every 10 seconds
-    setInterval(fetchStats, 10000);
-
-    // Reset button
+    // Reset button (authenticated)
     $btnReset.addEventListener('click', async () => {
-      const key = $adminKey.value.trim();
-      if (!key) {
-        alert('Please enter your Admin Key in the top input box first.');
-        $adminKey.focus();
+      if (!currentAdminKey) {
+        alert('Admin authentication is required.');
         return;
       }
 
@@ -809,7 +1136,10 @@
       }
 
       try {
-        const res = await fetch(`/api/stats/reset?key=${encodeURIComponent(key)}`, { method: 'POST' });
+        const res = await fetch(`/api/stats/reset?key=${encodeURIComponent(currentAdminKey)}`, {
+          method: 'POST',
+          headers: { 'X-Admin-Key': currentAdminKey }
+        });
         const resData = await res.json();
         if (!res.ok) {
           alert('Reset failed: ' + (resData.detail || 'Unauthorized'));
@@ -822,8 +1152,22 @@
       }
     });
 
-    // Initial load
-    fetchStats();
+    // Check for auto-login from URL or sessionStorage
+    (function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const keyFromUrl = urlParams.get('key');
+      let savedKey = '';
+      try {
+        savedKey = keyFromUrl || sessionStorage.getItem('melodyxx_admin_key') || '';
+      } catch (_) {}
+
+      if (savedKey) {
+        $gateInput.value = savedKey;
+        authenticateAndLoad(savedKey);
+      } else {
+        $gateInput.focus();
+      }
+    })();
   </script>
 </body>
 
