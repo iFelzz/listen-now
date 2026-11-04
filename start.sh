@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────
-#  Listen Now - Startup Script (Linux / macOS)
+#  Melodyxx - Startup Script (Linux / macOS)
 # ──────────────────────────────────────────────
 
 set -e
@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"
 
 echo ""
 echo " =========================================="
-echo "  Listen Now - YouTube MP3 Downloader"
+echo "  Melodyxx - YouTube MP3 Downloader"
 echo "  Powered by FastAPI + yt-dlp + FFmpeg"
 echo " =========================================="
 echo ""

@@ -1,12 +1,12 @@
 # ─────────────────────────────────────────────────────────────
-#  Listen Now – Dockerfile
+#  Melodyxx – Dockerfile
 #  Base: python:3.12-slim  |  Includes: ffmpeg, yt-dlp, FastAPI
 # ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim
 
 # Metadata
-LABEL maintainer="Listen Now"
-LABEL description="YouTube MP3 Downloader powered by yt-dlp & FastAPI (Zero-Disk Streaming Engine)"
+LABEL maintainer="Melodyxx"
+LABEL description="Melodyxx – YouTube MP3 Downloader powered by yt-dlp & FastAPI (Zero-Disk Streaming Engine)"
 
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1

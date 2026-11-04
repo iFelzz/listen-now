@@ -1,4 +1,4 @@
-# 🎵 Listen Now – YouTube MP3 Downloader (v2.2.4)
+# 🎵 Melodyxx – YouTube MP3 Downloader (v2.2.4)
 
 A high-performance web application to search for songs on YouTube or explore complete artist discographies, preview audio directly in the browser, and download high-quality MP3 (128 / 192 / 320 kbps) with **official high-resolution album cover art & clean ID3 metadata**.
 
@@ -52,7 +52,7 @@ Powered by a **Cobalt-Style Zero-Disk Real-Time Streaming Pipeline** (**FastAPI*
 ## 📁 Project Structure
 
 ```
-listen-now/
+melodyxx/
 ├── main.py                 # FastAPI backend & Zero-disk stream piping engine
 ├── metadata_resolver.py    # Apple Music & YouTube metadata and artwork resolver
 ├── requirements.txt        # Python dependencies
@@ -172,5 +172,5 @@ To bypass YouTube bot checks or datacenter IP restrictions on cloud VPS:
 
 ## 📄 License & Attribution
 
-Listen Now &copy; 2026 &mdash; Created by [iFelzz](https://github.com/iFelzz)  
+Melodyxx &copy; 2026 &mdash; Created by [iFelzz](https://github.com/iFelzz)  
 Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp), [FFmpeg](https://ffmpeg.org), and [FastAPI](https://fastapi.tiangolo.com).

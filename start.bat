@@ -1,10 +1,10 @@
 @echo off
-title Listen Now - YouTube MP3 Downloader
+title Melodyxx - YouTube MP3 Downloader
 color 0A
 
 echo.
 echo  ==========================================
-echo   Listen Now - YouTube MP3 Downloader
+echo   Melodyxx - YouTube MP3 Downloader
 echo   Powered by FastAPI + yt-dlp + FFmpeg
 echo  ==========================================
 echo.

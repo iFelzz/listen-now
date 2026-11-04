@@ -1,10 +1,10 @@
 version: "3.9"
 
 services:
-  listen-now:
+  melodyxx:
     # Ganti 'image' menjadi 'build: .' agar Portainer merakit sendiri dari Dockerfile
     build: .
-    container_name: listen-now-container
+    container_name: melodyxx-container
     restart: unless-stopped
     ports:
       - "8000:8000"

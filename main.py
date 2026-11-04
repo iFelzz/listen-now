@@ -1,5 +1,5 @@
 """
-Listen Now – Zero-Disk Streaming Backend (Cobalt-Style Pipeline)
+Melodyxx – Zero-Disk Streaming Backend (Cobalt-Style Pipeline)
 ───────────────────────────────────────────────────────────────
 Architecture:
   - Zero-Disk Storage: 0 bytes written to disk. All media is processed in-memory.
@@ -287,7 +287,7 @@ async def _cache_maintenance_loop():
 # ── Lifespan ──────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing Listen Now (Zero-Disk Streaming Engine v2.1)...")
+    logger.info("Initializing Melodyxx (Zero-Disk Streaming Engine v2.2.4)...")
     try:
         ver = yt_dlp.version.__version__
         logger.info("yt-dlp version: %s", ver)
@@ -303,7 +303,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["400/day"])
 
 # ── FastAPI App ───────────────────────────────────────────────
 app = FastAPI(
-    title="Listen Now",
+    title="Melodyxx",
     description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style) & Auto-Cover Art",
     version="2.2.4",
     lifespan=lifespan,
@@ -446,12 +446,12 @@ async def health():
     """Health & architecture check endpoint."""
     return {
         "status": "ok",
-        "service": "Listen Now",
+        "service": "Melodyxx",
         "architecture": "zero-disk-stream-piping",
         "active_streams": _active_streams_count,
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.2.3",
+        "version": "2.2.4",
     }
 
 @app.get("/api/storage")
@@ -780,7 +780,7 @@ async def stream_audio(
     """
     stream_url    = None
     stream_title  = "audio"
-    stream_artist = "Listen Now"
+    stream_artist = "Melodyxx"
     stream_album  = ""
     stream_year   = ""
     poster_url    = None

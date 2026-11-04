@@ -70,7 +70,7 @@
     let itemsPerPage = 10;
     let currentPreferredQuality = '320';
     try {
-      currentPreferredQuality = localStorage.getItem('listen_now_quality') || '320';
+      currentPreferredQuality = localStorage.getItem('melodyxx_quality') || localStorage.getItem('listen_now_quality') || '320';
     } catch (_) {}
 
     let currentPlayingBtn = null;
@@ -343,7 +343,7 @@
       if (!quality) return;
       currentPreferredQuality = String(quality);
       try {
-        localStorage.setItem('listen_now_quality', currentPreferredQuality);
+        localStorage.setItem('melodyxx_quality', currentPreferredQuality);
       } catch (_) {}
 
       // 1. Sync header toggle buttons
@@ -1039,14 +1039,14 @@
     }
 
     // Volume slider initialization
-    const savedVol = localStorage.getItem('listen_now_volume');
+    const savedVol = localStorage.getItem('melodyxx_volume') || localStorage.getItem('listen_now_volume');
     if (savedVol !== null) {
       $volumeSlider.value = savedVol;
     }
     audioPlayer.volume = $volumeSlider.value;
     $volumeSlider.addEventListener('input', (e) => {
       audioPlayer.volume = e.target.value;
-      localStorage.setItem('listen_now_volume', e.target.value);
+      localStorage.setItem('melodyxx_volume', e.target.value);
     });
 
     // ── Audio events ──────────────────────────────────────────
@@ -1172,7 +1172,7 @@
             body: item.title,
             icon: item.thumbnail || '/static/logo.png',
             badge: '/static/logo.png',
-            tag: 'listen-now-download',
+            tag: 'melodyxx-download',
           });
         }
 
@@ -1242,13 +1242,13 @@
         const newVol = Math.min(1, parseFloat($volumeSlider.value) + 0.1);
         $volumeSlider.value = newVol;
         audioPlayer.volume = newVol;
-        localStorage.setItem('listen_now_volume', newVol);
+        localStorage.setItem('melodyxx_volume', newVol);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         const newVol = Math.max(0, parseFloat($volumeSlider.value) - 0.1);
         $volumeSlider.value = newVol;
         audioPlayer.volume = newVol;
-        localStorage.setItem('listen_now_volume', newVol);
+        localStorage.setItem('melodyxx_volume', newVol);
       }
 
       // Show keyboard tip on first use

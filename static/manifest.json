@@ -1,7 +1,7 @@
 {
-  "name": "Listen Now",
-  "short_name": "Listen Now",
-  "description": "Search YouTube, preview songs, and download as MP3.",
+  "name": "Melodyxx",
+  "short_name": "Melodyxx",
+  "description": "Search YouTube, preview songs, and download high quality MP3 with Melodyxx.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -1,5 +1,5 @@
 """
-Metadata Resolver for Listen Now
+Metadata Resolver for Melodyxx
 ─────────────────────────────────
 Automatically fetches official cover art (800x800) and cleans song metadata
 using a 3-tier hierarchy:
