@@ -1225,7 +1225,7 @@
 
     /* Push page content up when bar is visible */
     body.player-open .main-content {
-      padding-bottom: 120px;
+      padding-bottom: 180px;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -2022,7 +2022,7 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(22, 16, 38, 0.92);
+  background: rgba(22, 16, 38, 0.94);
   border: 1px solid rgba(124, 58, 237, 0.5);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -2031,9 +2031,16 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 24px rgba(124, 58, 237, 0.3);
   z-index: 900;
+  transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Float smoothly above the mini player when active to prevent overlapping */
+body.player-open .batch-action-bar,
+body:has(#mini-player.show) .batch-action-bar {
+  bottom: 120px;
 }
 
 .batch-bar-left {
@@ -2119,6 +2126,12 @@
   z-index: 910;
   animation: slideUp 0.3s ease;
   backdrop-filter: blur(12px);
+  transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.player-open .batch-progress-widget,
+body:has(#mini-player.show) .batch-progress-widget {
+  bottom: 120px;
 }
 
 .batch-progress-header {
