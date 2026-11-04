@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=2.2.5" />
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2.6" />
 </head>
 
 <body>
@@ -45,11 +45,11 @@
       <div class="search-mode-tabs" role="tablist" aria-label="Search Mode">
         <button type="button" class="search-mode-tab active" data-mode="songs" id="tab-mode-songs" role="tab" aria-selected="true">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-          Lagu
+          Songs
         </button>
         <button type="button" class="search-mode-tab" data-mode="artists" id="tab-mode-artists" role="tab" aria-selected="false">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          Artis (Diskografi)
+          Artists (Discography)
         </button>
       </div>
 
@@ -148,8 +148,8 @@
         <section id="artist-search-results" class="artist-search-section" style="display: none;" aria-label="Artist search results">
           <div class="results-header-wrap">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span class="results-title">Artis Ditemukan</span>
-              <span class="results-count" id="artist-results-count">0 artis</span>
+              <span class="results-title">Artists Found</span>
+              <span class="results-count" id="artist-results-count">0 artists</span>
             </div>
           </div>
           <div class="artist-results-grid" id="artist-results-grid"></div>
@@ -159,7 +159,7 @@
         <section id="artist-view" class="artist-discography-section" style="display: none;" aria-label="Artist Discography">
           <button type="button" class="btn-back-artist" id="btn-back-artist">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Kembali ke Hasil Pencarian
+            Back to Search Results
           </button>
 
           <!-- Artist Hero Banner -->
@@ -167,37 +167,37 @@
             <img class="artist-avatar" id="artist-avatar" src="" alt="Artist Photo">
             <div class="artist-meta">
               <span class="artist-genre-badge" id="artist-genre">Genre</span>
-              <h2 class="artist-name" id="artist-name">Nama Artis</h2>
-              <p class="artist-stats" id="artist-stats">Memuat diskografi...</p>
+              <h2 class="artist-name" id="artist-name">Artist Name</h2>
+              <p class="artist-stats" id="artist-stats">Loading discography...</p>
             </div>
           </div>
 
           <!-- Discography Sub Tabs: Top Songs vs Albums -->
           <div class="disco-nav-tabs" role="tablist">
             <button type="button" class="disco-tab active" data-view="top-songs" id="tab-top-songs">
-              🔥 Lagu Terpopuler
+              🔥 Popular Songs
             </button>
             <button type="button" class="disco-tab" data-view="albums" id="tab-albums">
-              💿 Semua Album &amp; EP
+              💿 All Albums &amp; EPs
             </button>
           </div>
 
           <!-- Top Songs Panel -->
           <div class="disco-panel" id="panel-top-songs">
             <div class="disco-panel-header">
-              <span class="panel-subtitle" id="top-songs-subtitle">Paling sering didengarkan</span>
+              <span class="panel-subtitle" id="top-songs-subtitle">Most popular songs</span>
               <div class="disco-top-actions">
                 <div class="disco-limit-wrap">
-                  <label for="top-songs-limit-select">Tampilkan:</label>
+                  <label for="top-songs-limit-select">Show:</label>
                   <select id="top-songs-limit-select" class="disco-select">
-                    <option value="25">25 lagu</option>
-                    <option value="50">50 lagu</option>
-                    <option value="100" selected>100 lagu</option>
-                    <option value="all">Semua lagu</option>
+                    <option value="25">25 songs</option>
+                    <option value="50">50 songs</option>
+                    <option value="100" selected>100 songs</option>
+                    <option value="all">All songs</option>
                   </select>
                 </div>
                 <button type="button" class="btn-select-all-top" id="btn-select-all-top">
-                  Pilih Semua Lagu Populer
+                  Select All Popular Songs
                 </button>
               </div>
             </div>
@@ -274,13 +274,13 @@
   <div id="batch-action-bar" class="batch-action-bar" style="display: none;">
     <div class="batch-bar-left">
       <span class="batch-count-badge" id="batch-count">0</span>
-      <span class="batch-count-label">Lagu dipilih</span>
+      <span class="batch-count-label">tracks selected</span>
     </div>
     <div class="batch-bar-actions">
-      <button type="button" class="btn-batch-clear" id="btn-batch-clear">Batal Pilih</button>
+      <button type="button" class="btn-batch-clear" id="btn-batch-clear">Deselect All</button>
       <button type="button" class="btn-batch-download" id="btn-batch-download">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        <span id="btn-batch-dl-text">Unduh Batch (0)</span>
+        <span id="btn-batch-dl-text">Download Selected (0)</span>
       </button>
     </div>
   </div>
@@ -290,24 +290,24 @@
     <div class="batch-progress-header">
       <div class="batch-progress-title-wrap">
         <div class="spinner-small" id="batch-spinner"></div>
-        <span class="batch-progress-title" id="batch-progress-title">Sedang Mengunduh Batch...</span>
+        <span class="batch-progress-title" id="batch-progress-title">Downloading Batch...</span>
       </div>
-      <button type="button" class="btn-batch-cancel" id="btn-batch-cancel" title="Batalkan Antrean">✕</button>
+      <button type="button" class="btn-batch-cancel" id="btn-batch-cancel" title="Cancel Queue">✕</button>
     </div>
-    <div class="batch-progress-sub" id="batch-progress-sub">Menyiapkan antrean...</div>
+    <div class="batch-progress-sub" id="batch-progress-sub">Preparing queue...</div>
     <div class="batch-progress-track">
       <div class="batch-progress-fill" id="batch-progress-fill" style="width: 0%;"></div>
     </div>
     <div class="batch-progress-footer">
       <span id="batch-progress-count">0 / 0</span>
-      <span id="batch-progress-status">Berjalan berurutan</span>
+      <span id="batch-progress-status">Sequential download</span>
     </div>
   </div>
 
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=2.2.5" defer></script>
+  <script src="/static/js/app.js?v=2.2.6" defer></script>
 </body>
 
 </html>

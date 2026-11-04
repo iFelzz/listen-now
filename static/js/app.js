@@ -384,7 +384,7 @@
         $tabModeSongs.setAttribute('aria-selected', 'true');
         $tabModeArtists.classList.remove('active');
         $tabModeArtists.setAttribute('aria-selected', 'false');
-        $input.placeholder = 'Type the Song Title, or Paste a YouTube URL...';
+        $input.placeholder = 'Type the song title, or paste a YouTube URL...';
         clearSelection();
         if (allSearchResults.length > 0) {
           showState('results');
@@ -399,7 +399,7 @@
         $tabModeArtists.setAttribute('aria-selected', 'true');
         $tabModeSongs.classList.remove('active');
         $tabModeSongs.setAttribute('aria-selected', 'false');
-        $input.placeholder = 'Ketik nama artis atau band (contoh: Red Velvet, Coldplay)…';
+        $input.placeholder = 'Type artist or band name (e.g. Coldplay, Red Velvet, Alan Walker)…';
         clearSelection();
         if (currentDiscography) {
           showState('artist-view');
@@ -460,7 +460,7 @@
 
     async function performArtistSearch(query) {
       showState('loading');
-      $loadingText.textContent = `Mencari katalog diskografi ${query}…`;
+      $loadingText.textContent = `Searching discography for ${query}…`;
       $searchBtn.disabled = true;
 
       try {
@@ -487,7 +487,7 @@
         renderArtistResults(artists);
       } catch (err) {
         console.error('[Artist Search Error]', err);
-        $errorMsg.textContent = err.message || 'Gagal mencari artis. Silakan coba lagi.';
+        $errorMsg.textContent = err.message || 'Failed to search artists. Please try again.';
         showState('error');
       } finally {
         $searchBtn.disabled = false;
@@ -495,7 +495,7 @@
     }
 
     function renderArtistResults(artists) {
-      $artistResultsCount.textContent = `${artists.length} artis ditemukan`;
+      $artistResultsCount.textContent = `${artists.length} artist${artists.length === 1 ? '' : 's'} found`;
       $artistResultsGrid.innerHTML = artists.map(art => `
         <div class="artist-card" data-artist-id="${art.artist_id}">
           <div class="artist-card-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.6rem;">🎤</div>
@@ -517,7 +517,7 @@
 
     async function loadArtistDiscography(artistId) {
       showState('loading');
-      $loadingText.textContent = 'Memuat diskografi & seluruh lagu…';
+      $loadingText.textContent = 'Loading discography & popular tracks…';
       $searchBtn.disabled = true;
 
       try {
@@ -530,7 +530,7 @@
         showState('artist-view');
       } catch (err) {
         console.error('[Discography Error]', err);
-        $errorMsg.textContent = err.message || 'Gagal memuat diskografi artis.';
+        $errorMsg.textContent = err.message || 'Failed to load artist discography.';
         showState('error');
       } finally {
         $searchBtn.disabled = false;
@@ -583,7 +583,7 @@
       const visibleSongs = getVisibleTopSongs();
 
       if ($topSongsSubtitle) {
-        $topSongsSubtitle.textContent = `Menampilkan ${visibleSongs.length} dari ${allSongs.length} lagu terpopuler`;
+        $topSongsSubtitle.textContent = `Showing ${visibleSongs.length} of ${allSongs.length} popular tracks`;
       }
 
       $topSongsList.innerHTML = visibleSongs.map(track => buildTrackRow(track)).join('');
@@ -597,7 +597,7 @@
       if (visibleSongs.length === 0) return;
 
       const allSelected = visibleSongs.every(t => selectedTracks.has(t.track_id));
-      $btnSelectAllTop.textContent = allSelected ? 'Batal Pilih Semua' : 'Pilih Semua Lagu Populer';
+      $btnSelectAllTop.textContent = allSelected ? 'Deselect All' : 'Select All Popular Songs';
     }
 
     if ($topSongsLimitSelect) {
@@ -609,7 +609,7 @@
     function renderDiscography(disco) {
       $artistName.textContent = disco.name;
       $artistGenre.textContent = disco.genre || 'Music';
-      $artistStats.textContent = `${disco.top_songs.length} Lagu Terpopuler • ${disco.albums.length} Album / EP`;
+      $artistStats.textContent = `${disco.top_songs.length} Popular Tracks • ${disco.albums.length} Albums & EPs`;
       $artistAvatar.src = disco.artwork_url || '/static/logo.png';
       $artistAvatar.onerror = () => { $artistAvatar.src = '/static/logo.png'; };
 
@@ -623,18 +623,18 @@
             <img class="album-art" src="${album.artwork_url || '/static/logo.png'}" alt="Cover" loading="lazy" onerror="this.src='/static/logo.png'">
             <div class="album-info">
               <div class="album-title" title="${esc(album.title)}">${esc(album.title)}</div>
-              <div class="album-meta-text">${album.year ? album.year + ' • ' : ''}${album.track_count} Lagu • ${esc(album.genre)}</div>
+              <div class="album-meta-text">${album.year ? album.year + ' • ' : ''}${album.track_count} Tracks • ${esc(album.genre)}</div>
             </div>
             <div class="album-actions">
               <button type="button" class="btn-select-album" data-album-id="${album.album_id}">
-                Pilih Album
+                Select Album
               </button>
               <svg class="album-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
           </div>
           <div class="album-tracks-container" id="album-tracks-${album.album_id}">
             <div class="tracks-list" id="album-list-${album.album_id}">
-              <div style="font-size: 0.8rem; color: var(--clr-text-muted); padding: 8px 0;">Memuat daftar lagu...</div>
+              <div style="font-size: 0.8rem; color: var(--clr-text-muted); padding: 8px 0;">Loading tracklist...</div>
             </div>
           </div>
         </div>
@@ -653,7 +653,7 @@
         });
       });
 
-      // Attach "Pilih Album" click listeners
+      // Attach "Select Album" click listeners
       $albumsGrid.querySelectorAll('.btn-select-album').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -667,12 +667,12 @@
             // Check if all are already selected
             const allSelected = tracks.every(t => selectedTracks.has(t.track_id));
             tracks.forEach(t => toggleTrackSelection(t, !allSelected));
-            btn.textContent = !allSelected ? 'Batal Pilih' : 'Pilih Album';
+            btn.textContent = !allSelected ? 'Deselect' : 'Select Album';
           }
         });
       });
 
-      // "Pilih Semua Lagu Populer" button
+      // "Select All Popular Songs" button
       if ($btnSelectAllTop) {
         $btnSelectAllTop.onclick = () => {
           if (!currentDiscography || !currentDiscography.top_songs) return;
@@ -707,7 +707,7 @@
         return tracks;
       } catch (err) {
         console.error('Failed to load album tracks:', err);
-        listEl.innerHTML = '<div style="font-size:0.8rem; color:#ff6b6b;">Gagal memuat lagu album.</div>';
+        listEl.innerHTML = '<div style="font-size:0.8rem; color:#ff6b6b;">Failed to load album tracks.</div>';
         return [];
       }
     }
@@ -717,7 +717,7 @@
       return `
         <div class="track-row ${isChecked ? 'selected' : ''}" id="track-row-${track.track_id}" data-id="${track.track_id}">
           <div class="track-cb-wrap">
-            <input type="checkbox" class="track-checkbox" data-id="${track.track_id}" ${isChecked ? 'checked' : ''} aria-label="Pilih lagu ${esc(track.title)}">
+            <input type="checkbox" class="track-checkbox" data-id="${track.track_id}" ${isChecked ? 'checked' : ''} aria-label="Select track ${esc(track.title)}">
           </div>
           <img class="track-art" src="${track.artwork_url || '/static/logo.png'}" alt="Art" loading="lazy" onerror="this.src='/static/logo.png'">
           <div class="track-main">
@@ -727,10 +727,10 @@
           <div class="track-dur">${track.duration || ''}</div>
           <div class="track-actions">
             ${track.preview_url ? `
-            <button type="button" class="btn-track-action btn-track-play" data-preview="${esc(track.preview_url)}" data-title="${esc(track.title)}" data-artist="${esc(track.artist)}" data-art="${esc(track.artwork_url)}" title="Dengarkan Cuplikan">
+            <button type="button" class="btn-track-action btn-track-play" data-preview="${esc(track.preview_url)}" data-title="${esc(track.title)}" data-artist="${esc(track.artist)}" data-art="${esc(track.artwork_url)}" title="Preview Audio">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>` : ''}
-            <button type="button" class="btn-track-action btn-track-download" data-id="${track.track_id}" title="Download Lagu Ini">
+            <button type="button" class="btn-track-action btn-track-download" data-id="${track.track_id}" title="Download Track">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             </button>
           </div>
@@ -806,13 +806,13 @@
               data = await res.json();
             } catch (_) {}
             if (!res.ok) throw new Error((data && data.detail) || `Server error (${res.status})`);
-            if (!data || !data.download_url) throw new Error('Download URL tidak ditemukan.');
+            if (!data || !data.download_url) throw new Error('Download URL not found.');
 
             triggerDownload(data.download_url, data.filename);
-            toast('success', `Mengunduh <strong>${esc(track.artist)} - ${esc(track.title)}</strong>`);
+            toast('success', `Downloading <strong>${esc(track.artist)} - ${esc(track.title)}</strong>`);
           } catch (err) {
             console.error(err);
-            toast('error', `Gagal mengunduh: ${err.message}`);
+            toast('error', `Download failed: ${err.message}`);
           } finally {
             btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
             btn.disabled = false;
@@ -867,7 +867,7 @@
       if (count > 0 && !isBatchDownloading) {
         $batchActionBar.style.display = 'flex';
         $batchCount.textContent = count;
-        $btnBatchDlText.textContent = `Unduh Batch (${count})`;
+        $btnBatchDlText.textContent = `Download Selected (${count})`;
       } else {
         $batchActionBar.style.display = 'none';
       }
@@ -886,14 +886,14 @@
     if ($btnBatchCancel) {
       $btnBatchCancel.addEventListener('click', () => {
         cancelBatchDownload = true;
-        $batchProgressStatus.textContent = 'Membatalkan...';
+        $batchProgressStatus.textContent = 'Cancelling...';
       });
     }
 
     async function startBatchDownload() {
       if (selectedTracks.size === 0) return;
       if (isBatchDownloading) {
-        toast('info', 'Download batch sedang berjalan!');
+        toast('info', 'Batch download is already in progress!');
         return;
       }
 
@@ -911,7 +911,7 @@
 
       for (let i = 0; i < total; i++) {
         if (cancelBatchDownload) {
-          toast('info', 'Batch download dibatalkan.');
+          toast('info', 'Batch download cancelled.');
           break;
         }
 
@@ -919,11 +919,11 @@
         const trackNum = i + 1;
 
         // Update UI progress
-        $batchProgressTitle.textContent = `Mengunduh (${trackNum}/${total})`;
+        $batchProgressTitle.textContent = `Downloading (${trackNum}/${total})`;
         $batchProgressSub.textContent = `${track.artist} - ${track.title}`;
         $batchProgressFill.style.width = `${Math.round(((i) / total) * 100)}%`;
         $batchProgressCount.textContent = `${trackNum} / ${total}`;
-        $batchProgressStatus.textContent = 'Menyiapkan stream audio…';
+        $batchProgressStatus.textContent = 'Preparing audio stream…';
 
         try {
           const res = await fetch('/api/download', {
@@ -950,25 +950,25 @@
           // Trigger browser / FDM / IDM download cleanly
           triggerDownload(data.download_url, data.filename);
           successCount++;
-          $batchProgressStatus.textContent = 'File berhasil dikirim!';
+          $batchProgressStatus.textContent = 'Stream dispatched!';
         } catch (err) {
           console.warn(`[Batch DL Skip] ${track.title}:`, err);
           failCount++;
-          $batchProgressStatus.textContent = 'Dilewati (Error)';
+          $batchProgressStatus.textContent = 'Skipped (Error)';
         }
 
         // Safe inter-download delay (~1.5s) to avoid 429 rate limit
         if (i < total - 1 && !cancelBatchDownload) {
-          $batchProgressStatus.textContent = 'Jeda 1.5 detik…';
+          $batchProgressStatus.textContent = 'Inter-download delay (1.5s)…';
           await new Promise(r => setTimeout(r, 1500));
         }
       }
 
       $batchProgressFill.style.width = '100%';
-      $batchProgressTitle.textContent = 'Selesai!';
-      $batchProgressSub.textContent = `Berhasil mengunduh ${successCount} lagu${failCount > 0 ? ` (${failCount} dilewati)` : ''}.`;
-      $batchProgressStatus.textContent = 'Semua antrean selesai';
-      toast('success', `Selesai mengunduh ${successCount} lagu!`);
+      $batchProgressTitle.textContent = 'Completed!';
+      $batchProgressSub.textContent = `Successfully downloaded ${successCount} track${successCount === 1 ? '' : 's'}${failCount > 0 ? ` (${failCount} skipped)` : ''}.`;
+      $batchProgressStatus.textContent = 'All downloads finished';
+      toast('success', `Finished downloading ${successCount} track${successCount === 1 ? '' : 's'}!`);
 
       setTimeout(() => {
         $batchProgressWidget.style.display = 'none';
