@@ -188,19 +188,6 @@ def get_commit_hash() -> str:
         _last_commit_check = now
         return _cached_commit_hash
 
-    # 5. Fallback to version.json file generated during build / deployment
-    vfile = BASE_DIR / "version.json"
-    if vfile.exists():
-        try:
-            vdata = json.loads(vfile.read_text(encoding="utf-8"))
-            commit = vdata.get("commit")
-            if commit and commit not in ("latest", "unknown", ""):
-                _cached_commit_hash = commit.strip()[:7]
-                _last_commit_check = now
-                return _cached_commit_hash
-        except Exception:
-            pass
-
     return _cached_commit_hash or "main"
 
 COMMIT_HASH = get_commit_hash()
