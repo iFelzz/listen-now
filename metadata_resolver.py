@@ -301,7 +301,7 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
 
 # ── Artist Discovery & Discography APIs ───────────────────────
 
-def search_artists(query: str, limit: int = 5) -> list:
+def search_artists(query: str, limit: int = 10) -> list:
     """
     Search artists via iTunes Search API.
     Deduplicates identical artist names (keeping the top-ranked verified artist)
@@ -311,7 +311,7 @@ def search_artists(query: str, limit: int = 5) -> list:
     if not clean_q:
         return []
     encoded = urllib.parse.quote_plus(clean_q[:60])
-    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(10, limit * 3), 30)}"
+    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(20, limit * 3), 50)}"
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}

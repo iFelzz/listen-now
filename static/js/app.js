@@ -408,8 +408,8 @@
         clearSelection();
         if (currentDiscography) {
           showState('artist-view');
-        } else if (lastArtistSearchResults.length > 0) {
-          showState('artists');
+        } else if (lastArtistSearchResults && lastArtistSearchResults.length > 0) {
+          renderArtistResults(lastArtistSearchResults);
         } else {
           showState('empty');
         }
@@ -465,11 +465,11 @@
 
     async function performArtistSearch(query) {
       showState('loading');
-      $loadingText.textContent = `Searching discography for ${query}…`;
+      $loadingText.textContent = `Searching artists for ${query}…`;
       $searchBtn.disabled = true;
 
       try {
-        const res = await fetch(`/api/artist/search?q=${encodeURIComponent(query)}&limit=8`);
+        const res = await fetch(`/api/artist/search?q=${encodeURIComponent(query)}&limit=12`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
 
@@ -478,14 +478,6 @@
 
         if (artists.length === 0) {
           showState('no-results');
-          return;
-        }
-
-        const normQ = query.trim().toLowerCase();
-        // If only 1 artist found OR if the top artist is an exact match (e.g. "Alan Walker"),
-        // jump straight into their discography page!
-        if (artists.length === 1 || (artists[0] && artists[0].name.trim().toLowerCase() === normQ)) {
-          await loadArtistDiscography(artists[0].artist_id);
           return;
         }
 
@@ -544,8 +536,9 @@
 
     if ($btnBackArtist) {
       $btnBackArtist.addEventListener('click', () => {
-        if (lastArtistSearchResults.length > 1) {
-          showState('artists');
+        currentDiscography = null;
+        if (lastArtistSearchResults && lastArtistSearchResults.length > 0) {
+          renderArtistResults(lastArtistSearchResults);
         } else if (allSearchResults.length > 0) {
           searchMode = 'songs';
           $tabModeSongs.classList.add('active');
