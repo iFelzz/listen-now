@@ -585,6 +585,48 @@ async def get_stats(request: Request, key: Optional[str] = None):
     summary["is_admin"] = True
     return JSONResponse(content=summary)
 
+@app.get("/api/stats/live")
+async def live_stats_stream(request: Request, key: Optional[str] = None):
+    """
+    Real-time Server-Sent Events (SSE) stream for live analytics metrics.
+    Continuously pushes updated metrics directly to connected admin dashboards.
+    """
+    admin_header = request.headers.get("X-Admin-Key")
+    provided_key = (key or admin_header or "").strip()
+    if provided_key != ADMIN_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Admin authentication required. Access denied."
+        )
+
+    async def event_generator():
+        try:
+            # Initial snapshot
+            initial = analytics.get_summary(current_active_streams=_active_streams_count)
+            initial["is_admin"] = True
+            yield f"data: {json.dumps(initial)}\n\n"
+
+            # Stream updates every 1.5s
+            while True:
+                if await request.is_disconnected():
+                    break
+                await asyncio.sleep(1.5)
+                summary = analytics.get_summary(current_active_streams=_active_streams_count)
+                summary["is_admin"] = True
+                yield f"data: {json.dumps(summary)}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
 @app.post("/api/stats/reset")
 async def reset_stats(request: Request, key: Optional[str] = None):
     """Reset accumulated analytics metrics (Admin authentication required)."""

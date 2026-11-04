@@ -1,12 +1,12 @@
 /**
- * Melodyxx — Service Worker (v35)
+ * Melodyxx — Service Worker (v36)
  * Strategy:
  *   - API & Stream: Network-only, never cache
  *   - Navigation (HTML): Network-first with cache fallback
  *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'melodyxx-v35';
+const CACHE_NAME = 'melodyxx-v36';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',

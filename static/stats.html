@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.4.1" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.4.2" />
 
   <style>
     body {
@@ -423,11 +423,18 @@
       gap: 6px;
       font-size: 0.72rem;
       font-weight: 700;
-      padding: 2px 8px;
+      padding: 3px 9px;
       border-radius: 12px;
       background: rgba(52, 211, 153, 0.15);
       border: 1px solid rgba(52, 211, 153, 0.4);
       color: #34d399;
+      transition: all 0.25s ease;
+    }
+
+    .live-indicator.live-ping {
+      box-shadow: 0 0 16px rgba(52, 211, 153, 0.75);
+      border-color: rgba(52, 211, 153, 0.9);
+      background: rgba(52, 211, 153, 0.28);
     }
 
     .pulse-dot {
@@ -714,7 +721,7 @@
           <div>
             <h1 class="stats-title">
               Melodyxx Analytics
-              <span class="live-indicator"><span class="pulse-dot"></span> Live</span>
+              <span class="live-indicator" id="live-indicator"><span class="pulse-dot"></span> Live</span>
             </h1>
             <p class="stats-subtitle">Internal real-time bandwidth &amp; stream metrics</p>
           </div>
@@ -923,7 +930,10 @@
 
   <script>
     let currentAdminKey = '';
-    let autoRefreshTimer = null;
+    let liveEventSource = null;
+    let fallbackPollTimer = null;
+    let localUptimeSeconds = 0;
+    let uptimeTicker = null;
 
     const $adminGate = document.getElementById('admin-gate');
     const $gateForm = document.getElementById('gate-form');
@@ -936,6 +946,7 @@
     const $btnLock = document.getElementById('btn-admin-lock');
     const $btnRefresh = document.getElementById('btn-refresh-stats');
     const $btnReset = document.getElementById('btn-reset-metrics');
+    const $liveIndicator = document.getElementById('live-indicator');
 
     function esc(str) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -950,7 +961,23 @@
       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    // Attempt authentication
+    function formatUptime(seconds) {
+      const days = Math.floor(seconds / 86400);
+      const rem = seconds % 86400;
+      const hours = Math.floor(rem / 3600);
+      const rem2 = rem % 3600;
+      const mins = Math.floor(rem2 / 60);
+      const secs = rem2 % 60;
+      return days ? `${days}d ${hours}h ${mins}m ${secs}s` : `${hours}h ${mins}m ${secs}s`;
+    }
+
+    function pingLiveIndicator() {
+      if (!$liveIndicator) return;
+      $liveIndicator.classList.add('live-ping');
+      setTimeout(() => $liveIndicator.classList.remove('live-ping'), 450);
+    }
+
+    // Attempt authentication & start live stream
     async function authenticateAndLoad(key) {
       $gateError.style.display = 'none';
       $gateBtn.disabled = true;
@@ -979,9 +1006,7 @@
         $dashboard.style.display = 'block';
 
         renderMetrics(data);
-
-        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-        autoRefreshTimer = setInterval(fetchStats, 10000);
+        startLiveStream(key);
 
       } catch (err) {
         $gateErrorText.textContent = err.message || 'Invalid Admin Key. Access denied.';
@@ -997,6 +1022,68 @@
       }
     }
 
+    function startLiveStream(key) {
+      // Clean up previous connections
+      stopLiveStream();
+
+      // Start 1s uptime ticker for smooth clock
+      if (!uptimeTicker) {
+        uptimeTicker = setInterval(() => {
+          if (localUptimeSeconds > 0) {
+            localUptimeSeconds++;
+            const $uptime = document.getElementById('val-uptime');
+            if ($uptime) $uptime.textContent = formatUptime(localUptimeSeconds);
+          }
+        }, 1000);
+      }
+
+      // 1. Try Server-Sent Events (SSE) for zero-latency push
+      if (window.EventSource) {
+        try {
+          const sseUrl = `/api/stats/live?key=${encodeURIComponent(key)}`;
+          liveEventSource = new EventSource(sseUrl);
+
+          liveEventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              renderMetrics(data);
+              pingLiveIndicator();
+            } catch (e) {
+              console.error('SSE parse error:', e);
+            }
+          };
+
+          liveEventSource.onerror = () => {
+            console.warn('SSE connection interrupted. Falling back to active 2s polling.');
+            if (liveEventSource) {
+              liveEventSource.close();
+              liveEventSource = null;
+            }
+            if (!fallbackPollTimer) {
+              fallbackPollTimer = setInterval(fetchStats, 2000);
+            }
+          };
+          return;
+        } catch (err) {
+          console.warn('Could not start EventSource, falling back to polling:', err);
+        }
+      }
+
+      // 2. Fallback to fast 2s polling
+      fallbackPollTimer = setInterval(fetchStats, 2000);
+    }
+
+    function stopLiveStream() {
+      if (liveEventSource) {
+        liveEventSource.close();
+        liveEventSource = null;
+      }
+      if (fallbackPollTimer) {
+        clearInterval(fallbackPollTimer);
+        fallbackPollTimer = null;
+      }
+    }
+
     // Form submit
     $gateForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1008,10 +1095,14 @@
     // Lock button
     $btnLock.addEventListener('click', () => {
       currentAdminKey = '';
+      stopLiveStream();
+      if (uptimeTicker) {
+        clearInterval(uptimeTicker);
+        uptimeTicker = null;
+      }
       try {
         sessionStorage.removeItem('melodyxx_admin_key');
       } catch (_) {}
-      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
       $dashboard.style.display = 'none';
       $adminGate.style.display = 'flex';
       $gateInput.value = '';
@@ -1035,6 +1126,7 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         renderMetrics(data);
+        pingLiveIndicator();
       } catch (err) {
         console.error('Failed to fetch analytics:', err);
       } finally {
@@ -1043,6 +1135,8 @@
     }
 
     function renderMetrics(data) {
+      localUptimeSeconds = Number(data.uptime_seconds || 0);
+
       document.getElementById('val-total-streams').textContent = Number(data.total_streams || 0).toLocaleString();
       document.getElementById('val-today-streams').textContent = Number(data.today?.streams || 0).toLocaleString();
 
@@ -1058,7 +1152,7 @@
       document.getElementById('val-total-previews').textContent = Number(data.total_previews || 0).toLocaleString();
       document.getElementById('val-today-previews').textContent = Number(data.today?.previews || 0).toLocaleString();
 
-      document.getElementById('val-uptime').textContent = data.uptime_human || '0m';
+      document.getElementById('val-uptime').textContent = data.uptime_human || formatUptime(localUptimeSeconds);
 
       // Top Tracks
       const $topTracksList = document.getElementById('top-tracks-list');
@@ -1122,7 +1216,9 @@
       }
     }
 
-    $btnRefresh.addEventListener('click', fetchStats);
+    $btnRefresh.addEventListener('click', () => {
+      fetchStats();
+    });
 
     // Reset button (authenticated)
     $btnReset.addEventListener('click', async () => {
