@@ -1,5 +1,10 @@
 # 🎵 Melodyxx – YouTube MP3 Downloader (v2.2.4)
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688.svg)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-enabled-2496ED.svg)](https://www.docker.com/)
+
 A high-performance web application to search for songs on YouTube or explore complete artist discographies, preview audio directly in the browser, and download high-quality MP3 (128 / 192 / 320 kbps) with **official high-resolution album cover art & clean ID3 metadata**.
 
 Powered by a **Cobalt-Style Zero-Disk Real-Time Streaming Pipeline** (**FastAPI** + **yt-dlp** + **FFmpeg Stream Pipes** + **Apple Music / iTunes Metadata Resolver**).
@@ -172,5 +177,14 @@ To bypass YouTube bot checks or datacenter IP restrictions on cloud VPS:
 
 ## 📄 License & Attribution
 
-Melodyxx &copy; 2026 &mdash; Created by [iFelzz](https://github.com/iFelzz)  
-Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp), [FFmpeg](https://ffmpeg.org), and [FastAPI](https://fastapi.tiangolo.com).
+This project is licensed under the **GNU Affero General Public License v3.0 (GNU AGPLv3)** — see the [LICENSE](LICENSE) file for details.
+
+### 🙏 Acknowledgements & Inspirations
+
+Melodyxx was built with inspiration and tools from the open-source community:
+* **[Cobalt](https://github.com/imputnet/cobalt)** by [wukko / imputnet](https://github.com/imputnet) — for pioneering the zero-disk real-time streaming philosophy.
+* **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — for rock-solid media extraction.
+* **[FFmpeg](https://ffmpeg.org)** — for in-memory stream processing and transcoding.
+* **[FastAPI](https://fastapi.tiangolo.com)** — for the high-performance asynchronous web framework.
+
+Melodyxx &copy; 2026 &mdash; Created by [iFelzz](https://github.com/iFelzz).
