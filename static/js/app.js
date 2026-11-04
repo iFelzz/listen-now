@@ -1345,14 +1345,126 @@
       }
     }
 
+    // ── In-App Update Notification System ──────────────────────
+    const $updateBanner = document.getElementById('update-notification-banner');
+    const $updateNewVersion = document.getElementById('update-new-version');
+    const $btnUpdateReload = document.getElementById('btn-update-reload');
+    const $btnUpdateDismiss = document.getElementById('btn-update-dismiss');
+
+    let currentAppVersion = null;
+    let isUpdateBannerShown = false;
+    let newWorkerWaiting = null;
+
+    function showUpdateNotification(newVersion) {
+      if (isUpdateBannerShown) return;
+      isUpdateBannerShown = true;
+
+      if ($updateNewVersion) {
+        $updateNewVersion.textContent = newVersion;
+      }
+      if ($updateBanner) {
+        $updateBanner.style.display = 'flex';
+      }
+
+      toast('info', `✨ New update available (${newVersion})! Click Refresh to update.`);
+    }
+
+    function checkForUpdates() {
+      if (isUpdateBannerShown) return;
+
+      fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          const remoteVersion = (data && data.version) ? String(data.version).trim() : null;
+          if (!remoteVersion) return;
+          const formattedRemote = remoteVersion.startsWith('v') ? remoteVersion : `v${remoteVersion}`;
+
+          if (!currentAppVersion) {
+            currentAppVersion = formattedRemote;
+            return;
+          }
+
+          if (formattedRemote !== currentAppVersion) {
+            showUpdateNotification(formattedRemote);
+          }
+        })
+        .catch(err => {
+          console.debug('[Update Check] Silent failure:', err);
+        });
+    }
+
+    if ($btnUpdateReload) {
+      $btnUpdateReload.addEventListener('click', async () => {
+        $btnUpdateReload.textContent = 'Updating…';
+        $btnUpdateReload.disabled = true;
+
+        if (newWorkerWaiting) {
+          try {
+            newWorkerWaiting.postMessage({ action: 'skipWaiting' });
+          } catch (_) {}
+        }
+
+        // Clean out client-side cache storages before reload
+        if ('caches' in window) {
+          try {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          } catch (_) {}
+        }
+
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 200);
+      });
+    }
+
+    if ($btnUpdateDismiss) {
+      $btnUpdateDismiss.addEventListener('click', () => {
+        if ($updateBanner) {
+          $updateBanner.style.display = 'none';
+        }
+      });
+    }
+
     // ── PWA / Service Worker Registration ─────────────────────
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js')
-          .then((reg) => console.log('[SW] Registered, scope:', reg.scope))
+          .then((reg) => {
+            console.log('[SW] Registered, scope:', reg.scope);
+
+            // Check if there is already a waiting worker
+            if (reg.waiting) {
+              newWorkerWaiting = reg.waiting;
+              checkForUpdates();
+            }
+
+            reg.addEventListener('updatefound', () => {
+              const installingWorker = reg.installing;
+              if (!installingWorker) return;
+              installingWorker.addEventListener('statechange', () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  newWorkerWaiting = installingWorker;
+                  checkForUpdates();
+                }
+              });
+            });
+          })
           .catch((err) => console.warn('[SW] Registration failed:', err));
       });
     }
+
+    // Periodic check every 60s & on tab refocus
+    setInterval(checkForUpdates, 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdates();
+      }
+    });
+    window.addEventListener('focus', checkForUpdates);
 
     // ── Focus search on load ──────────────────────────────────
     window.addEventListener('load', () => {
@@ -1377,6 +1489,12 @@
           $versionLink.textContent = formatted;
           $versionLink.href = data.version_url || 'https://github.com/iFelzz/listen-now';
           $versionLink.title = `Melodyxx ${formatted}`;
+
+          if (!currentAppVersion) {
+            currentAppVersion = formatted;
+          } else if (formatted !== currentAppVersion) {
+            showUpdateNotification(formatted);
+          }
         })
         .catch(err => {
           console.debug('[Version] Could not fetch live version:', err);

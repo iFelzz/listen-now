@@ -1,12 +1,12 @@
 /**
- * Melodyxx — Service Worker (v23)
+ * Melodyxx — Service Worker (v24)
  * Strategy:
  *   - API & Stream: Network-only, never cache
  *   - Navigation (HTML): Network-first with cache fallback
  *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'melodyxx-v23';
+const CACHE_NAME = 'melodyxx-v24';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
@@ -14,6 +14,13 @@ const APP_SHELL = [
   '/static/logo.png',
   '/static/manifest.json',
 ];
+
+// ── Skip waiting on explicit client message ───────────────────
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
 
 // ── Install: pre-cache app shell ────────────────────────────
 self.addEventListener('install', (event) => {
