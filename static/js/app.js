@@ -1336,10 +1336,10 @@
       setTimeout(requestNotificationPermission, 3000);
     });
 
-    // ── Load and display Git commit hash badge ────────────────
-    function loadCommitHash() {
-      const $commitLink = document.getElementById('commit-link');
-      if (!$commitLink) return;
+    // ── Load and display version badge ─────────────────────────
+    function loadVersion() {
+      const $versionLink = document.getElementById('version-link') || document.getElementById('commit-link');
+      if (!$versionLink) return;
 
       fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' })
         .then(res => {
@@ -1347,21 +1347,20 @@
           return res.json();
         })
         .then(data => {
-          const commit = (data && data.commit) ? String(data.commit).trim() : '';
-          if (commit && commit !== 'latest' && commit !== 'unknown') {
-            $commitLink.textContent = `#${commit}`;
-            $commitLink.href = data.commit_url || `https://github.com/iFelzz/listen-now/commit/${commit}`;
-            $commitLink.title = `Commit ${commit} on GitHub`;
-          }
+          const version = (data && data.version) ? String(data.version).trim() : 'v1.0.0';
+          const formatted = version.startsWith('v') ? version : `v${version}`;
+          $versionLink.textContent = formatted;
+          $versionLink.href = data.version_url || 'https://github.com/iFelzz/listen-now';
+          $versionLink.title = `Melodyxx ${formatted}`;
         })
         .catch(err => {
-          console.debug('[Version] Could not fetch live commit hash:', err);
+          console.debug('[Version] Could not fetch live version:', err);
         });
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadCommitHash);
+      document.addEventListener('DOMContentLoaded', loadVersion);
     } else {
-      loadCommitHash();
+      loadVersion();
     }
-    window.addEventListener('load', loadCommitHash);
+    window.addEventListener('load', loadVersion);

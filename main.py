@@ -206,6 +206,21 @@ def get_commit_hash() -> str:
 COMMIT_HASH = get_commit_hash()
 logger.info("Current Git commit hash: %s", COMMIT_HASH)
 
+def get_app_version() -> str:
+    """Read semantic version from VERSION file or fallback to v1.0.0."""
+    vfile = BASE_DIR / "VERSION"
+    try:
+        if vfile.is_file():
+            val = vfile.read_text(encoding="utf-8").strip()
+            if val:
+                return val if val.startswith("v") else f"v{val}"
+    except Exception:
+        pass
+    return "v1.0.0"
+
+APP_VERSION = get_app_version()
+logger.info("Current Melodyxx App Version: %s", APP_VERSION)
+
 def _get_base_ytdl_opts() -> dict[str, Any]:
     """Common base options for yt-dlp metadata extraction."""
     opts: dict[str, Any] = {
@@ -288,7 +303,7 @@ async def _cache_maintenance_loop():
 # ── Lifespan ──────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing Melodyxx (Zero-Disk Streaming Engine v2.2.4)...")
+    logger.info("Initializing Melodyxx (Zero-Disk Streaming Engine %s)...", get_app_version())
     try:
         ver = yt_dlp.version.__version__
         logger.info("yt-dlp version: %s", ver)
@@ -306,7 +321,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["5000/day"])
 app = FastAPI(
     title="Melodyxx",
     description="YouTube MP3 Downloader powered by Zero-Disk Stream Piping (Cobalt-Style) & Auto-Cover Art",
-    version="2.2.4",
+    version=get_app_version().lstrip("v"),
     lifespan=lifespan,
 )
 app.state.limiter = limiter
@@ -441,12 +456,14 @@ async def favicon():
 
 @app.get("/api/version")
 async def get_version():
-    """Return Git commit hash and app version dynamically."""
+    """Return semantic version and git commit metadata dynamically."""
     commit = get_commit_hash()
+    version = get_app_version()
     return {
+        "version": version,
         "commit": commit,
-        "version": "2.2.3",
-        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}"
+        "version_url": f"https://github.com/iFelzz/listen-now/releases/tag/{version}" if version else "https://github.com/iFelzz/listen-now",
+        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}" if commit and commit not in ("latest", "unknown") else "https://github.com/iFelzz/listen-now",
     }
 
 @app.get("/api/health")
@@ -457,9 +474,9 @@ async def health():
         "service": "Melodyxx",
         "architecture": "zero-disk-stream-piping",
         "active_streams": _active_streams_count,
+        "version": get_app_version(),
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
-        "version": "2.2.4",
     }
 
 @app.get("/api/storage")
