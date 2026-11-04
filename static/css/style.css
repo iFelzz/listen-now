@@ -1886,6 +1886,32 @@
   border-color: var(--clr-accent);
 }
 
+.btn-track-action.loading,
+.btn-track-play.loading {
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(168, 85, 247, 0.6);
+  color: #c084fc;
+  cursor: wait;
+}
+
+.btn-track-action.playing,
+.btn-track-play.playing {
+  background: var(--clr-accent);
+  border-color: var(--clr-accent);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.55);
+}
+
+.spinner-track-icon {
+  animation: track-spin 0.75s linear infinite;
+  display: block;
+}
+
+@keyframes track-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Albums Grid */
 .albums-grid {
   display: flex;

@@ -156,14 +156,16 @@
 
     const TRACK_ICON_PLAY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
     const TRACK_ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+    const TRACK_ICON_SPIN = `<svg class="spinner-track-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
 
     function resetCurrentPlayingBtn() {
       if (!currentPlayingBtn) return;
       if (currentPlayingBtn.classList.contains('btn-track-play')) {
         currentPlayingBtn.innerHTML = TRACK_ICON_PLAY;
+        currentPlayingBtn.classList.remove('loading', 'playing');
       } else {
         currentPlayingBtn.innerHTML = ICON_PLAY;
-        currentPlayingBtn.classList.remove('playing');
+        currentPlayingBtn.classList.remove('loading', 'playing');
       }
       currentPlayingBtn = null;
     }
@@ -171,10 +173,13 @@
     function updateCurrentPlayingBtn(isPlaying) {
       if (!currentPlayingBtn) return;
       if (currentPlayingBtn.classList.contains('btn-track-play')) {
+        currentPlayingBtn.classList.remove('loading');
+        currentPlayingBtn.classList.toggle('playing', isPlaying);
         currentPlayingBtn.innerHTML = isPlaying ? TRACK_ICON_PAUSE : TRACK_ICON_PLAY;
       } else {
-        currentPlayingBtn.innerHTML = isPlaying ? ICON_PAUSE : ICON_PLAY;
+        currentPlayingBtn.classList.remove('loading');
         currentPlayingBtn.classList.toggle('playing', isPlaying);
+        currentPlayingBtn.innerHTML = isPlaying ? ICON_PAUSE : ICON_PLAY;
       }
     }
 
@@ -788,9 +793,21 @@
           // Same track button clicked: toggle play / pause
           if (currentPlayingBtn === btn) {
             if (audioPlayer.paused) {
-              audioPlayer.play();
+              btn.innerHTML = TRACK_ICON_SPIN;
+              btn.classList.add('loading');
+              try {
+                await audioPlayer.play();
+                btn.classList.remove('loading');
+                btn.classList.add('playing');
+                btn.innerHTML = TRACK_ICON_PAUSE;
+              } catch (_) {
+                btn.classList.remove('loading', 'playing');
+                btn.innerHTML = TRACK_ICON_PLAY;
+              }
             } else {
               audioPlayer.pause();
+              btn.classList.remove('loading', 'playing');
+              btn.innerHTML = TRACK_ICON_PLAY;
             }
             return;
           }
@@ -798,11 +815,25 @@
           // Different button clicked: reset previous active button icon back to PLAY
           resetCurrentPlayingBtn();
 
-          audioPlayer.src = prevUrl;
-          await audioPlayer.play();
-          showMiniPlayer(btn.dataset.title, btn.dataset.artist, btn.dataset.art);
-          btn.innerHTML = TRACK_ICON_PAUSE;
+          // Immediately give loading feedback!
+          btn.innerHTML = TRACK_ICON_SPIN;
+          btn.classList.add('loading');
           currentPlayingBtn = btn;
+
+          try {
+            audioPlayer.src = prevUrl;
+            await audioPlayer.play();
+            btn.classList.remove('loading');
+            btn.classList.add('playing');
+            btn.innerHTML = TRACK_ICON_PAUSE;
+            showMiniPlayer(btn.dataset.title, btn.dataset.artist, btn.dataset.art);
+          } catch (err) {
+            console.error('Audio playback failed:', err);
+            btn.classList.remove('loading', 'playing');
+            btn.innerHTML = TRACK_ICON_PLAY;
+            currentPlayingBtn = null;
+            toast('error', 'Audio preview could not be loaded.');
+          }
         });
       });
 
@@ -1141,6 +1172,24 @@
     audioPlayer.addEventListener('play', () => {
       $volumeControl.classList.add('show');
       setMiniIcon(false); // show pause icon in mini player
+      updateCurrentPlayingBtn(true);
+    });
+
+    audioPlayer.addEventListener('waiting', () => {
+      if (currentPlayingBtn) {
+        currentPlayingBtn.classList.add('loading');
+        if (currentPlayingBtn.classList.contains('btn-track-play')) {
+          currentPlayingBtn.innerHTML = TRACK_ICON_SPIN;
+        } else {
+          currentPlayingBtn.innerHTML = ICON_SPIN;
+        }
+      }
+    });
+
+    audioPlayer.addEventListener('playing', () => {
+      if (currentPlayingBtn) {
+        currentPlayingBtn.classList.remove('loading');
+      }
       updateCurrentPlayingBtn(true);
     });
 
