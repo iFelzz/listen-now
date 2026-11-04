@@ -1168,29 +1168,75 @@
     /* ═══════════════════════════════════════════════════
        FOOTER
     ═══════════════════════════════════════════════════ */
-    footer {
+    footer.app-footer {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 40px;
+      height: 42px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(10, 10, 20, 0.98);
+      background: rgba(10, 10, 20, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border-top: 1px solid var(--clr-border);
       color: var(--clr-text-dim);
       font-size: 0.78rem;
       z-index: 800;
     }
 
-    footer a {
-      color: var(--clr-accent);
-      text-decoration: none;
+    .footer-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    footer a:hover {
-      text-decoration: underline;
+    .footer-left,
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-sep {
+      color: var(--clr-border);
+      font-size: 0.65rem;
+      user-select: none;
+    }
+
+    .footer-copy {
+      color: var(--clr-text-dim);
+      font-weight: 500;
+    }
+
+    .footer-by a,
+    .footer-github-link {
+      color: var(--clr-text-muted);
+      text-decoration: none;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-by a:hover,
+    .footer-github-link:hover {
+      color: var(--clr-accent);
+    }
+
+    .footer-github-icon {
+      opacity: 0.75;
+      transition: var(--transition);
+    }
+
+    .footer-github-link:hover .footer-github-icon {
+      opacity: 1;
+      color: var(--clr-accent);
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1237,6 +1283,16 @@
         width: 100%;
         justify-content: center;
       }
+
+      footer.app-footer {
+        height: auto;
+        padding: 6px 12px;
+      }
+
+      .footer-container {
+        padding: 0 8px;
+        font-size: 0.74rem;
+      }
     }
 
     @media (max-width: 440px) {
@@ -1247,6 +1303,12 @@
       .card-thumb-wrap {
         aspect-ratio: 16/6;
         width: 100%;
+      }
+
+      .footer-container {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
       }
     }
 
