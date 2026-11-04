@@ -3,6 +3,7 @@
     // ── DOM refs ──────────────────────────────────────────────
     const $form = document.getElementById('search-form');
     const $input = document.getElementById('search-input');
+    const $searchClearBtn = document.getElementById('btn-search-clear');
     const $searchBtn = document.getElementById('search-btn');
     const $loading = document.getElementById('loading');
     const $loadingText = document.getElementById('loading-text');
@@ -1288,15 +1289,39 @@
     }
     // ── Form submit ───────────────────────────────────────────
 
+    function syncClearButtonVisibility() {
+      if (!$searchClearBtn) return;
+      if ($input.value.trim().length > 0) {
+        $searchClearBtn.style.display = 'inline-flex';
+      } else {
+        $searchClearBtn.style.display = 'none';
+      }
+    }
+
+    $input.addEventListener('input', syncClearButtonVisibility);
+
+    if ($searchClearBtn) {
+      $searchClearBtn.addEventListener('click', () => {
+        $input.value = '';
+        syncClearButtonVisibility();
+        $input.focus();
+      });
+    }
+
     $form.addEventListener('submit', (e) => {
       e.preventDefault();
       const q = $input.value.trim();
       if (q) performSearch(q);
     });
 
-    // Allow Enter key to submit from anywhere in the form
+    // Allow Enter key to submit, and Escape to clear
     $input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') $form.dispatchEvent(new Event('submit'));
+      if (e.key === 'Enter') {
+        $form.dispatchEvent(new Event('submit'));
+      } else if (e.key === 'Escape') {
+        $input.value = '';
+        syncClearButtonVisibility();
+      }
     });
 
     // ── Keyboard Shortcuts ────────────────────────────────────

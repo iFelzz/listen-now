@@ -254,9 +254,56 @@
       outline: none;
     }
 
+    /* Hide ugly native browser search cancel button */
+    #search-input::-webkit-search-decoration,
+    #search-input::-webkit-search-cancel-button,
+    #search-input::-webkit-search-results-button,
+    #search-input::-webkit-search-results-decoration {
+      -webkit-appearance: none;
+      appearance: none;
+      display: none;
+    }
+
+    #search-input::-ms-clear,
+    #search-input::-ms-reveal {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
     #search-input::placeholder {
       color: var(--clr-text-dim);
       font-size: 0.91rem;
+    }
+
+    /* Custom sleek search clear button */
+    .btn-search-clear {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--clr-text-muted);
+      cursor: pointer;
+      padding: 0;
+      margin-left: 6px;
+      margin-right: 8px;
+      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-search-clear:hover {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      transform: scale(1.08);
+    }
+
+    .btn-search-clear:active {
+      transform: scale(0.92);
     }
 
     #search-btn {
