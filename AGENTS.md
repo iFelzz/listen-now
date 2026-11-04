@@ -53,6 +53,11 @@ Whenever you bump the version in `VERSION` (e.g., from `1.0.0` to `1.0.1`):
    ```bash
    git commit -m "fix(stream): prevent 0kb files and bump version to v1.0.1"
    ```
+5. **Create & Push Git Tag (CRITICAL)**:
+   Always create an annotated git tag matching the version and push it to the remote repository so GitHub release tag links (`/releases/tag/vX.Y.Z`) never 404:
+   ```bash
+   git tag -a v1.0.1 -m "Release v1.0.1"; git push origin v1.0.1
+   ```
 
 ---
 
