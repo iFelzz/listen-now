@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.3.1" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.3.2" />
 </head>
 
 <body>
@@ -54,18 +54,13 @@
 
     <!-- ── HERO / HEADER ── -->
     <header class="hero" role="banner">
-      <div class="hero-badge">
-        <span class="hero-badge-dot"></span>
-        <span class="hero-badge-text">Zero-Disk Audio Engine</span>
-      </div>
-
       <div class="logo-wrap">
         <img src="/static/logo.png?v=3" alt="Melodyxx logo" class="logo-img" />
         <span class="logo-text">Melodyxx</span>
       </div>
 
       <p class="hero-tagline">
-        Search songs or explore artist discographies with official high-resolution album artwork.
+        Download high-quality MP3s with official Apple Music artwork.
       </p>
 
       <!-- Search Mode Tabs -->
@@ -87,14 +82,10 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input id="search-input" type="search" name="q" placeholder="Search songs, tracks, or paste a YouTube link..."
+          <input id="search-input" type="search" name="q" placeholder="Search songs, artists, or paste a YouTube URL..."
             autocomplete="off" spellcheck="false" aria-label="Search keyword" required />
         </div>
         <button type="submit" id="search-btn" aria-label="Search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
           <span>Search</span>
         </button>
       </form>
@@ -388,7 +379,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.3.1" defer></script>
+  <script src="/static/js/app.js?v=1.3.2" defer></script>
 </body>
 
 </html>
