@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.3.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.3.1" />
 </head>
 
 <body>
@@ -54,45 +54,48 @@
 
     <!-- ── HERO / HEADER ── -->
     <header class="hero" role="banner">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span class="hero-badge-text">Zero-Disk Audio Engine</span>
+      </div>
+
       <div class="logo-wrap">
         <img src="/static/logo.png?v=3" alt="Melodyxx logo" class="logo-img" />
         <span class="logo-text">Melodyxx</span>
       </div>
+
       <p class="hero-tagline">
-        Find your favorite songs on YouTube, then download directly as high-quality MP3 — free and instant.
+        Search songs or explore artist discographies with official high-resolution album artwork.
       </p>
 
       <!-- Search Mode Tabs -->
       <div class="search-mode-tabs" role="tablist" aria-label="Search Mode">
         <button type="button" class="search-mode-tab active" data-mode="songs" id="tab-mode-songs" role="tab" aria-selected="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-          Songs
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          <span>Songs</span>
         </button>
         <button type="button" class="search-mode-tab" data-mode="artists" id="tab-mode-artists" role="tab" aria-selected="false">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          Artists (Discography)
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>Artists</span>
         </button>
       </div>
 
-      <!-- Search form -->
-      <form class="search-form" id="search-form" role="search" aria-label="Search songs on YouTube">
+      <!-- Unified Search Command Bar -->
+      <form class="search-form" id="search-form" role="search" aria-label="Search songs or artists">
         <div class="search-input-wrap">
-          <!-- Search icon -->
           <svg class="search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input id="search-input" type="search" name="q" placeholder="Type the Song Title, or Paste a YouTube URL..."
+          <input id="search-input" type="search" name="q" placeholder="Search songs, tracks, or paste a YouTube link..."
             autocomplete="off" spellcheck="false" aria-label="Search keyword" required />
         </div>
-        <button type="submit" id="search-btn" aria-label="Search songs">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-            style="margin-right: 6px; display: inline-block; vertical-align: text-bottom;">
+        <button type="submit" id="search-btn" aria-label="Search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          Search
+          <span>Search</span>
         </button>
       </form>
     </header>
@@ -385,7 +388,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.3.0" defer></script>
+  <script src="/static/js/app.js?v=1.3.1" defer></script>
 </body>
 
 </html>

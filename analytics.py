@@ -228,3 +228,4 @@ class AnalyticsEngine:
 
 # Global singleton instance
 analytics = AnalyticsEngine()
+
