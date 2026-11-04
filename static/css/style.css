@@ -158,6 +158,8 @@
       width: 52px;
       height: 52px;
       border-radius: 14px;
+      object-fit: cover;
+      display: block;
       box-shadow: 0 0 24px rgba(139, 92, 246, 0.5);
     }
 
