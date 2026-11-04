@@ -1903,6 +1903,50 @@
   color: var(--clr-text-muted);
 }
 
+.batch-progress-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-batch-retry {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-batch-retry:hover {
+  background: linear-gradient(135deg, #6d28d9, #9333ea);
+  transform: translateY(-1px);
+}
+
+.btn-batch-dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clr-text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-batch-dismiss:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .spinner-small {
   width: 14px;
   height: 14px;

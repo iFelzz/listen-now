@@ -62,6 +62,11 @@
     const $batchProgressCount = document.getElementById('batch-progress-count');
     const $batchProgressStatus = document.getElementById('batch-progress-status');
     const $btnBatchCancel = document.getElementById('btn-batch-cancel');
+    const $batchProgressActions = document.getElementById('batch-progress-actions');
+    const $btnBatchRetry = document.getElementById('btn-batch-retry');
+    const $btnBatchRetryText = document.getElementById('btn-batch-retry-text');
+    const $btnBatchDismiss = document.getElementById('btn-batch-dismiss');
+    const $batchSpinner = document.getElementById('batch-spinner');
 
     // Global state
     let searchMode = 'songs'; // 'songs' | 'artists'
@@ -890,6 +895,23 @@
       });
     }
 
+    if ($btnBatchRetry) {
+      $btnBatchRetry.addEventListener('click', () => {
+        if ($batchProgressActions) $batchProgressActions.style.display = 'none';
+        startBatchDownload();
+      });
+    }
+
+    if ($btnBatchDismiss) {
+      $btnBatchDismiss.addEventListener('click', () => {
+        $batchProgressWidget.style.display = 'none';
+        isBatchDownloading = false;
+        if (selectedTracks.size > 0 && $batchActionBar) {
+          $batchActionBar.style.display = 'flex';
+        }
+      });
+    }
+
     async function startBatchDownload() {
       if (selectedTracks.size === 0) return;
       if (isBatchDownloading) {
@@ -904,10 +926,12 @@
 
       // Show progress widget & hide bottom bar
       $batchProgressWidget.style.display = 'block';
+      if ($batchProgressActions) $batchProgressActions.style.display = 'none';
+      if ($batchSpinner) $batchSpinner.style.display = 'inline-block';
       $batchActionBar.style.display = 'none';
 
       let successCount = 0;
-      let failCount = 0;
+      const failedTracks = [];
 
       for (let i = 0; i < total; i++) {
         if (cancelBatchDownload) {
@@ -923,58 +947,96 @@
         $batchProgressSub.textContent = `${track.artist} - ${track.title}`;
         $batchProgressFill.style.width = `${Math.round(((i) / total) * 100)}%`;
         $batchProgressCount.textContent = `${trackNum} / ${total}`;
-        $batchProgressStatus.textContent = 'Preparing audio stream…';
+        $batchProgressStatus.textContent = 'Resolving stream…';
 
-        try {
-          const res = await fetch('/api/download', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url: '',
-              title: track.title,
-              artist: track.artist,
-              album: track.album,
-              year: track.year,
-              poster_url: track.artwork_url,
-              quality: currentPreferredQuality
-            })
-          });
+        let attempt = 0;
+        let downloaded = false;
 
-          let data = null;
+        while (attempt < 2 && !downloaded && !cancelBatchDownload) {
+          attempt++;
           try {
-            data = await res.json();
-          } catch (_) {}
-          if (!res.ok) throw new Error((data && data.detail) || `Server error (${res.status})`);
-          if (!data || !data.download_url) throw new Error('Download URL missing');
+            const res = await fetch('/api/download', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: '',
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                year: track.year,
+                poster_url: track.artwork_url,
+                quality: currentPreferredQuality
+              })
+            });
 
-          // Trigger browser / FDM / IDM download cleanly
-          triggerDownload(data.download_url, data.filename);
-          successCount++;
-          $batchProgressStatus.textContent = 'Stream dispatched!';
-        } catch (err) {
-          console.warn(`[Batch DL Skip] ${track.title}:`, err);
-          failCount++;
-          $batchProgressStatus.textContent = 'Skipped (Error)';
+            let data = null;
+            try {
+              data = await res.json();
+            } catch (_) {}
+
+            if (res.status === 429) {
+              $batchProgressStatus.textContent = 'Rate limit hit, waiting 5s before retry…';
+              await new Promise(r => setTimeout(r, 5000));
+              continue;
+            }
+
+            if (!res.ok) throw new Error((data && data.detail) || `Server error (${res.status})`);
+            if (!data || !data.download_url) throw new Error('Download URL missing');
+
+            triggerDownload(data.download_url, data.filename);
+            downloaded = true;
+            successCount++;
+            $batchProgressStatus.textContent = 'Stream dispatched!';
+
+            // Automatically uncheck and deselect successful track from selection state
+            toggleTrackSelection(track, false);
+          } catch (err) {
+            console.warn(`[Batch DL Attempt ${attempt}] ${track.title}:`, err);
+            if (attempt < 2 && !cancelBatchDownload) {
+              $batchProgressStatus.textContent = 'Retrying…';
+              await new Promise(r => setTimeout(r, 2000));
+            } else {
+              failedTracks.push(track);
+              $batchProgressStatus.textContent = 'Failed';
+            }
+          }
         }
 
-        // Safe inter-download delay (~1.5s) to avoid 429 rate limit
+        // Safe inter-download delay (2.5s) to avoid download manager thrashing & socket exhaustion
         if (i < total - 1 && !cancelBatchDownload) {
-          $batchProgressStatus.textContent = 'Inter-download delay (1.5s)…';
-          await new Promise(r => setTimeout(r, 1500));
+          $batchProgressStatus.textContent = 'Waiting for next track (2.5s)…';
+          await new Promise(r => setTimeout(r, 2500));
         }
       }
 
       $batchProgressFill.style.width = '100%';
-      $batchProgressTitle.textContent = 'Completed!';
-      $batchProgressSub.textContent = `Successfully downloaded ${successCount} track${successCount === 1 ? '' : 's'}${failCount > 0 ? ` (${failCount} skipped)` : ''}.`;
-      $batchProgressStatus.textContent = 'All downloads finished';
-      toast('success', `Finished downloading ${successCount} track${successCount === 1 ? '' : 's'}!`);
+      if ($batchSpinner) $batchSpinner.style.display = 'none';
 
-      setTimeout(() => {
-        $batchProgressWidget.style.display = 'none';
+      if (failedTracks.length === 0) {
+        $batchProgressTitle.textContent = 'Completed!';
+        $batchProgressSub.textContent = `All ${successCount} track${successCount === 1 ? '' : 's'} downloaded successfully.`;
+        $batchProgressStatus.textContent = 'All downloads finished';
+        toast('success', `Finished downloading all ${successCount} tracks!`);
+
+        setTimeout(() => {
+          $batchProgressWidget.style.display = 'none';
+          isBatchDownloading = false;
+          clearSelection();
+        }, 4000);
+      } else {
+        // Keep failed tracks selected so the user can see what failed and retry them
         isBatchDownloading = false;
-        clearSelection();
-      }, 4000);
+        $batchProgressTitle.textContent = 'Batch Incomplete';
+        $batchProgressSub.textContent = `${successCount} downloaded, ${failedTracks.length} failed.`;
+        $batchProgressStatus.textContent = 'Failed tracks kept in queue';
+        if ($btnBatchRetryText) {
+          $btnBatchRetryText.textContent = `Retry Failed Tracks (${failedTracks.length})`;
+        }
+        if ($batchProgressActions) {
+          $batchProgressActions.style.display = 'flex';
+        }
+        toast('warning', `${failedTracks.length} track${failedTracks.length === 1 ? '' : 's'} failed. Click Retry to re-download.`);
+      }
     }
 
     function triggerDownload(url, filename) {

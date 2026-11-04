@@ -247,6 +247,7 @@ _TOKEN_TTL_SECONDS = 900     # 15 minutes (allows download managers to reconnect
 
 _MAX_CACHE_ENTRIES = 300
 _active_streams_count: int = 0
+_STREAM_SEMAPHORE = asyncio.Semaphore(12)
 
 def prune_memory_caches() -> None:
     """Evict expired entries and enforce memory cache boundaries."""
@@ -299,7 +300,7 @@ async def lifespan(app: FastAPI):
     maintenance_task.cancel()
 
 # ── Rate Limiter ──────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["400/day"])
+limiter = Limiter(key_func=get_remote_address, default_limits=["5000/day"])
 
 # ── FastAPI App ───────────────────────────────────────────────
 app = FastAPI(
@@ -632,7 +633,7 @@ async def get_album_tracks(request: Request, album_id: str):
     return JSONResponse(content={"tracks": tracks})
 
 @app.post("/api/download")
-@limiter.limit("60/minute")
+@limiter.limit("300/minute")
 async def prepare_download(request: Request, body: DownloadRequest):
     """
     Resolve YouTube audio stream in ~0.5s, auto-fetch official poster artwork & clean metadata,
@@ -857,118 +858,191 @@ async def stream_audio(
     # Build FFmpeg command for in-memory stream piping
     has_poster = bool(poster_url and not is_native)
 
-    cmd = [
-        FFMPEG_BIN,
-        "-reconnect", "1",
-        "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "5",
-    ]
-    if user_agent:
-        cmd.extend(["-user_agent", user_agent])
-
-    cmd.extend(["-i", stream_url])
-
-    if has_poster:
-        # Dual-input: Input 0 = audio stream, Input 1 = cover art poster image
-        cmd.extend([
+    def _build_ffmpeg_cmd(include_poster: bool) -> list[str]:
+        c = [
+            FFMPEG_BIN,
+            "-hide_banner",
+            "-loglevel", "error",
             "-reconnect", "1",
             "-reconnect_streamed", "1",
             "-reconnect_delay_max", "5",
-            "-i", poster_url,
-            "-map", "0:a",
-            "-map", "1:v",
-            "-c:a", "libmp3lame",
-            "-b:a", f"{stream_quality}k",
-            "-c:v", "mjpeg",
-            "-disposition:v:0", "attached_pic",
-        ])
-    elif not is_native:
-        cmd.extend([
-            "-vn",
-            "-c:a", "libmp3lame",
-            "-b:a", f"{stream_quality}k",
-        ])
+        ]
+        if user_agent:
+            c.extend(["-user_agent", user_agent])
+        c.extend(["-i", stream_url])
 
-    if is_native:
-        # Native direct stream copy: 0% CPU usage
-        cmd.extend([
-            "-vn",
-            "-c:a", "copy",
-            "-movflags", "frag_keyframe+empty_moov+default_base_moof",
-            "-f", "mp4",
-            "pipe:1"
-        ])
-    else:
-        # Standard ID3v2.3 tags with rich metadata
-        cmd.extend([
-            "-id3v2_version", "3",
-            "-metadata", f"title={stream_title}",
-            "-metadata", f"artist={stream_artist}",
-        ])
-        if stream_album:
-            cmd.extend(["-metadata", f"album={stream_album}"])
-        if stream_year:
-            cmd.extend(["-metadata", f"date={stream_year}"])
-        cmd.extend([
-            "-f", "mp3",
-            "pipe:1"
-        ])
+        if include_poster and poster_url and not is_native:
+            c.extend([
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "5",
+                "-i", poster_url,
+                "-map", "0:a",
+                "-map", "1:v",
+                "-c:a", "libmp3lame",
+                "-b:a", f"{stream_quality}k",
+                "-c:v", "mjpeg",
+                "-disposition:v:0", "attached_pic",
+            ])
+        elif not is_native:
+            c.extend([
+                "-vn",
+                "-c:a", "libmp3lame",
+                "-b:a", f"{stream_quality}k",
+            ])
 
+        if is_native:
+            c.extend([
+                "-vn",
+                "-c:a", "copy",
+                "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                "-f", "mp4",
+                "pipe:1"
+            ])
+        else:
+            c.extend([
+                "-id3v2_version", "3",
+                "-metadata", f"title={stream_title}",
+                "-metadata", f"artist={stream_artist}",
+            ])
+            if stream_album:
+                c.extend(["-metadata", f"album={stream_album}"])
+            if stream_year:
+                c.extend(["-metadata", f"date={stream_year}"])
+            c.extend([
+                "-f", "mp3",
+                "pipe:1"
+            ])
+        return c
+
+    cmd = _build_ffmpeg_cmd(include_poster=has_poster)
     logger.info("Spawning stream pipe: %s (%s) [has_poster=%s]", output_filename, stream_quality, has_poster)
 
-    try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-    except Exception as exc:
-        logger.error("Failed to spawn FFmpeg process: %s", exc)
-        raise HTTPException(status_code=500, detail="Audio conversion pipeline failed to start.")
-
-    async def chunk_generator():
-        global _active_streams_count
-        _active_streams_count += 1
-        logger.info("Stream opened: %s (Active streams: %d)", output_filename, _active_streams_count)
-
-        header_patched = False
-        initial_buffer = bytearray()
+    async def _spawn_and_verify(proc_cmd: list[str]):
+        try:
+            p = await asyncio.create_subprocess_exec(
+                *proc_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except Exception as exc:
+            logger.error("Failed to spawn FFmpeg process: %s", exc)
+            return None, b"", str(exc)
 
         try:
-            while True:
-                chunk = await process.stdout.read(64 * 1024)  # 64 KB chunks
-                if not chunk:
-                    # Stream finished: flush any remaining initial buffer
+            # Wait up to 12s for initial bytes to ensure stream started
+            initial = await asyncio.wait_for(p.stdout.read(64 * 1024), timeout=12.0)
+            return p, initial, ""
+        except Exception as exc:
+            try:
+                p.terminate()
+                await p.wait()
+            except Exception:
+                pass
+            return None, b"", str(exc)
+
+    process, first_chunk, spawn_err = await _spawn_and_verify(cmd)
+
+    # Automatic fallback: if dual-input with poster fails, retry with audio-only immediately
+    # This prevents 0 KB files or sudden connection resets when mzstatic images fail or hang
+    if (not first_chunk or process is None) and has_poster:
+        logger.warning(
+            "Dual-input stream pipe failed for '%s' (%s), attempting audio-only fallback...",
+            output_filename, spawn_err or "empty output"
+        )
+        if process and process.returncode is None:
+            try:
+                process.terminate()
+                await process.wait()
+            except Exception:
+                pass
+        fallback_cmd = _build_ffmpeg_cmd(include_poster=False)
+        process, first_chunk, spawn_err = await _spawn_and_verify(fallback_cmd)
+
+    # If stream pipeline completely failed to produce audio data, return HTTP 502
+    if not first_chunk or process is None:
+        err_detail = ""
+        if process and process.stderr:
+            try:
+                err_bytes = await asyncio.wait_for(process.stderr.read(), timeout=1.0)
+                err_detail = err_bytes.decode("utf-8", errors="ignore").strip()
+            except Exception:
+                pass
+        if process and process.returncode is None:
+            try:
+                process.terminate()
+                await process.wait()
+            except Exception:
+                pass
+        logger.error("FFmpeg pipeline aborted for '%s': %s", output_filename, err_detail or spawn_err)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Audio transcoding failed: {err_detail[:200] if err_detail else 'Stream source unreachable'}"
+        )
+
+    async def chunk_generator(initial_chunk: bytes):
+        global _active_streams_count
+        async with _STREAM_SEMAPHORE:
+            _active_streams_count += 1
+            logger.info("Stream opened: %s (Active streams: %d)", output_filename, _active_streams_count)
+
+            header_patched = False
+            initial_buffer = bytearray()
+            initial_buffer.extend(initial_chunk)
+
+            if not is_native:
+                patched = fix_id3_size_in_stream(initial_buffer)
+                if patched > 0:
+                    header_patched = True
+                    yield bytes(initial_buffer)
+                    initial_buffer.clear()
+
+            try:
+                while True:
                     if initial_buffer:
                         if not header_patched and not is_native:
-                            fix_id3_size_in_stream(initial_buffer)
-                        yield bytes(initial_buffer)
-                    break
+                            if len(initial_buffer) >= 512 * 1024:
+                                header_patched = True
+                                fix_id3_size_in_stream(initial_buffer)
+                                yield bytes(initial_buffer)
+                                initial_buffer.clear()
+                        else:
+                            yield bytes(initial_buffer)
+                            initial_buffer.clear()
 
-                if not header_patched and not is_native:
-                    initial_buffer.extend(chunk)
-                    patched = fix_id3_size_in_stream(initial_buffer)
-                    # Once patched or safety threshold (512 KB) reached, flush header buffer
-                    if patched > 0 or len(initial_buffer) >= 512 * 1024:
-                        header_patched = True
-                        yield bytes(initial_buffer)
-                        initial_buffer.clear()
-                else:
-                    yield chunk
-        except (asyncio.CancelledError, GeneratorExit):
-            logger.info("Client disconnected early from stream: %s", output_filename)
-        finally:
-            _active_streams_count = max(0, _active_streams_count - 1)
-            logger.info("Stream closed: %s (Remaining active: %d)", output_filename, _active_streams_count)
-            if process.returncode is None:
-                try:
-                    process.terminate()
-                    await process.wait()
-                except Exception:
-                    pass
+                    chunk = await process.stdout.read(64 * 1024)  # 64 KB chunks
+                    if not chunk:
+                        # Stream finished: flush any remaining initial buffer
+                        if initial_buffer:
+                            if not header_patched and not is_native:
+                                fix_id3_size_in_stream(initial_buffer)
+                            yield bytes(initial_buffer)
+                        break
+
+                    if not header_patched and not is_native:
+                        initial_buffer.extend(chunk)
+                        patched = fix_id3_size_in_stream(initial_buffer)
+                        # Once patched or safety threshold (512 KB) reached, flush header buffer
+                        if patched > 0 or len(initial_buffer) >= 512 * 1024:
+                            header_patched = True
+                            yield bytes(initial_buffer)
+                            initial_buffer.clear()
+                    else:
+                        yield chunk
+            except (asyncio.CancelledError, GeneratorExit):
+                logger.info("Client disconnected early from stream: %s", output_filename)
+            finally:
+                _active_streams_count = max(0, _active_streams_count - 1)
+                logger.info("Stream closed: %s (Remaining active: %d)", output_filename, _active_streams_count)
+                if process.returncode is None:
+                    try:
+                        process.terminate()
+                        await process.wait()
+                    except Exception:
+                        pass
 
     return StreamingResponse(
-        chunk_generator(),
+        chunk_generator(first_chunk),
         media_type=media_type,
         headers={
             "Content-Disposition": content_disp,

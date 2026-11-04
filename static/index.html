@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=2.2.6" />
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2.7" />
 </head>
 
 <body>
@@ -303,12 +303,19 @@
       <span id="batch-progress-count">0 / 0</span>
       <span id="batch-progress-status">Sequential download</span>
     </div>
+    <div class="batch-progress-actions" id="batch-progress-actions" style="display: none;">
+      <button type="button" class="btn-batch-retry" id="btn-batch-retry">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        <span id="btn-batch-retry-text">Retry Failed Tracks</span>
+      </button>
+      <button type="button" class="btn-batch-dismiss" id="btn-batch-dismiss">Dismiss</button>
+    </div>
   </div>
 
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=2.2.6" defer></script>
+  <script src="/static/js/app.js?v=2.2.7" defer></script>
 </body>
 
 </html>
