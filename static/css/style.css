@@ -2302,16 +2302,21 @@ body:has(#mini-player.show) .batch-progress-widget {
 }
 
 .update-banner-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.4), rgba(168, 85, 247, 0.3));
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(168, 85, 247, 0.25));
+  border: 1px solid rgba(168, 85, 247, 0.45);
   color: #c084fc;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.35);
+}
+
+.update-banner-icon svg {
+  display: block;
 }
 
 .update-banner-content {
