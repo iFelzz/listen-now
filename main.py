@@ -543,6 +543,18 @@ async def sitemap():
         return FileResponse(str(sitemap_path), media_type="application/xml; charset=utf-8")
     raise HTTPException(status_code=404, detail="Sitemap not found.")
 
+@app.get("/google{code}.html", include_in_schema=False)
+async def google_site_verification(code: str):
+    """Serve Google Search Console site verification file dynamically or from disk."""
+    filename = f"google{code}.html"
+    for path in (STATIC_DIR / filename, BASE_DIR / filename):
+        if path.exists():
+            return FileResponse(str(path), media_type="text/html; charset=utf-8")
+    return Response(
+        content=f"google-site-verification: {filename}",
+        media_type="text/html; charset=utf-8"
+    )
+
 @app.get("/api/version")
 async def get_version():
     """Return semantic version and git commit metadata dynamically."""

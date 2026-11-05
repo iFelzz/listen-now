@@ -1,5 +1,16 @@
 [
   {
+    "version": "v1.11.1",
+    "date": "2026-11-05",
+    "time": "14:57 WIB",
+    "type": "improvement",
+    "title": "Google Search Console Site Verification Endpoint & Meta Tag",
+    "highlights": [
+      "Added dynamic endpoint to serve Google Search Console HTML verification file (googledfb472774f5b70f0.html).",
+      "Embedded google-site-verification meta tag as redundant verification method in document head."
+    ]
+  },
+  {
     "version": "v1.11.0",
     "date": "2026-11-05",
     "time": "14:38 WIB",
