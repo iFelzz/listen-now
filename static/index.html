@@ -144,7 +144,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.11.2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.12.0" />
 </head>
 
 <body>
@@ -752,6 +752,40 @@
           </svg>
         </button>
       </div>
+
+      <!-- Release Toolbar: Search & Quick Version Filter -->
+      <div class="release-modal-toolbar">
+        <div class="release-search-wrap">
+          <svg class="release-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="release-search-input" class="release-search-input" placeholder="Search changelog, features, fixes..." autocomplete="off" />
+          <button type="button" id="release-search-clear" class="release-search-clear" style="display: none;" aria-label="Clear search">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="release-filter-row">
+          <div class="release-version-select-wrap">
+            <span class="release-filter-label">Jump to:</span>
+            <select id="release-version-select" class="release-version-select" aria-label="Jump to version">
+              <option value="all">All Releases</option>
+            </select>
+            <svg class="release-select-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="release-type-chips" id="release-type-chips">
+            <button type="button" class="release-type-chip active" data-type="all">All</button>
+            <button type="button" class="release-type-chip" data-type="feature">Features</button>
+            <button type="button" class="release-type-chip" data-type="improvement">Improvements</button>
+            <button type="button" class="release-type-chip" data-type="fix">Fixes</button>
+          </div>
+        </div>
+      </div>
       <div class="release-modal-body" id="release-modal-body">
         <div class="release-loading-state" id="release-loading">
           <div class="spinner-small"></div>
@@ -759,11 +793,20 @@
         </div>
       </div>
       <div class="release-modal-footer">
-        <span class="release-footer-note">Semantic Versioning 2.0.0</span>
-        <a href="https://github.com/iFelzz/melodyxx/releases" target="_blank" rel="noopener" class="release-github-tag-link">
-          <span>GitHub Releases</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-        </a>
+        <span class="release-footer-note" id="release-footer-count">34 Releases • SemVer 2.0.0</span>
+        <div class="release-footer-actions">
+          <button type="button" class="btn-release-scroll-top" id="btn-release-scroll-top" style="display: none;" title="Scroll to top">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="19" x2="12" y2="5"></line>
+              <polyline points="5 12 12 5 19 12"></polyline>
+            </svg>
+            <span>Top</span>
+          </button>
+          <a href="https://github.com/iFelzz/melodyxx/releases" target="_blank" rel="noopener" class="release-github-tag-link">
+            <span>GitHub Releases</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -903,7 +946,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.11.2" defer></script>
+  <script src="/static/js/app.js?v=1.12.0" defer></script>
 </body>
 
 </html>

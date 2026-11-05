@@ -82,6 +82,12 @@
     const $releaseLogCard = document.getElementById('release-modal-card');
     const $btnReleaseClose = document.getElementById('btn-release-close');
     const $releaseModalBody = document.getElementById('release-modal-body');
+    const $releaseSearchInput = document.getElementById('release-search-input');
+    const $releaseSearchClear = document.getElementById('release-search-clear');
+    const $releaseVersionSelect = document.getElementById('release-version-select');
+    const $releaseTypeChips = document.getElementById('release-type-chips');
+    const $releaseFooterCount = document.getElementById('release-footer-count');
+    const $btnReleaseScrollTop = document.getElementById('btn-release-scroll-top');
 
     // Bug Reporter DOM refs
     const $btnOpenBugReport = document.getElementById('btn-open-bug-report');
@@ -2165,6 +2171,8 @@
     let cachedChangelog = null;
     let isReleaseLogClosing = false;
     let isChangelogRendered = false;
+    let selectedReleaseType = 'all';
+    let releaseSearchQuery = '';
 
     function checkReleaseLogBadge(latestVersion) {
       if (!$releaseLogBadge) return;
@@ -2188,14 +2196,15 @@
         $releaseLogBadge.style.display = 'none';
       }
 
-      const activeVer = currentAppVersion || 'v1.6.2';
+      const activeVer = currentAppVersion || 'v1.11.2';
       try {
         localStorage.setItem('melodyxx_last_seen_release', activeVer);
       } catch (_) {}
 
       if (!isChangelogRendered) {
         if (cachedChangelog) {
-          renderChangelog(cachedChangelog);
+          setupReleaseVersionSelect(cachedChangelog);
+          renderFilteredChangelog();
         } else {
           fetchChangelog();
         }
@@ -2221,13 +2230,15 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         cachedChangelog = data;
-        renderChangelog(data);
+        setupReleaseVersionSelect(data);
+        renderFilteredChangelog();
       } catch (err) {
         try {
           const fallbackRes = await fetch(`/static/changelog.json?_t=${Date.now()}`);
           const fallbackData = await fallbackRes.json();
           cachedChangelog = fallbackData;
-          renderChangelog(fallbackData);
+          setupReleaseVersionSelect(fallbackData);
+          renderFilteredChangelog();
         } catch (fbErr) {
           if (!isChangelogRendered) {
             $releaseModalBody.innerHTML = `
@@ -2240,9 +2251,40 @@
       }
     }
 
-    function renderChangelog(items) {
+    function setupReleaseVersionSelect(items) {
+      if (!$releaseVersionSelect || !Array.isArray(items)) return;
+      // Group versions: All releases + distinct Minor groups + Individual versions
+      const options = ['<option value="all">All Releases (' + items.length + ')</option>'];
+
+      // Distinct minor branches e.g. "v1.11.x Series", "v1.10.x Series", etc.
+      const groups = {};
+      items.forEach(item => {
+        const m = (item.version || '').match(/^(v?\d+\.\d+)/);
+        const groupKey = m ? m[1] : 'other';
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(item);
+      });
+
+      options.push('<optgroup label="── Version Series ──">');
+      Object.keys(groups).forEach(key => {
+        const count = groups[key].length;
+        const formattedKey = key.startsWith('v') ? key : `v${key}`;
+        options.push(`<option value="group:${key}">${formattedKey}.x Series (${count})</option>`);
+      });
+      options.push('</optgroup>');
+
+      options.push('<optgroup label="── Specific Versions ──">');
+      items.forEach(item => {
+        options.push(`<option value="ver:${item.version}">${item.version} — ${esc(item.title.substring(0, 32))}${item.title.length > 32 ? '…' : ''}</option>`);
+      });
+      options.push('</optgroup>');
+
+      $releaseVersionSelect.innerHTML = options.join('');
+    }
+
+    function renderFilteredChangelog() {
       if (!$releaseModalBody) return;
-      if (!items || items.length === 0) {
+      if (!cachedChangelog || cachedChangelog.length === 0) {
         $releaseModalBody.innerHTML = `
           <div class="release-loading-state">
             <span>No release notes found.</span>
@@ -2251,8 +2293,72 @@
         return;
       }
 
-      $releaseModalBody.innerHTML = items.map((item, idx) => {
-        const isLatest = idx === 0;
+      const q = (releaseSearchQuery || '').trim().toLowerCase();
+      const selectedVerVal = $releaseVersionSelect ? $releaseVersionSelect.value : 'all';
+
+      const filtered = cachedChangelog.filter(item => {
+        // Filter by Type
+        if (selectedReleaseType !== 'all') {
+          const t = (item.type || 'feature').toLowerCase();
+          if (t !== selectedReleaseType) return false;
+        }
+
+        // Filter by Version dropdown
+        if (selectedVerVal && selectedVerVal !== 'all') {
+          if (selectedVerVal.startsWith('group:')) {
+            const prefix = selectedVerVal.replace('group:', '');
+            if (!item.version.startsWith(prefix) && !item.version.startsWith('v' + prefix)) {
+              return false;
+            }
+          } else if (selectedVerVal.startsWith('ver:')) {
+            const exactVer = selectedVerVal.replace('ver:', '');
+            if (item.version !== exactVer) {
+              return false;
+            }
+          }
+        }
+
+        // Filter by Search Query
+        if (q) {
+          const matchVer = (item.version || '').toLowerCase().includes(q);
+          const matchTitle = (item.title || '').toLowerCase().includes(q);
+          const matchType = (item.type || '').toLowerCase().includes(q);
+          const matchHighlights = (item.highlights || []).some(h => (h || '').toLowerCase().includes(q));
+          if (!matchVer && !matchTitle && !matchType && !matchHighlights) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      if ($releaseFooterCount) {
+        const total = cachedChangelog.length;
+        if (filtered.length === total) {
+          $releaseFooterCount.textContent = `${total} Releases • SemVer 2.0.0`;
+        } else {
+          $releaseFooterCount.textContent = `Showing ${filtered.length} of ${total} Releases`;
+        }
+      }
+
+      if (filtered.length === 0) {
+        $releaseModalBody.innerHTML = `
+          <div class="release-empty-search">
+            <svg class="release-empty-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+            <div class="release-empty-text">No release notes matching your criteria</div>
+            <div class="release-empty-hint">Try adjusting your search terms or clearing the version/type filter.</div>
+          </div>
+        `;
+        isChangelogRendered = true;
+        return;
+      }
+
+      $releaseModalBody.innerHTML = filtered.map((item, idx) => {
+        const isLatest = idx === 0 && selectedReleaseType === 'all' && (!selectedVerVal || selectedVerVal === 'all') && !q;
         const type = (item.type || 'feature').toLowerCase();
         const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
         const highlightsHtml = (item.highlights || []).map(hl => `
@@ -2263,7 +2369,7 @@
         `).join('');
 
         return `
-          <article class="release-entry ${isLatest ? 'latest' : ''}">
+          <article class="release-entry ${isLatest ? 'latest' : ''}" id="release-${esc(item.version.replace(/\./g, '-'))}">
             <div class="release-entry-header">
               <div class="release-entry-left">
                 <span class="release-version-tag">${esc(item.version)}</span>
@@ -2281,7 +2387,78 @@
           </article>
         `;
       }).join('');
+
       isChangelogRendered = true;
+    }
+
+    // Release Search & Filter Event Listeners
+    if ($releaseSearchInput) {
+      $releaseSearchInput.addEventListener('input', (e) => {
+        releaseSearchQuery = e.target.value;
+        if ($releaseSearchClear) {
+          $releaseSearchClear.style.display = releaseSearchQuery ? 'flex' : 'none';
+        }
+        renderFilteredChangelog();
+      });
+    }
+
+    if ($releaseSearchClear) {
+      $releaseSearchClear.addEventListener('click', () => {
+        if ($releaseSearchInput) {
+          $releaseSearchInput.value = '';
+          $releaseSearchInput.focus();
+        }
+        releaseSearchQuery = '';
+        $releaseSearchClear.style.display = 'none';
+        renderFilteredChangelog();
+      });
+    }
+
+    if ($releaseVersionSelect) {
+      $releaseVersionSelect.addEventListener('change', () => {
+        const val = $releaseVersionSelect.value;
+        // If selecting a specific version, we can either filter or scroll to it
+        if (val.startsWith('ver:')) {
+          const exactVer = val.replace('ver:', '');
+          const targetEl = document.getElementById(`release-${exactVer.replace(/\./g, '-')}`);
+          if (targetEl && selectedReleaseType === 'all' && !releaseSearchQuery) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            targetEl.classList.remove('jump-highlight');
+            void targetEl.offsetWidth; // trigger reflow
+            targetEl.classList.add('jump-highlight');
+            return;
+          }
+        }
+        renderFilteredChangelog();
+        if ($releaseModalBody) $releaseModalBody.scrollTop = 0;
+      });
+    }
+
+    if ($releaseTypeChips) {
+      $releaseTypeChips.addEventListener('click', (e) => {
+        const btn = e.target.closest('.release-type-chip');
+        if (!btn) return;
+        $releaseTypeChips.querySelectorAll('.release-type-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedReleaseType = btn.dataset.type || 'all';
+        renderFilteredChangelog();
+        if ($releaseModalBody) $releaseModalBody.scrollTop = 0;
+      });
+    }
+
+    // Scroll to top button in Release Modal
+    if ($releaseModalBody && $btnReleaseScrollTop) {
+      $releaseModalBody.addEventListener('scroll', () => {
+        if ($releaseModalBody.scrollTop > 240) {
+          $btnReleaseScrollTop.style.display = 'inline-flex';
+        } else {
+          $btnReleaseScrollTop.style.display = 'none';
+        }
+      });
+
+      $btnReleaseScrollTop.addEventListener('click', () => {
+        $releaseModalBody.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     }
 
     if ($btnReleaseLog) {

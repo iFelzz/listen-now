@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.12.0",
+    "date": "2026-11-05",
+    "time": "15:28 WIB",
+    "type": "feature",
+    "title": "Release Log Toolbar: Instant Search, Version Jump & Type Filters",
+    "highlights": [
+      "Added instant search bar to find releases by version number, title keywords, or release highlights.",
+      "Added smart 'Jump to' dropdown selector grouped by version series (e.g. v1.11.x, v1.10.x, v1.0.x) and direct release jumps.",
+      "Integrated fast category chips (All, Features, Improvements, Fixes) with smooth scroll-to-top navigation."
+    ]
+  },
+  {
     "version": "v1.11.2",
     "date": "2026-11-05",
     "time": "15:10 WIB",
