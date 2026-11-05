@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.6.2",
+    "date": "2026-11-05",
+    "time": "07:30 WIB",
+    "type": "improvement",
+    "title": "Snappy Modal Transitions & Clean Release Notes Icon",
+    "highlights": [
+      "Replaced star icon with dedicated, clean Release Notes document vector SVG.",
+      "Removed rotation spin on close (X) button, replaced with subtle smooth hover scaling.",
+      "Optimized modal transitions to high-performance 0.18s GPU-accelerated spring animations.",
+      "Preloaded changelog data on startup to eliminate layout shifts and perceived rendering lag."
+    ]
+  },
+  {
     "version": "v1.6.1",
     "date": "2026-11-05",
     "time": "07:25 WIB",

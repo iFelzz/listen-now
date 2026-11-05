@@ -2563,8 +2563,8 @@ body:has(#mini-player.show) .btn-release-log {
 }
 
 .btn-release-log:hover svg {
-  transform: rotate(20deg) scale(1.1);
-  stroke: #e0e7ff;
+  transform: scale(1.08);
+  stroke: #ffffff;
 }
 
 .release-log-badge {
@@ -2595,53 +2595,56 @@ body:has(#mini-player.show) .btn-release-log {
 .release-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(6, 4, 12, 0.78);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(4, 2, 8, 0.74);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: releaseBackdropFadeIn 0.25s ease-out forwards;
+  animation: releaseFadeIn 0.15s ease-out forwards;
+  will-change: opacity;
 }
 
 .release-modal-backdrop.closing {
-  animation: releaseBackdropFadeOut 0.2s ease-in forwards;
+  animation: releaseFadeOut 0.12s ease-in forwards;
 }
 
 .release-modal-card {
   background: rgba(18, 12, 32, 0.96);
   border: 1px solid rgba(168, 85, 247, 0.35);
-  border-radius: 22px;
+  border-radius: 20px;
   width: 100%;
   max-width: 580px;
   max-height: 84vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 45px rgba(124, 58, 237, 0.22);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(124, 58, 237, 0.18);
   overflow: hidden;
-  animation: releaseModalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  animation: releaseScaleIn 0.18s cubic-bezier(0, 0, 0.2, 1) forwards;
 }
 
 .release-modal-backdrop.closing .release-modal-card {
-  animation: releaseModalPopOut 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: releaseScaleOut 0.12s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-@keyframes releaseBackdropFadeIn {
+@keyframes releaseFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes releaseBackdropFadeOut {
+@keyframes releaseFadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
 }
 
-@keyframes releaseModalPopIn {
+@keyframes releaseScaleIn {
   from {
     opacity: 0;
-    transform: scale(0.92) translateY(18px);
+    transform: scale(0.97) translateY(8px);
   }
   to {
     opacity: 1;
@@ -2649,14 +2652,14 @@ body:has(#mini-player.show) .btn-release-log {
   }
 }
 
-@keyframes releaseModalPopOut {
+@keyframes releaseScaleOut {
   from {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
   to {
     opacity: 0;
-    transform: scale(0.92) translateY(18px);
+    transform: scale(0.97) translateY(8px);
   }
 }
 
@@ -2722,24 +2725,28 @@ body:has(#mini-player.show) .btn-release-log {
 .btn-release-close {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  width: 32px;
-  height: 32px;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #94a3b8;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
   flex-shrink: 0;
   margin-left: 12px;
 }
 
 .btn-release-close:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.45);
-  color: #f87171;
-  transform: rotate(90deg);
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.38);
+  color: #fca5a5;
+  transform: scale(1.06);
+}
+
+.btn-release-close:active {
+  transform: scale(0.95);
 }
 
 /* ── Modal Body & Entries ──────────────────────────────── */

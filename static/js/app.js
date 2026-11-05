@@ -1692,6 +1692,7 @@
     // ── Release Log & What's New Drawer ────────────────────────
     let cachedChangelog = null;
     let isReleaseLogClosing = false;
+    let isChangelogRendered = false;
 
     function checkReleaseLogBadge(latestVersion) {
       if (!$releaseLogBadge) return;
@@ -1715,15 +1716,17 @@
         $releaseLogBadge.style.display = 'none';
       }
 
-      const activeVer = currentAppVersion || 'v1.6.0';
+      const activeVer = currentAppVersion || 'v1.6.2';
       try {
         localStorage.setItem('melodyxx_last_seen_release', activeVer);
       } catch (_) {}
 
-      if (cachedChangelog) {
-        renderChangelog(cachedChangelog);
-      } else {
-        fetchChangelog();
+      if (!isChangelogRendered) {
+        if (cachedChangelog) {
+          renderChangelog(cachedChangelog);
+        } else {
+          fetchChangelog();
+        }
       }
     }
 
@@ -1736,7 +1739,7 @@
         $releaseLogModal.classList.remove('closing');
         document.body.style.overflow = '';
         isReleaseLogClosing = false;
-      }, 200);
+      }, 120);
     }
 
     async function fetchChangelog() {
@@ -1754,11 +1757,13 @@
           cachedChangelog = fallbackData;
           renderChangelog(fallbackData);
         } catch (fbErr) {
-          $releaseModalBody.innerHTML = `
-            <div class="release-loading-state">
-              <span>Failed to load release history. Please try again.</span>
-            </div>
-          `;
+          if (!isChangelogRendered) {
+            $releaseModalBody.innerHTML = `
+              <div class="release-loading-state">
+                <span>Failed to load release history. Please try again.</span>
+              </div>
+            `;
+          }
         }
       }
     }
@@ -1804,6 +1809,7 @@
           </article>
         `;
       }).join('');
+      isChangelogRendered = true;
     }
 
     if ($btnReleaseLog) {
@@ -1842,6 +1848,7 @@
 
           checkPostUpdateFeedback(formatted);
           checkReleaseLogBadge(formatted);
+          fetchChangelog();
 
           if (!currentAppVersion) {
             currentAppVersion = formatted;
