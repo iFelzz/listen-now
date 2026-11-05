@@ -105,7 +105,7 @@ def get_git_remote_commit() -> Optional[str]:
     try:
         import urllib.request
         req = urllib.request.Request(
-            "https://github.com/iFelzz/listen-now.git/info/refs?service=git-upload-pack",
+            "https://github.com/iFelzz/melodyxx.git/info/refs?service=git-upload-pack",
             headers={"User-Agent": "git/2.40.0"}
         )
         with urllib.request.urlopen(req, timeout=3.5) as resp:
@@ -529,8 +529,8 @@ async def get_version():
     return {
         "version": version,
         "commit": commit,
-        "version_url": f"https://github.com/iFelzz/listen-now/releases/tag/{version}" if version else "https://github.com/iFelzz/listen-now",
-        "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}" if commit and commit not in ("latest", "unknown") else "https://github.com/iFelzz/listen-now",
+        "version_url": f"https://github.com/iFelzz/melodyxx/releases/tag/{version}" if version else "https://github.com/iFelzz/melodyxx",
+        "commit_url": f"https://github.com/iFelzz/melodyxx/commit/{commit}" if commit and commit not in ("latest", "unknown") else "https://github.com/iFelzz/melodyxx",
     }
 
 @app.get("/api/changelog")

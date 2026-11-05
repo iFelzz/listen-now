@@ -2188,7 +2188,7 @@
           const version = (data && data.version) ? String(data.version).trim() : 'v1.0.0';
           const formatted = version.startsWith('v') ? version : `v${version}`;
           $versionLink.textContent = formatted;
-          $versionLink.href = data.version_url || 'https://github.com/iFelzz/listen-now';
+          $versionLink.href = data.version_url || 'https://github.com/iFelzz/melodyxx';
           $versionLink.title = `Melodyxx ${formatted}`;
 
           checkPostUpdateFeedback(formatted);
