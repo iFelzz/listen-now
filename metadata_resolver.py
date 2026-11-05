@@ -846,9 +846,9 @@ def get_live_suggestions(query: str, mode: str = "songs") -> Dict[str, Any]:
             logger.debug("YouTube suggestion fetch error: %s", e)
         return []
 
-    def fetch_itunes_artists(term: str) -> List[Dict[str, Any]]:
+    def fetch_itunes_artists(term: str, limit: int = 4) -> List[Dict[str, Any]]:
         try:
-            url = f"https://itunes.apple.com/search?term={urllib.parse.quote_plus(term)}&entity=musicArtist&limit=4"
+            url = f"https://itunes.apple.com/search?term={urllib.parse.quote_plus(term)}&entity=musicArtist&limit={limit}"
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -859,6 +859,61 @@ def get_live_suggestions(query: str, mode: str = "songs") -> Dict[str, Any]:
         except Exception as e:
             logger.debug("iTunes artist lookup error: %s", e)
         return []
+
+    # If searching in Artists mode, strictly return artists without YouTube song queries
+    if mode == "artists":
+        terms = [clean_q]
+        if alias_matches:
+            for al in alias_matches:
+                if al not in terms:
+                    terms.append(al)
+
+        raw_artist_results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(terms), 3)) as pool:
+            for term_res in pool.map(lambda t: fetch_itunes_artists(t, limit=10), terms):
+                raw_artist_results.extend(term_res)
+
+        seen_ids = set()
+        exact_matches = []
+        prefix_matches = []
+        other_matches = []
+
+        for r in raw_artist_results:
+            aid = r.get("artistId")
+            aname = r.get("artistName")
+            if not aid or not aname:
+                continue
+            aid_str = str(aid)
+            if aid_str in seen_ids:
+                continue
+            seen_ids.add(aid_str)
+            item = {
+                "artist_id": aid_str,
+                "name": aname,
+                "genre": r.get("primaryGenreName") or "Artist",
+                "artist_url": r.get("artistLinkUrl") or "",
+            }
+            anorm = clean_label_str(aname)
+            if anorm == q_norm or (alias_matches and any(clean_label_str(alias) == anorm for alias in alias_matches)):
+                exact_matches.append(item)
+            elif anorm.startswith(q_norm) or q_norm in anorm:
+                prefix_matches.append(item)
+            else:
+                other_matches.append(item)
+
+        artists_list = exact_matches + prefix_matches + other_matches
+        result_data = {
+            "mode": "artists",
+            "query": clean_q,
+            "top_artist": artists_list[0] if artists_list else None,
+            "artists": artists_list[:8],
+            "suggestions": []
+        }
+        _LIVE_SUGGEST_CACHE[cache_key] = (now, result_data)
+        if len(_LIVE_SUGGEST_CACHE) > 500:
+            oldest_key = min(_LIVE_SUGGEST_CACHE.keys(), key=lambda k: _LIVE_SUGGEST_CACHE[k][0])
+            _LIVE_SUGGEST_CACHE.pop(oldest_key, None)
+        return result_data
 
     yt_suggestions: List[str] = []
     itunes_artists_raw: List[Dict[str, Any]] = []

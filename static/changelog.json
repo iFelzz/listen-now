@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.7.1",
+    "date": "2026-11-05",
+    "time": "08:55 WIB",
+    "type": "fix",
+    "title": "Strict Artist Separation in Search Autocomplete",
+    "highlights": [
+      "Fixed issue where song queries and discography popular songs appeared when searching in Artists mode.",
+      "Dedicated artist-only autocomplete pipeline returning 100% music artists with avatars and genres.",
+      "Strict compliance with zero auto-jump policy: selecting an artist always renders artist cards grid first.",
+      "Isolated in-memory suggestion caches between Songs and Artists modes."
+    ]
+  },
+  {
     "version": "v1.7.0",
     "date": "2026-11-05",
     "time": "08:15 WIB",

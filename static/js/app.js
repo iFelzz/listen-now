@@ -1464,6 +1464,63 @@
 
     function renderSearchSuggestions(data, typedQuery) {
       if (!$searchSuggestions) return;
+
+      // ── ARTISTS MODE: strictly render matching artists, never song titles ──
+      if (searchMode === 'artists') {
+        const artists = (data.artists && data.artists.length > 0)
+          ? data.artists
+          : (data.top_artist ? [data.top_artist] : []);
+
+        if (artists.length === 0) {
+          hideSearchSuggestions();
+          return;
+        }
+
+        let html = '<div class="suggestion-queries-list">';
+        html += artists.map(art => {
+          const artistMeta = art.genre ? `Artist • ${esc(art.genre)}` : 'Musical Artist';
+          return `
+            <div class="suggestion-artist-item" data-type="artist" data-artist-id="${esc(art.artist_id || '')}" data-name="${esc(art.name)}" role="option" tabindex="-1">
+              <div class="suggestion-artist-avatar" aria-hidden="true">
+                ${ICON_SUGGEST_ARTIST}
+              </div>
+              <div class="suggestion-artist-info">
+                <span class="suggestion-artist-name">${highlightMatch(art.name, typedQuery)}</span>
+                <span class="suggestion-artist-meta">${artistMeta}</span>
+              </div>
+              <span class="suggestion-artist-badge">Artist</span>
+            </div>
+          `;
+        }).join('');
+        html += '</div>';
+
+        $searchSuggestions.innerHTML = html;
+        $searchSuggestions.style.display = 'block';
+        activeSuggestIndex = -1;
+
+        $searchSuggestions.querySelectorAll('.suggestion-artist-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const name = el.dataset.name;
+            $input.value = name;
+            syncClearButtonVisibility();
+            hideSearchSuggestions();
+            // In Artists mode, perform artist search to render artist cards grid (never auto-jump to discography)
+            performArtistSearch(name);
+          });
+        });
+
+        const allItems = Array.from($searchSuggestions.querySelectorAll('.suggestion-artist-item'));
+        allItems.forEach((el, idx) => {
+          el.addEventListener('mouseenter', () => {
+            allItems.forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+            activeSuggestIndex = idx;
+          });
+        });
+        return;
+      }
+
+      // ── SONGS MODE: render featured top artist (if matched) + YouTube query predictions ──
       const topArtist = data.top_artist;
       const suggestions = (data.suggestions || []).filter(s => s && s.trim().length > 0);
 
@@ -1513,20 +1570,13 @@
       $searchSuggestions.style.display = 'block';
       activeSuggestIndex = -1;
 
-      // Attach click events
       $searchSuggestions.querySelectorAll('.suggestion-artist-item').forEach(el => {
         el.addEventListener('click', () => {
           const name = el.dataset.name;
-          const aid = el.dataset.artistId;
           $input.value = name;
           syncClearButtonVisibility();
           hideSearchSuggestions();
-
-          if (searchMode === 'artists' && aid) {
-            loadArtistDiscography(aid);
-          } else {
-            performSearch(name);
-          }
+          performSearch(name);
         });
       });
 
@@ -1540,7 +1590,6 @@
         });
       });
 
-      // Hover sync active state
       const allItems = Array.from($searchSuggestions.querySelectorAll('.suggestion-artist-item, .suggestion-item'));
       allItems.forEach((el, idx) => {
         el.addEventListener('mouseenter', () => {
