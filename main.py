@@ -36,7 +36,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 
 import yt_dlp
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, HTTPException, Request, Header, Form, File, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -64,6 +64,9 @@ STATIC_DIR = BASE_DIR / "static"
 CLEANUP_TOKEN = os.environ.get("CLEANUP_TOKEN")
 YTDLP_PROXY   = os.environ.get("YTDLP_PROXY")
 ADMIN_KEY     = os.environ.get("ADMIN_KEY", "melodyxx-admin")
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE")
 if not COOKIES_FILE and (BASE_DIR / "cookies.txt").exists():
@@ -553,6 +556,207 @@ async def health():
         "commit": get_commit_hash(),
         "disk_usage_bytes": 0,
     }
+
+# ── Bug Reporter & User Feedback (Zero-Disk Telegram Forwarding) ─
+def make_multipart_body(fields: dict, file_field: Optional[str] = None, filename: Optional[str] = None, file_bytes: Optional[bytes] = None, mime_type: Optional[str] = None):
+    boundary = f"----MelodyxxBoundary{secrets.token_hex(16)}"
+    body = bytearray()
+    for key, value in fields.items():
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8"))
+        body.extend(str(value).encode("utf-8"))
+        body.extend(b"\r\n")
+    if file_field and file_bytes:
+        fname = filename or "attachment"
+        mtype = mime_type or "application/octet-stream"
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(f'Content-Disposition: form-data; name="{file_field}"; filename="{fname}"\r\n'.encode("utf-8"))
+        body.extend(f"Content-Type: {mtype}\r\n\r\n".encode("utf-8"))
+        body.extend(file_bytes)
+        body.extend(b"\r\n")
+    body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+    content_type = f"multipart/form-data; boundary={boundary}"
+    return bytes(body), content_type
+
+def send_telegram_report_sync(
+    name: str,
+    email: str,
+    category: str,
+    description: str,
+    platform_info: str,
+    screen_res: str,
+    current_url: str,
+    app_version: str,
+    client_ip: str,
+    file_bytes: Optional[bytes] = None,
+    filename: Optional[str] = None,
+    mime_type: Optional[str] = None
+):
+    token = TELEGRAM_BOT_TOKEN
+    chat_id = TELEGRAM_CHAT_ID
+
+    now_str = time.strftime("%d %b %Y, %H:%M WIB", time.localtime())
+    reporter_str = f"{name or 'Anonymous'}" + (f" ({email})" if email else "")
+
+    report_text = (
+        f"🚨 *[Melodyxx Report / Feedback]*\n\n"
+        f"👤 *Reporter:* {reporter_str}\n"
+        f"🏷️ *Category:* {category or 'Bug'}\n"
+        f"📅 *Time:* {now_str}\n\n"
+        f"📝 *Description:*\n{description}\n\n"
+        f"💻 *Diagnostics:*\n"
+        f"• *App Version:* {app_version}\n"
+        f"• *Browser & OS:* {platform_info or 'Unknown'}\n"
+        f"• *Screen Resolution:* {screen_res or 'Unknown'}\n"
+        f"• *Page URL:* {current_url or 'Home'}\n"
+        f"• *Client IP:* `{client_ip}`"
+    )
+
+    if not token or not chat_id:
+        logger.warning(
+            "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in environment. Simulating report delivery:\n%s",
+            report_text
+        )
+        return
+
+    try:
+        import urllib.request
+        headers = {"User-Agent": "Melodyxx-Reporter/1.0"}
+
+        if file_bytes and filename:
+            is_image = (mime_type and mime_type.startswith("image/")) or filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+            is_video = (mime_type and mime_type.startswith("video/")) or filename.lower().endswith((".mp4", ".webm", ".mov"))
+
+            if is_image:
+                endpoint = f"https://api.telegram.org/bot{token}/sendPhoto"
+                file_field = "photo"
+            elif is_video:
+                endpoint = f"https://api.telegram.org/bot{token}/sendVideo"
+                file_field = "video"
+            else:
+                endpoint = f"https://api.telegram.org/bot{token}/sendDocument"
+                file_field = "document"
+
+            caption = report_text if len(report_text) <= 1024 else report_text[:1020] + "…"
+            fields = {
+                "chat_id": chat_id,
+                "caption": caption,
+                "parse_mode": "Markdown"
+            }
+
+            body_bytes, ctype = make_multipart_body(fields, file_field, filename, file_bytes, mime_type)
+            req = urllib.request.Request(endpoint, data=body_bytes, headers={**headers, "Content-Type": ctype})
+            with urllib.request.urlopen(req, timeout=15.0) as resp:
+                resp.read()
+
+            if len(report_text) > 1024:
+                follow_req = urllib.request.Request(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    data=urllib.parse.urlencode({"chat_id": chat_id, "text": report_text, "parse_mode": "Markdown"}).encode("utf-8"),
+                    headers=headers
+                )
+                with urllib.request.urlopen(follow_req, timeout=10.0) as f_resp:
+                    f_resp.read()
+
+        else:
+            endpoint = f"https://api.telegram.org/bot{token}/sendMessage"
+            payload = urllib.parse.urlencode({
+                "chat_id": chat_id,
+                "text": report_text,
+                "parse_mode": "Markdown"
+            }).encode("utf-8")
+            req = urllib.request.Request(endpoint, data=payload, headers=headers)
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                resp.read()
+
+        logger.info("Bug report forwarded to Telegram successfully (category: %s, reporter: %s)", category, name or 'anon')
+
+    except Exception as exc:
+        logger.error("Failed to forward report to Telegram Bot API: %s", exc)
+
+@app.post("/api/report")
+@limiter.limit("2/10minute;5/day")
+async def submit_bug_report(
+    request: Request,
+    name: str = Form(""),
+    email: str = Form(""),
+    category: str = Form("Bug / Error"),
+    description: str = Form(""),
+    company_website: str = Form(""),
+    platform_info: str = Form(""),
+    screen_res: str = Form(""),
+    current_url: str = Form(""),
+    app_version: str = Form(""),
+    media: Optional[UploadFile] = File(None)
+):
+    """
+    Receive user bug reports & feedback with zero-disk memory streaming to Telegram Bot API.
+    Protected with Honeypot trap, SlowAPI rate limiting, and strict file validation.
+    """
+    company_website_val = str(company_website or "") if isinstance(company_website, str) else ""
+    name_val = str(name or "") if isinstance(name, str) else ""
+    email_val = str(email or "") if isinstance(email, str) else ""
+    category_val = str(category or "Bug / Error") if isinstance(category, str) else "Bug / Error"
+    desc = str(description or "").strip() if isinstance(description, str) else ""
+    platform_info_val = str(platform_info or "") if isinstance(platform_info, str) else ""
+    screen_res_val = str(screen_res or "") if isinstance(screen_res, str) else ""
+    current_url_val = str(current_url or "") if isinstance(current_url, str) else ""
+    app_version_val = (str(app_version or "").strip() or APP_VERSION) if isinstance(app_version, str) else APP_VERSION
+
+    # 1. Honeypot check: If bot filled hidden company_website, silently drop
+    if company_website_val.strip():
+        logger.warning("Spam bot detected via honeypot trap from IP %s", get_client_ip(request))
+        return JSONResponse(content={"ok": True, "message": "Report received."})
+
+    # 2. Description validation
+    if not desc or len(desc) < 8:
+        raise HTTPException(status_code=400, detail="Description is too short. Please provide at least 8 characters.")
+
+    # 3. Media validation (file size & mime type)
+    file_bytes = None
+    filename = None
+    mime_type = None
+
+    if hasattr(media, "filename") and media.filename:
+        filename = media.filename
+        mime_type = media.content_type or "application/octet-stream"
+
+        file_bytes = await media.read()
+        file_size = len(file_bytes)
+
+        is_video = mime_type.startswith("video/") or filename.lower().endswith((".mp4", ".webm", ".mov"))
+        is_image = mime_type.startswith("image/") or filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+
+        if is_image and file_size > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Image size exceeds 10 MB limit.")
+        elif is_video and file_size > 30 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Video size exceeds 30 MB limit.")
+        elif not is_image and not is_video and file_size > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds 10 MB limit.")
+
+        dangerous_exts = (".exe", ".sh", ".bat", ".cmd", ".php", ".py", ".js", ".vbs", ".msi", ".dll")
+        if filename.lower().endswith(dangerous_exts):
+            raise HTTPException(status_code=400, detail="Unsupported file format.")
+
+    # 4. Forward directly to Telegram (Zero-disk in-memory)
+    client_ip = get_client_ip(request)
+    await asyncio.to_thread(
+        send_telegram_report_sync,
+        name=name_val.strip(),
+        email=email_val.strip(),
+        category=category_val.strip(),
+        description=desc,
+        platform_info=platform_info_val.strip(),
+        screen_res=screen_res_val.strip(),
+        current_url=current_url_val.strip(),
+        app_version=app_version_val.strip(),
+        client_ip=client_ip,
+        file_bytes=file_bytes,
+        filename=filename,
+        mime_type=mime_type,
+    )
+
+    return JSONResponse(content={"ok": True, "message": "Thank you! Your report has been submitted."})
 
 @app.get("/api/storage")
 async def storage_info(request: Request, key: Optional[str] = None):

@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.10.0",
+    "date": "2026-11-05",
+    "time": "13:55 WIB",
+    "type": "feature",
+    "title": "Bug Reporter & Feedback System with Zero-Disk Telegram Forwarding",
+    "highlights": [
+      "Integrated in-app Bug Reporter & Feedback dialog accessible from the footer.",
+      "Added support for image (PNG, JPG, WEBP) and video (MP4, WEBM) attachments with drag & drop and live media preview.",
+      "Implemented zero-disk streaming memory forwarder directly to developer's Telegram Bot.",
+      "Enforced multi-layered anti-spam protections: SlowAPI rate limiting, invisible honeypot trap, and client-side cooldowns.",
+      "Auto-collected non-intrusive diagnostic metadata (App Version, Platform/OS, Screen Resolution, Current Page URL)."
+    ]
+  },
+  {
     "version": "v1.9.0",
     "date": "2026-11-05",
     "time": "13:35 WIB",

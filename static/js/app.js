@@ -83,6 +83,31 @@
     const $btnReleaseClose = document.getElementById('btn-release-close');
     const $releaseModalBody = document.getElementById('release-modal-body');
 
+    // Bug Reporter DOM refs
+    const $btnOpenBugReport = document.getElementById('btn-open-bug-report');
+    const $bugReportModal = document.getElementById('bug-report-modal');
+    const $btnReportClose = document.getElementById('btn-report-close');
+    const $btnReportCancel = document.getElementById('btn-report-cancel');
+    const $reportForm = document.getElementById('report-form');
+    const $reportName = document.getElementById('report-name');
+    const $reportEmail = document.getElementById('report-email');
+    const $reportCategory = document.getElementById('report-category');
+    const $reportDescription = document.getElementById('report-description');
+    const $reportCharCount = document.getElementById('report-char-count');
+    const $reportDropzone = document.getElementById('report-dropzone');
+    const $reportFileInput = document.getElementById('report-file-input');
+    const $dropzoneIdle = document.getElementById('dropzone-idle');
+    const $dropzonePreview = document.getElementById('dropzone-preview');
+    const $previewMediaWrap = document.getElementById('preview-media-wrap');
+    const $previewFilename = document.getElementById('preview-filename');
+    const $previewFilesize = document.getElementById('preview-filesize');
+    const $btnPreviewRemove = document.getElementById('btn-preview-remove');
+    const $diagAppVersion = document.getElementById('diag-app-version');
+    const $diagPlatform = document.getElementById('diag-platform');
+    const $diagScreen = document.getElementById('diag-screen');
+    const $diagPage = document.getElementById('diag-page');
+    const $btnReportSubmit = document.getElementById('btn-report-submit');
+
     // Global state
     let searchMode = 'songs'; // 'songs' | 'artists'
     let isSearching = false;
@@ -2255,6 +2280,269 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && $releaseLogModal && $releaseLogModal.style.display === 'flex') {
         closeReleaseLog();
+      }
+    });
+
+    // ── Bug Reporter & User Feedback ───────────────────────────
+    let selectedReportFile = null;
+    let selectedReportPreviewUrl = null;
+    let isReportModalClosing = false;
+    let isReportSubmitting = false;
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      return `${Math.round(bytes / 1024)} KB`;
+    }
+
+    function openBugReportModal() {
+      if (!$bugReportModal) return;
+      $bugReportModal.classList.remove('closing');
+      $bugReportModal.setAttribute('aria-hidden', 'false');
+      $bugReportModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      // Populate diagnostics
+      const activeVer = currentAppVersion || 'v1.10.0';
+      if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
+      if ($diagPlatform) {
+        const platform = navigator.userAgentData?.platform || navigator.platform || 'Unknown';
+        const browser = navigator.userAgent.split(' ')[0] || 'Browser';
+        $diagPlatform.textContent = `${platform} • ${browser}`;
+      }
+      if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
+      if ($diagPage) $diagPage.textContent = window.location.href;
+
+      setTimeout(() => {
+        if ($reportName && !$reportName.value) {
+          $reportName.focus();
+        } else if ($reportDescription) {
+          $reportDescription.focus();
+        }
+      }, 100);
+    }
+
+    function closeBugReportModal() {
+      if (!$bugReportModal || isReportModalClosing || $bugReportModal.style.display === 'none') return;
+      isReportModalClosing = true;
+      $bugReportModal.classList.add('closing');
+      setTimeout(() => {
+        $bugReportModal.style.display = 'none';
+        $bugReportModal.setAttribute('aria-hidden', 'true');
+        $bugReportModal.classList.remove('closing');
+        document.body.style.overflow = '';
+        isReportModalClosing = false;
+      }, 120);
+    }
+
+    function clearReportFile() {
+      selectedReportFile = null;
+      if (selectedReportPreviewUrl) {
+        URL.revokeObjectURL(selectedReportPreviewUrl);
+        selectedReportPreviewUrl = null;
+      }
+      if ($reportFileInput) $reportFileInput.value = '';
+      if ($previewMediaWrap) $previewMediaWrap.innerHTML = '';
+      if ($previewFilename) $previewFilename.textContent = '';
+      if ($previewFilesize) $previewFilesize.textContent = '';
+      if ($dropzonePreview) $dropzonePreview.style.display = 'none';
+      if ($dropzoneIdle) $dropzoneIdle.style.display = 'flex';
+    }
+
+    function handleReportFileSelect(file) {
+      if (!file) return;
+      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name);
+
+      if (!isImage && !isVideo) {
+        toast('error', 'Only images (PNG, JPG, WEBP) or videos (MP4, WEBM) are supported.');
+        clearReportFile();
+        return;
+      }
+
+      if (isImage && file.size > 10 * 1024 * 1024) {
+        toast('error', 'Image size exceeds 10 MB limit.');
+        clearReportFile();
+        return;
+      }
+
+      if (isVideo && file.size > 30 * 1024 * 1024) {
+        toast('error', 'Video size exceeds 30 MB limit.');
+        clearReportFile();
+        return;
+      }
+
+      if (selectedReportPreviewUrl) {
+        URL.revokeObjectURL(selectedReportPreviewUrl);
+      }
+
+      selectedReportFile = file;
+      selectedReportPreviewUrl = URL.createObjectURL(file);
+
+      if ($dropzoneIdle) $dropzoneIdle.style.display = 'none';
+      if ($dropzonePreview) $dropzonePreview.style.display = 'flex';
+      if ($previewFilename) $previewFilename.textContent = file.name;
+      if ($previewFilesize) $previewFilesize.textContent = formatFileSize(file.size);
+
+      if ($previewMediaWrap) {
+        if (isImage) {
+          $previewMediaWrap.innerHTML = `<img src="${selectedReportPreviewUrl}" alt="Preview thumbnail" />`;
+        } else {
+          $previewMediaWrap.innerHTML = `<video src="${selectedReportPreviewUrl}" muted playsinline></video>`;
+        }
+      }
+    }
+
+    if ($reportFileInput) {
+      $reportFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleReportFileSelect(e.target.files[0]);
+        }
+      });
+    }
+
+    if ($reportDropzone) {
+      ['dragenter', 'dragover'].forEach(evtName => {
+        $reportDropzone.addEventListener(evtName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          $reportDropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(evtName => {
+        $reportDropzone.addEventListener(evtName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          $reportDropzone.classList.remove('dragover');
+        });
+      });
+
+      $reportDropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files[0]) {
+          handleReportFileSelect(dt.files[0]);
+        }
+      });
+    }
+
+    if ($btnPreviewRemove) {
+      $btnPreviewRemove.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        clearReportFile();
+      });
+    }
+
+    if ($reportDescription && $reportCharCount) {
+      $reportDescription.addEventListener('input', () => {
+        const len = $reportDescription.value.length;
+        $reportCharCount.textContent = `${len} / 1000`;
+        if (len >= 950) {
+          $reportCharCount.style.color = '#f43f5e';
+        } else {
+          $reportCharCount.style.color = '#64748b';
+        }
+      });
+    }
+
+    if ($reportForm) {
+      $reportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isReportSubmitting) return;
+
+        // Check local cooldown
+        const lastSent = parseInt(localStorage.getItem('melodyxx_last_report_ts') || '0', 10);
+        const now = Date.now();
+        const cooldownMs = 5 * 60 * 1000; // 5 minutes
+        if (now - lastSent < cooldownMs) {
+          const remainingSec = Math.ceil((cooldownMs - (now - lastSent)) / 1000);
+          const remainingMin = Math.ceil(remainingSec / 60);
+          toast('info', `Please wait ${remainingMin} minute(s) before submitting another report.`);
+          return;
+        }
+
+        const desc = ($reportDescription?.value || '').trim();
+        if (desc.length < 8) {
+          toast('error', 'Please provide a description of at least 8 characters.');
+          if ($reportDescription) $reportDescription.focus();
+          return;
+        }
+
+        isReportSubmitting = true;
+        const submitIcon = $btnReportSubmit ? $btnReportSubmit.querySelector('.submit-icon') : null;
+        const submitSpinner = $btnReportSubmit ? $btnReportSubmit.querySelector('.submit-spinner') : null;
+        const submitText = $btnReportSubmit ? $btnReportSubmit.querySelector('.submit-text') : null;
+
+        if ($btnReportSubmit) $btnReportSubmit.disabled = true;
+        if (submitSpinner) submitSpinner.style.display = 'inline-block';
+        if (submitIcon) submitIcon.style.display = 'none';
+        if (submitText) submitText.textContent = 'Sending…';
+
+        try {
+          const formData = new FormData();
+          formData.append('name', ($reportName?.value || '').trim());
+          formData.append('email', ($reportEmail?.value || '').trim());
+          formData.append('category', $reportCategory?.value || 'Bug / Error');
+          formData.append('description', desc);
+          formData.append('company_website', document.getElementById('report-hp-field')?.value || '');
+          formData.append('platform_info', `${navigator.userAgentData?.platform || navigator.platform || 'Unknown'} • ${navigator.userAgent || 'Browser'}`);
+          formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
+          formData.append('current_url', window.location.href);
+          formData.append('app_version', currentAppVersion || 'v1.10.0');
+
+          if (selectedReportFile) {
+            formData.append('media', selectedReportFile, selectedReportFile.name);
+          }
+
+          const res = await fetch('/api/report', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.detail || `Server returned error (${res.status})`);
+          }
+
+          toast('success', 'Thank you! Your report has been submitted.');
+          localStorage.setItem('melodyxx_last_report_ts', String(Date.now()));
+
+          // Reset form
+          $reportForm.reset();
+          if ($reportCharCount) $reportCharCount.textContent = '0 / 1000';
+          clearReportFile();
+          closeBugReportModal();
+
+        } catch (err) {
+          toast('error', err.message || 'Failed to submit report. Please try again.');
+        } finally {
+          isReportSubmitting = false;
+          if ($btnReportSubmit) $btnReportSubmit.disabled = false;
+          if (submitSpinner) submitSpinner.style.display = 'none';
+          if (submitIcon) submitIcon.style.display = 'inline-block';
+          if (submitText) submitText.textContent = 'Send Report';
+        }
+      });
+    }
+
+    if ($btnOpenBugReport) {
+      $btnOpenBugReport.addEventListener('click', openBugReportModal);
+    }
+    if ($btnReportClose) {
+      $btnReportClose.addEventListener('click', closeBugReportModal);
+    }
+    if ($btnReportCancel) {
+      $btnReportCancel.addEventListener('click', closeBugReportModal);
+    }
+    if ($bugReportModal) {
+      $bugReportModal.addEventListener('click', (e) => {
+        if (e.target === $bugReportModal) closeBugReportModal();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $bugReportModal && $bugReportModal.style.display === 'flex') {
+        closeBugReportModal();
       }
     });
 
