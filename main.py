@@ -524,6 +524,25 @@ async def favicon():
         )
     raise HTTPException(status_code=404, detail="Favicon not found.")
 
+@app.get("/robots.txt", include_in_schema=False)
+async def robots():
+    """Serve robots.txt for search engine crawlers."""
+    robots_path = STATIC_DIR / "robots.txt"
+    if robots_path.exists():
+        return FileResponse(str(robots_path), media_type="text/plain; charset=utf-8")
+    return Response(
+        content="User-agent: *\nAllow: /\nAllow: /static/\nDisallow: /api/\nDisallow: /stats\n\nSitemap: https://melodyxx.eztec.biz.id/sitemap.xml\n",
+        media_type="text/plain; charset=utf-8"
+    )
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap():
+    """Serve sitemap.xml for search engine indexing."""
+    sitemap_path = STATIC_DIR / "sitemap.xml"
+    if sitemap_path.exists():
+        return FileResponse(str(sitemap_path), media_type="application/xml; charset=utf-8")
+    raise HTTPException(status_code=404, detail="Sitemap not found.")
+
 @app.get("/api/version")
 async def get_version():
     """Return semantic version and git commit metadata dynamically."""

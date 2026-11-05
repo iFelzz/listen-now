@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /static/
+Disallow: /api/
+Disallow: /stats
+
+Sitemap: https://melodyxx.eztec.biz.id/sitemap.xml

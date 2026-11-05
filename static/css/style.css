@@ -3313,6 +3313,173 @@ body:has(#mini-player.show) .btn-release-log {
   color: #e0e7ff;
 }
 
+/* ── SEO Showcase & FAQ Section ────────────────────────── */
+.seo-info-section {
+  margin-top: 56px;
+  margin-bottom: 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.seo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.seo-card {
+  background: rgba(18, 12, 32, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.16);
+  border-radius: 16px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.seo-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 20px rgba(124, 58, 237, 0.12);
+}
+
+.seo-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c084fc;
+}
+
+.seo-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.seo-card-text {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.seo-faq-card {
+  background: rgba(18, 12, 32, 0.7);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
+  padding: 32px 28px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+}
+
+.seo-faq-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.seo-badge-pill {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.seo-faq-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.seo-faq-subtitle {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.seo-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faq-item {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.faq-item:hover,
+.faq-item[open] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.faq-summary {
+  padding: 16px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  user-select: none;
+  list-style: none;
+}
+
+.faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
+  color: #c084fc;
+}
+
+.faq-answer {
+  padding: 0 18px 16px;
+  font-size: 0.84rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 12px;
+}
+
+.faq-answer p {
+  margin: 0;
+}
+
 /* ── Bug Report & Feedback Modal ───────────────────────── */
 .footer-report-btn {
   background: transparent;
@@ -3914,5 +4081,17 @@ details[open] .summary-caret {
   .report-form {
     padding: 16px 18px;
     gap: 12px;
+  }
+  .seo-info-section {
+    margin-top: 36px;
+    margin-bottom: 56px;
+    gap: 24px;
+  }
+  .seo-faq-card {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+  .seo-faq-title {
+    font-size: 1.15rem;
   }
 }

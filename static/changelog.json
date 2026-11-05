@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.11.0",
+    "date": "2026-11-05",
+    "time": "14:38 WIB",
+    "type": "feature",
+    "title": "Comprehensive SEO & Indexability Suite for Search Engines",
+    "highlights": [
+      "Configured dynamic /robots.txt and /sitemap.xml endpoints for Googlebot and Bing indexing.",
+      "Engineered comprehensive JSON-LD structured schemas (WebApplication, WebSite with SearchAction, FAQPage).",
+      "Added high-CTR meta tags, Open Graph (OG), Twitter Cards, and canonical URL directives.",
+      "Integrated semantic H1 headings, feature highlights grid, and interactive FAQ accordion section."
+    ]
+  },
+  {
     "version": "v1.10.6",
     "date": "2026-11-05",
     "time": "14:28 WIB",

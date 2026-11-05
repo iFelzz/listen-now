@@ -1,7 +1,7 @@
 {
-  "name": "Melodyxx",
+  "name": "Melodyxx — YouTube to MP3 Downloader",
   "short_name": "Melodyxx",
-  "description": "Search YouTube, preview songs, and download high quality MP3 with Melodyxx.",
+  "description": "Fast and free YouTube to MP3 downloader & artist discography browser. Download 320kbps audio with official Apple Music artwork.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
