@@ -1,5 +1,16 @@
 [
   {
+    "version": "v1.10.5",
+    "date": "2026-11-05",
+    "time": "14:22 WIB",
+    "type": "improvement",
+    "title": "Mandatory Reporter Identity Fields (Name & Email Required)",
+    "highlights": [
+      "Made Name and Email fields strictly required with visual indicator asterisks.",
+      "Added client-side and server-side email pattern validation to ensure reachable reporter contacts."
+    ]
+  },
+  {
     "version": "v1.10.4",
     "date": "2026-11-05",
     "time": "14:20 WIB",

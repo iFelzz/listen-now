@@ -2529,6 +2529,21 @@
           return;
         }
 
+        const name = ($reportName?.value || '').trim();
+        if (!name) {
+          toast('error', 'Please enter your name.');
+          if ($reportName) $reportName.focus();
+          return;
+        }
+
+        const email = ($reportEmail?.value || '').trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+          toast('error', 'Please enter a valid email address.');
+          if ($reportEmail) $reportEmail.focus();
+          return;
+        }
+
         const desc = ($reportDescription?.value || '').trim();
         if (desc.length < 8) {
           toast('error', 'Please provide a description of at least 8 characters.');

@@ -730,7 +730,16 @@ async def submit_bug_report(
         logger.warning("Spam bot detected via honeypot trap from IP %s", get_client_ip(request))
         return JSONResponse(content={"ok": True, "message": "Report received."})
 
-    # 2. Description validation
+    # 2. Name & Email validation (required)
+    name_clean = name_val.strip()
+    if not name_clean:
+        raise HTTPException(status_code=400, detail="Name is required. Please provide your name.")
+
+    email_clean = email_val.strip()
+    if not email_clean or "@" not in email_clean or "." not in email_clean.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="A valid email address is required.")
+
+    # 3. Description validation
     if not desc or len(desc) < 8:
         raise HTTPException(status_code=400, detail="Description is too short. Please provide at least 8 characters.")
 
