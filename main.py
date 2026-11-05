@@ -226,6 +226,9 @@ def _get_base_ytdl_opts() -> dict[str, Any]:
             "Accept-Language": "en-US,en;q=0.9",
         },
     }
+    if shutil.which("node"):
+        opts["js_runtimes"] = {"node": {}}
+        opts["remote_components"] = ["ejs:github"]
     if FFMPEG_LOCATION:
         opts["ffmpeg_location"] = FFMPEG_LOCATION
     if COOKIES_FILE:
@@ -856,15 +859,17 @@ async def prepare_download(request: Request, body: DownloadRequest):
     token        = secrets.token_urlsafe(16)
 
     _stream_tokens[token] = {
-        "stream_url": info["stream_url"],
-        "title":      clean_title,
-        "artist":     clean_artist,
-        "album":      clean_album,
-        "year":       year,
-        "poster_url": poster_url,
-        "quality":    quality,
-        "user_agent": info["user_agent"],
-        "created_at": time.time(),
+        "stream_url":    info["stream_url"],
+        "webpage_url":   info.get("webpage_url") or target_url,
+        "explicit_meta": explicit_meta,
+        "title":         clean_title,
+        "artist":        clean_artist,
+        "album":         clean_album,
+        "year":          year,
+        "poster_url":    poster_url,
+        "quality":       quality,
+        "user_agent":    info.get("user_agent"),
+        "created_at":    time.time(),
     }
 
     ext = "m4a" if quality in ("native", "m4a") else "mp3"
@@ -1040,24 +1045,32 @@ async def stream_audio(
     # Build FFmpeg command for in-memory stream piping
     has_poster = bool(poster_url and not is_native)
 
-    def _build_ffmpeg_cmd(include_poster: bool) -> list[str]:
+    def _build_ffmpeg_cmd(include_poster: bool, custom_stream_url: Optional[str] = None) -> list[str]:
+        target_stream = custom_stream_url or stream_url
         c = [
             FFMPEG_BIN,
             "-hide_banner",
             "-loglevel", "error",
             "-reconnect", "1",
             "-reconnect_streamed", "1",
+            "-reconnect_on_network_error", "1",
+            "-reconnect_on_http_error", "4xx,5xx",
             "-reconnect_delay_max", "5",
+            "-reconnect_max_retries", "3",
         ]
         if user_agent:
             c.extend(["-user_agent", user_agent])
-        c.extend(["-i", stream_url])
+        c.extend(["-i", target_stream])
 
         if include_poster and poster_url and not is_native:
             c.extend([
                 "-reconnect", "1",
                 "-reconnect_streamed", "1",
+                "-reconnect_on_network_error", "1",
+                "-reconnect_on_http_error", "4xx,5xx",
                 "-reconnect_delay_max", "5",
+                "-reconnect_max_retries", "3",
+                "-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
                 "-i", poster_url,
                 "-map", "0:a",
                 "-map", "1:v",
@@ -1112,8 +1125,8 @@ async def stream_audio(
             return None, b"", str(exc)
 
         try:
-            # Wait up to 12s for initial bytes to ensure stream started
-            initial = await asyncio.wait_for(p.stdout.read(64 * 1024), timeout=12.0)
+            # Wait up to 12s for initial bytes (8 KB buffer check is fast and reliable)
+            initial = await asyncio.wait_for(p.stdout.read(8 * 1024), timeout=12.0)
             return p, initial, ""
         except Exception as exc:
             try:
@@ -1125,7 +1138,7 @@ async def stream_audio(
 
     process, first_chunk, spawn_err = await _spawn_and_verify(cmd)
 
-    # Automatic fallback: if dual-input with poster fails, retry with audio-only immediately
+    # Level 1 Fallback: if dual-input with poster fails, retry with audio-only immediately
     # This prevents 0 KB files or sudden connection resets when mzstatic images fail or hang
     if (not first_chunk or process is None) and has_poster:
         logger.warning(
@@ -1141,7 +1154,45 @@ async def stream_audio(
         fallback_cmd = _build_ffmpeg_cmd(include_poster=False)
         process, first_chunk, spawn_err = await _spawn_and_verify(fallback_cmd)
 
-    # If stream pipeline completely failed to produce audio data, return HTTP 502
+    # Level 2 Fallback: If YouTube stream URL expired, failed, or was rejected by Googlevideo CDN,
+    # re-extract a fresh direct stream URL from YouTube on-the-fly and retry transcoding!
+    if not first_chunk or process is None:
+        fresh_target = token_data.get("webpage_url") or url or stream_title
+        if fresh_target:
+            logger.warning(
+                "Direct stream source unreachable for '%s' (%s). Refreshing YouTube stream URL on the fly...",
+                output_filename, spawn_err or "empty bytes"
+            )
+            if process and process.returncode is None:
+                try:
+                    process.terminate()
+                    await process.wait()
+                except Exception:
+                    pass
+            try:
+                explicit_meta = token_data.get("explicit_meta") or {
+                    "artist": stream_artist,
+                    "title": stream_title,
+                    "album": stream_album,
+                    "year": stream_year,
+                    "poster_url": poster_url,
+                }
+                fresh_info = await asyncio.to_thread(
+                    _extract_stream_info, fresh_target, stream_title, explicit_meta
+                )
+                if fresh_info and fresh_info.get("stream_url"):
+                    fresh_stream_url = fresh_info["stream_url"]
+                    token_data["stream_url"] = fresh_stream_url
+                    if fresh_info.get("user_agent"):
+                        token_data["user_agent"] = fresh_info["user_agent"]
+
+                    logger.info("Successfully refreshed YouTube stream URL for '%s'. Retrying FFmpeg pipeline...", output_filename)
+                    retry_cmd = _build_ffmpeg_cmd(include_poster=False, custom_stream_url=fresh_stream_url)
+                    process, first_chunk, spawn_err = await _spawn_and_verify(retry_cmd)
+            except Exception as refresh_err:
+                logger.error("On-the-fly stream refresh failed for '%s': %s", output_filename, refresh_err)
+
+    # If stream pipeline completely failed to produce audio data after all fallbacks, return HTTP 502
     if not first_chunk or process is None:
         err_detail = ""
         if process and process.stderr:

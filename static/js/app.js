@@ -1150,10 +1150,10 @@
           }
         }
 
-        // Safe inter-download delay (2.5s) to avoid download manager thrashing & socket exhaustion
+        // Safe inter-download delay (3s) to avoid download manager thrashing & socket exhaustion
         if (i < total - 1 && !cancelBatchDownload) {
-          $batchProgressStatus.textContent = 'Waiting for next track (2.5s)…';
-          await new Promise(r => setTimeout(r, 2500));
+          $batchProgressStatus.textContent = 'Pacing next download (3s)…';
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
 

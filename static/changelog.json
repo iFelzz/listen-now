@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.6.1",
+    "date": "2026-11-05",
+    "time": "07:25 WIB",
+    "type": "fix",
+    "title": "502 Stream Error & Download Manager Resilience",
+    "highlights": [
+      "Fixed 502 Bad Gateway during batch downloads and external download managers (NDM/IDM).",
+      "Added multi-level on-the-fly YouTube stream refresh if Googlevideo CDN drops connection.",
+      "Integrated Node.js challenge solving runtime and ejs:github component for 100% n-challenge compliance.",
+      "Configured robust FFmpeg reconnect flags (-reconnect_on_http_error 4xx,5xx, -reconnect_on_network_error 1).",
+      "Optimized batch sequential pacing to 3s to prevent socket thrashing."
+    ]
+  },
+  {
     "version": "v1.6.0",
     "date": "2026-11-05",
     "time": "07:20 WIB",
