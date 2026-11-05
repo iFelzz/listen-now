@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.8.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.9.0" />
 </head>
 
 <body>
@@ -226,14 +226,82 @@
 
           <!-- Artist Hero Banner -->
           <div class="artist-banner" id="artist-banner">
-            <img class="artist-avatar" id="artist-avatar" src="" alt="Artist Photo">
-            <div class="artist-meta">
-              <div class="artist-badges-wrap" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
-                <span class="artist-country-badge" id="artist-country" style="display: none;"></span>
-                <span class="artist-genre-badge" id="artist-genre">Genre</span>
+            <!-- Dynamic Ambient Artwork Backdrop -->
+            <div class="artist-ambient-backdrop" id="artist-ambient-backdrop" aria-hidden="true"></div>
+            <div class="artist-banner-overlay" aria-hidden="true"></div>
+
+            <div class="artist-banner-content">
+              <div class="artist-banner-left">
+                <div class="artist-avatar-wrap">
+                  <img class="artist-avatar" id="artist-avatar" src="" alt="Artist Photo">
+                </div>
+                <div class="artist-meta">
+                  <div class="artist-badges-wrap" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+                    <span class="artist-country-badge" id="artist-country" style="display: none;"></span>
+                    <span class="artist-genre-badge" id="artist-genre">Genre</span>
+                  </div>
+                  <h2 class="artist-name" id="artist-name">Artist Name</h2>
+                  <p class="artist-stats" id="artist-stats">Loading discography...</p>
+                </div>
               </div>
-              <h2 class="artist-name" id="artist-name">Artist Name</h2>
-              <p class="artist-stats" id="artist-stats">Loading discography...</p>
+
+              <!-- Extra Music Insights & Stats (Right Column) -->
+              <div class="artist-extra-stats" id="artist-extra-stats">
+                <div class="stat-pill-card" title="Career Span / Release Years">
+                  <div class="stat-pill-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <div class="stat-pill-info">
+                    <span class="stat-pill-label">Career Span</span>
+                    <span class="stat-pill-val" id="artist-stat-career">—</span>
+                  </div>
+                </div>
+
+                <div class="stat-pill-card" title="Most Recent Album or EP">
+                  <div class="stat-pill-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </div>
+                  <div class="stat-pill-info">
+                    <span class="stat-pill-label">Latest Album</span>
+                    <span class="stat-pill-val" id="artist-stat-latest">—</span>
+                  </div>
+                </div>
+
+                <div class="stat-pill-card" title="Estimated Total Playtime for Popular Tracks">
+                  <div class="stat-pill-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                  </div>
+                  <div class="stat-pill-info">
+                    <span class="stat-pill-label">Total Music</span>
+                    <span class="stat-pill-val" id="artist-stat-duration">—</span>
+                  </div>
+                </div>
+
+                <div class="stat-pill-card" title="Estimated Total Audio Download Size">
+                  <div class="stat-pill-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </div>
+                  <div class="stat-pill-info">
+                    <span class="stat-pill-label">Est. Size</span>
+                    <span class="stat-pill-val" id="artist-stat-size">—</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -462,7 +530,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.8.0" defer></script>
+  <script src="/static/js/app.js?v=1.9.0" defer></script>
 </body>
 
 </html>

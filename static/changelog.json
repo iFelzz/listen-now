@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.9.0",
+    "date": "2026-11-05",
+    "time": "13:35 WIB",
+    "type": "feature",
+    "title": "Ambient Artwork Backdrop & Rich Artist Music Insights",
+    "highlights": [
+      "Introduced immersive Spotify & Apple Music-style dynamic blurred ambient artwork glow behind the artist hero banner.",
+      "Added rich music statistics grid on the right side of the artist card featuring Career Span, Latest Album, Total Playtime, and Estimated MP3 Size.",
+      "Synchronized estimated discography download sizes dynamically with the active global download quality setting.",
+      "Designed clean responsive glassmorphic stat pill cards with custom neon vector iconography."
+    ]
+  },
+  {
     "version": "v1.8.0",
     "date": "2026-11-05",
     "time": "12:58 WIB",

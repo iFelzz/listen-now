@@ -375,6 +375,18 @@
         dlBtn.dataset.quality = currentPreferredQuality;
         dlBtn.title = `Download as ${currentPreferredQuality}kbps MP3`;
       });
+
+      // 3. Update discography estimated size if currently viewing an artist
+      if (currentDiscography && currentDiscography.top_songs) {
+        let totalSec = 0;
+        currentDiscography.top_songs.forEach(s => { totalSec += (s.duration_sec || 0); });
+        const $statSize = document.getElementById('artist-stat-size');
+        if ($statSize && totalSec > 0) {
+          const qBitrate = parseInt(currentPreferredQuality || '320', 10) || 320;
+          const mb = Math.round((totalSec * (qBitrate / 8)) / 1024);
+          $statSize.textContent = mb >= 1000 ? `~${(mb / 1024).toFixed(1)} GB` : `~${mb} MB`;
+        }
+      }
     }
 
     // Attach listeners to header global quality buttons
@@ -737,8 +749,95 @@
         }
       }
 
-      $artistAvatar.src = disco.photo || disco.artwork_url || '/static/logo.png';
+      const photoUrl = disco.photo || disco.artwork_url || '/static/logo.png';
+      $artistAvatar.src = photoUrl;
       $artistAvatar.onerror = () => { $artistAvatar.src = disco.artwork_url || '/static/logo.png'; };
+
+      // Ambient dynamic artwork backdrop
+      const $ambientBg = document.getElementById('artist-ambient-backdrop');
+      if ($ambientBg) {
+        if (disco.photo || disco.artwork_url) {
+          $ambientBg.style.backgroundImage = `url('${disco.photo || disco.artwork_url}')`;
+          $ambientBg.style.display = 'block';
+        } else {
+          $ambientBg.style.display = 'none';
+        }
+      }
+
+      // Compute Extra Statistics & Music Insights
+      // 1. Career Span (Min Year - Max Year)
+      const years = [];
+      if (Array.isArray(disco.albums)) {
+        disco.albums.forEach(a => {
+          if (a.year && a.year.length >= 4) {
+            const yr = parseInt(a.year, 10);
+            if (yr > 1950 && yr < 2100) years.push(yr);
+          }
+        });
+      }
+      if (Array.isArray(disco.top_songs)) {
+        disco.top_songs.forEach(s => {
+          if (s.year && s.year.length >= 4) {
+            const yr = parseInt(s.year, 10);
+            if (yr > 1950 && yr < 2100) years.push(yr);
+          }
+        });
+      }
+      const $statCareer = document.getElementById('artist-stat-career');
+      if ($statCareer) {
+        if (years.length > 0) {
+          const minY = Math.min(...years);
+          const maxY = Math.max(...years);
+          $statCareer.textContent = minY === maxY ? `${minY}` : `${minY} – ${maxY}`;
+        } else {
+          $statCareer.textContent = '—';
+        }
+      }
+
+      // 2. Latest Album Release
+      const $statLatest = document.getElementById('artist-stat-latest');
+      if ($statLatest) {
+        if (disco.albums && disco.albums.length > 0) {
+          const latest = disco.albums[0];
+          const latestTitle = latest.title || 'Latest Album';
+          const yrSuffix = latest.year ? ` (${latest.year})` : '';
+          $statLatest.textContent = `${latestTitle}${yrSuffix}`;
+          $statLatest.title = `${latestTitle}${yrSuffix}`;
+        } else {
+          $statLatest.textContent = '—';
+          $statLatest.title = '';
+        }
+      }
+
+      // 3. Total Duration across popular songs
+      let totalSec = 0;
+      if (Array.isArray(disco.top_songs)) {
+        disco.top_songs.forEach(s => {
+          totalSec += (s.duration_sec || 0);
+        });
+      }
+      const $statDuration = document.getElementById('artist-stat-duration');
+      if ($statDuration) {
+        if (totalSec > 0) {
+          const hrs = Math.floor(totalSec / 3600);
+          const mins = Math.floor((totalSec % 3600) / 60);
+          $statDuration.textContent = hrs > 0 ? `~${hrs}h ${mins}m` : `~${mins}m`;
+        } else {
+          $statDuration.textContent = '—';
+        }
+      }
+
+      // 4. Estimated Audio Download Size based on current preferred quality
+      const $statSize = document.getElementById('artist-stat-size');
+      if ($statSize) {
+        if (totalSec > 0) {
+          const qBitrate = parseInt(currentPreferredQuality || '320', 10) || 320;
+          const mb = Math.round((totalSec * (qBitrate / 8)) / 1024);
+          $statSize.textContent = mb >= 1000 ? `~${(mb / 1024).toFixed(1)} GB` : `~${mb} MB`;
+        } else {
+          $statSize.textContent = '—';
+        }
+      }
 
       // Render Top Songs List according to display limit
       renderTopSongsList();
