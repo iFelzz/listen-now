@@ -2515,3 +2515,447 @@ body:has(#mini-player.show) .batch-progress-widget {
     font-size: 0.74rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   RELEASE LOG & WHAT'S NEW FLOATING LAUNCHER & MODAL
+═══════════════════════════════════════════════════ */
+
+.btn-release-log {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(28, 18, 48, 0.92), rgba(18, 12, 32, 0.96));
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 950;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(124, 58, 237, 0.3);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.25s ease;
+}
+
+body.player-open .btn-release-log,
+body:has(#mini-player.show) .btn-release-log {
+  bottom: 116px;
+}
+
+.btn-release-log:hover {
+  transform: scale(1.08) translateY(-2px);
+  border-color: #c084fc;
+  color: #ffffff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6), 0 0 24px rgba(168, 85, 247, 0.55);
+}
+
+.btn-release-log:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.btn-release-log svg {
+  stroke: #c084fc;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-release-log:hover svg {
+  transform: rotate(20deg) scale(1.1);
+  stroke: #e0e7ff;
+}
+
+.release-log-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #0f0a1c;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulseBadge 2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 6px #38bdf8;
+  }
+  50% {
+    transform: scale(1.3);
+    box-shadow: 0 0 14px #38bdf8;
+  }
+}
+
+/* ── Release Modal Backdrop & Card ─────────────────────── */
+.release-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 4, 12, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: releaseBackdropFadeIn 0.25s ease-out forwards;
+}
+
+.release-modal-backdrop.closing {
+  animation: releaseBackdropFadeOut 0.2s ease-in forwards;
+}
+
+.release-modal-card {
+  background: rgba(18, 12, 32, 0.96);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 45px rgba(124, 58, 237, 0.22);
+  overflow: hidden;
+  animation: releaseModalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.release-modal-backdrop.closing .release-modal-card {
+  animation: releaseModalPopOut 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes releaseBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes releaseBackdropFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes releaseModalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes releaseModalPopOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(18px);
+  }
+}
+
+.release-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.14) 0%, rgba(124, 58, 237, 0) 100%);
+}
+
+.release-modal-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.release-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.release-modal-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c084fc;
+  flex-shrink: 0;
+}
+
+.release-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.release-whats-new-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(56, 189, 248, 0.25));
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #e0e7ff;
+}
+
+.release-modal-subtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+}
+
+.btn-release-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.btn-release-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  transform: rotate(90deg);
+}
+
+/* ── Modal Body & Entries ──────────────────────────────── */
+.release-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.35) transparent;
+}
+
+.release-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.release-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.release-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.35);
+  border-radius: 6px;
+}
+
+.release-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.6);
+}
+
+.release-entry {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.release-entry:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.release-entry.latest {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+}
+
+.release-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.release-entry-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.release-version-tag {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(124, 58, 237, 0.3);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.release-type-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.release-type-badge.feature {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.release-type-badge.fix {
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  color: #fb923c;
+}
+
+.release-type-badge.security {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+}
+
+.release-type-badge.improvement {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #c084fc;
+}
+
+.release-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.release-timestamp svg {
+  stroke: #64748b;
+}
+
+.release-entry-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 8px;
+}
+
+.release-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.release-highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.release-highlight-bullet {
+  margin-top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a855f7;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px #a855f7;
+}
+
+.release-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.release-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 6, 18, 0.5);
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.release-github-tag-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #c084fc;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.release-github-tag-link:hover {
+  color: #e0e7ff;
+}
+
+@media (max-width: 768px) {
+  .btn-release-log {
+    bottom: 20px;
+    right: 18px;
+    width: 44px;
+    height: 44px;
+  }
+  body.player-open .btn-release-log,
+  body:has(#mini-player.show) .btn-release-log {
+    bottom: 74px;
+    right: 18px;
+  }
+  .release-modal-card {
+    max-height: 90vh;
+    border-radius: 18px;
+  }
+  .release-modal-header {
+    padding: 16px 18px 12px;
+  }
+  .release-modal-body {
+    padding: 14px 18px;
+  }
+  .release-modal-footer {
+    padding: 12px 18px;
+  }
+}

@@ -74,6 +74,14 @@
     const $btnBatchDismiss = document.getElementById('btn-batch-dismiss');
     const $batchSpinner = document.getElementById('batch-spinner');
 
+    // Release Log / What's New DOM refs
+    const $btnReleaseLog = document.getElementById('btn-release-log');
+    const $releaseLogBadge = document.getElementById('release-log-badge');
+    const $releaseLogModal = document.getElementById('release-log-modal');
+    const $releaseLogCard = document.getElementById('release-modal-card');
+    const $btnReleaseClose = document.getElementById('btn-release-close');
+    const $releaseModalBody = document.getElementById('release-modal-body');
+
     // Global state
     let searchMode = 'songs'; // 'songs' | 'artists'
     let allSearchResults = [];
@@ -1681,6 +1689,140 @@
       }
     }
 
+    // ── Release Log & What's New Drawer ────────────────────────
+    let cachedChangelog = null;
+    let isReleaseLogClosing = false;
+
+    function checkReleaseLogBadge(latestVersion) {
+      if (!$releaseLogBadge) return;
+      try {
+        const lastSeen = localStorage.getItem('melodyxx_last_seen_release');
+        if (latestVersion && lastSeen !== latestVersion) {
+          $releaseLogBadge.style.display = 'block';
+        } else {
+          $releaseLogBadge.style.display = 'none';
+        }
+      } catch (_) {}
+    }
+
+    function openReleaseLog() {
+      if (!$releaseLogModal) return;
+      $releaseLogModal.classList.remove('closing');
+      $releaseLogModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      if ($releaseLogBadge) {
+        $releaseLogBadge.style.display = 'none';
+      }
+
+      const activeVer = currentAppVersion || 'v1.6.0';
+      try {
+        localStorage.setItem('melodyxx_last_seen_release', activeVer);
+      } catch (_) {}
+
+      if (cachedChangelog) {
+        renderChangelog(cachedChangelog);
+      } else {
+        fetchChangelog();
+      }
+    }
+
+    function closeReleaseLog() {
+      if (!$releaseLogModal || isReleaseLogClosing || $releaseLogModal.style.display === 'none') return;
+      isReleaseLogClosing = true;
+      $releaseLogModal.classList.add('closing');
+      setTimeout(() => {
+        $releaseLogModal.style.display = 'none';
+        $releaseLogModal.classList.remove('closing');
+        document.body.style.overflow = '';
+        isReleaseLogClosing = false;
+      }, 200);
+    }
+
+    async function fetchChangelog() {
+      if (!$releaseModalBody) return;
+      try {
+        const res = await fetch(`/api/changelog?_t=${Date.now()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        cachedChangelog = data;
+        renderChangelog(data);
+      } catch (err) {
+        try {
+          const fallbackRes = await fetch(`/static/changelog.json?_t=${Date.now()}`);
+          const fallbackData = await fallbackRes.json();
+          cachedChangelog = fallbackData;
+          renderChangelog(fallbackData);
+        } catch (fbErr) {
+          $releaseModalBody.innerHTML = `
+            <div class="release-loading-state">
+              <span>Failed to load release history. Please try again.</span>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function renderChangelog(items) {
+      if (!$releaseModalBody) return;
+      if (!items || items.length === 0) {
+        $releaseModalBody.innerHTML = `
+          <div class="release-loading-state">
+            <span>No release notes found.</span>
+          </div>
+        `;
+        return;
+      }
+
+      $releaseModalBody.innerHTML = items.map((item, idx) => {
+        const isLatest = idx === 0;
+        const type = (item.type || 'feature').toLowerCase();
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+        const highlightsHtml = (item.highlights || []).map(hl => `
+          <li class="release-highlight-item">
+            <span class="release-highlight-bullet" aria-hidden="true"></span>
+            <span>${esc(hl)}</span>
+          </li>
+        `).join('');
+
+        return `
+          <article class="release-entry ${isLatest ? 'latest' : ''}">
+            <div class="release-entry-header">
+              <div class="release-entry-left">
+                <span class="release-version-tag">${esc(item.version)}</span>
+                <span class="release-type-badge ${esc(type)}">${esc(typeLabel)}</span>
+              </div>
+              <div class="release-timestamp">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>${esc(item.date)} • ${esc(item.time || '')}</span>
+              </div>
+            </div>
+            <div class="release-entry-title">${esc(item.title)}</div>
+            <ul class="release-highlights">
+              ${highlightsHtml}
+            </ul>
+          </article>
+        `;
+      }).join('');
+    }
+
+    if ($btnReleaseLog) {
+      $btnReleaseLog.addEventListener('click', openReleaseLog);
+    }
+    if ($btnReleaseClose) {
+      $btnReleaseClose.addEventListener('click', closeReleaseLog);
+    }
+    if ($releaseLogModal) {
+      $releaseLogModal.addEventListener('click', (e) => {
+        if (e.target === $releaseLogModal) closeReleaseLog();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $releaseLogModal && $releaseLogModal.style.display === 'flex') {
+        closeReleaseLog();
+      }
+    });
+
     // ── Load and display version badge ─────────────────────────
     function loadVersion() {
       const $versionLink = document.getElementById('version-link') || document.getElementById('commit-link');
@@ -1699,6 +1841,7 @@
           $versionLink.title = `Melodyxx ${formatted}`;
 
           checkPostUpdateFeedback(formatted);
+          checkReleaseLogBadge(formatted);
 
           if (!currentAppVersion) {
             currentAppVersion = formatted;

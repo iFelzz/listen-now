@@ -526,6 +526,14 @@ async def get_version():
         "commit_url": f"https://github.com/iFelzz/listen-now/commit/{commit}" if commit and commit not in ("latest", "unknown") else "https://github.com/iFelzz/listen-now",
     }
 
+@app.get("/api/changelog")
+async def get_changelog():
+    """Return application release log / changelog dynamically."""
+    changelog_path = os.path.join(os.path.dirname(__file__), "static", "changelog.json")
+    if os.path.exists(changelog_path):
+        return FileResponse(changelog_path, media_type="application/json")
+    return JSONResponse(content=[])
+
 @app.get("/api/health")
 async def health():
     """Health & architecture check endpoint."""

@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.5.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.6.0" />
 </head>
 
 <body>
@@ -402,10 +402,60 @@
     </div>
   </div>
 
+  <!-- Floating Release Log / What's New Button -->
+  <button type="button" class="btn-release-log" id="btn-release-log" aria-label="Open Release Log & What's New" title="What's New in Melodyxx">
+    <span class="release-log-badge" id="release-log-badge" style="display: none;" aria-label="New update available"></span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+      <path d="M5 3v4"/>
+      <path d="M19 17v4"/>
+      <path d="M3 5h4"/>
+      <path d="M17 19h4"/>
+    </svg>
+  </button>
+
+  <!-- Release Log / What's New Modal Drawer -->
+  <div id="release-log-modal" class="release-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="release-modal-title">
+    <div class="release-modal-card" id="release-modal-card">
+      <div class="release-modal-header">
+        <div class="release-modal-title-group">
+          <div class="release-modal-title-row">
+            <div class="release-modal-icon-badge" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </div>
+            <h2 class="release-modal-title" id="release-modal-title">Release Log</h2>
+            <span class="release-whats-new-pill">What's New</span>
+          </div>
+          <p class="release-modal-subtitle">Changelog and version history across Melodyxx releases.</p>
+        </div>
+        <button type="button" class="btn-release-close" id="btn-release-close" aria-label="Close release log">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="release-modal-body" id="release-modal-body">
+        <div class="release-loading-state" id="release-loading">
+          <div class="spinner-small"></div>
+          <span>Loading release notes…</span>
+        </div>
+      </div>
+      <div class="release-modal-footer">
+        <span class="release-footer-note">Semantic Versioning 2.0.0</span>
+        <a href="https://github.com/iFelzz/listen-now/releases" target="_blank" rel="noopener" class="release-github-tag-link">
+          <span>GitHub Releases</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.5.0" defer></script>
+  <script src="/static/js/app.js?v=1.6.0" defer></script>
 </body>
 
 </html>

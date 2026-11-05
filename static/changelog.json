@@ -1,0 +1,138 @@
+[
+  {
+    "version": "v1.6.0",
+    "date": "2026-11-05",
+    "time": "07:20 WIB",
+    "type": "feature",
+    "title": "Release Log & What's New Drawer",
+    "highlights": [
+      "Added floating circular launcher button in the bottom-right corner with seamless animations.",
+      "Interactive Release Log drawer displaying complete version history with exact timestamps and highlights.",
+      "Unread release badge with pulsing neon indicator that clears upon opening.",
+      "Full responsive glassmorphism UI styled in Melodyxx violet neon theme."
+    ]
+  },
+  {
+    "version": "v1.5.0",
+    "date": "2026-11-05",
+    "time": "07:00 WIB",
+    "type": "feature",
+    "title": "Flexible Artist Search & Smart Suggestions",
+    "highlights": [
+      "Smart acronym and initialism expansion (e.g. searching 'h2h' instantly finds 'Hearts2Hearts', 'bmth' finds 'Bring Me The Horizon').",
+      "Interactive 'Did you mean:' suggestion chips bar for 1-click query expansion.",
+      "Load More Artists button expanding discovery results smoothly up to 48+ artists.",
+      "Multi-query parallel search pipeline merging exact, acronym, and related artist matches."
+    ]
+  },
+  {
+    "version": "v1.4.6",
+    "date": "2026-11-04",
+    "time": "14:07 WIB",
+    "type": "fix",
+    "title": "Symmetrical Update Banner Rotation",
+    "highlights": [
+      "Fixed update notification banner refresh icon rotation alignment for 100% geometric center symmetry."
+    ]
+  },
+  {
+    "version": "v1.4.5",
+    "date": "2026-11-04",
+    "time": "14:04 WIB",
+    "type": "fix",
+    "title": "Batch Download Action Bar Positioning",
+    "highlights": [
+      "Elevated floating batch download action bar above mini player when active to prevent layout overlaps."
+    ]
+  },
+  {
+    "version": "v1.4.4",
+    "date": "2026-11-04",
+    "time": "14:00 WIB",
+    "type": "feature",
+    "title": "Audio Buffering Loading Indicators",
+    "highlights": [
+      "Added circular loading spinner animation to song play buttons during audio pre-buffering."
+    ]
+  },
+  {
+    "version": "v1.4.3",
+    "date": "2026-11-04",
+    "time": "13:55 WIB",
+    "type": "fix",
+    "title": "Custom Styled Search Input Clear Button",
+    "highlights": [
+      "Replaced browser default search clear button with custom violet vector 'X' button."
+    ]
+  },
+  {
+    "version": "v1.4.2",
+    "date": "2026-11-04",
+    "time": "13:51 WIB",
+    "type": "feature",
+    "title": "Real-Time SSE Live Stream on Analytics",
+    "highlights": [
+      "Live Server-Sent Events (SSE) telemetry connection with automatic 2-second reactive polling fallback."
+    ]
+  },
+  {
+    "version": "v1.4.1",
+    "date": "2026-11-04",
+    "time": "12:58 WIB",
+    "type": "security",
+    "title": "Mandatory Admin Authentication on API",
+    "highlights": [
+      "Protected /api/stats and /api/storage endpoints with secure admin authentication header verification."
+    ]
+  },
+  {
+    "version": "v1.4.0",
+    "date": "2026-11-04",
+    "time": "12:55 WIB",
+    "type": "security",
+    "title": "Admin Key Gate for Analytics Dashboard",
+    "highlights": [
+      "Added full-screen glassmorphic Admin Key authentication modal gating access to /stats."
+    ]
+  },
+  {
+    "version": "v1.3.1",
+    "date": "2026-11-04",
+    "time": "12:39 WIB",
+    "type": "improvement",
+    "title": "Hero Section & Typography Modernization",
+    "highlights": [
+      "Streamlined unified search bar with modern purple glow and responsive design."
+    ]
+  },
+  {
+    "version": "v1.2.0",
+    "date": "2026-11-03",
+    "time": "22:15 WIB",
+    "type": "feature",
+    "title": "Apple Music Artist Discography Explorer",
+    "highlights": [
+      "Full artist discography browser with top popular tracks and album tracklist inspection."
+    ]
+  },
+  {
+    "version": "v1.1.0",
+    "date": "2026-11-03",
+    "time": "18:30 WIB",
+    "type": "feature",
+    "title": "Batch Sequential Download Queue",
+    "highlights": [
+      "Multi-select download drawer with sequential stream pacing and retry failed tracks feature."
+    ]
+  },
+  {
+    "version": "v1.0.0",
+    "date": "2026-11-03",
+    "time": "14:00 WIB",
+    "type": "feature",
+    "title": "Initial Melodyxx Production Release",
+    "highlights": [
+      "Zero-disk direct audio piping engine with official Apple Music 800x800 artwork embedding."
+    ]
+  }
+]
