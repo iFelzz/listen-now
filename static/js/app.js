@@ -1729,6 +1729,13 @@
       }, 150);
     });
 
+    // Dismiss suggestions when clicking anywhere outside search form
+    document.addEventListener('click', (e) => {
+      if ($form && !$form.contains(e.target)) {
+        hideSearchSuggestions();
+      }
+    });
+
     if ($searchClearBtn) {
       $searchClearBtn.addEventListener('click', () => {
         $input.value = '';

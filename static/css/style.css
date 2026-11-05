@@ -129,6 +129,8 @@
     .main-content {
       flex: 1;
       padding-bottom: 50px;
+      position: relative;
+      z-index: 1;
       /* space for fixed footer */
     }
 
@@ -148,6 +150,12 @@
       align-items: center;
       text-align: center;
       padding: 56px 20px 36px;
+      position: relative;
+      z-index: 50;
+    }
+
+    .hero:has(#search-suggestions:not([style*="display: none"])) {
+      z-index: 100;
     }
 
     .logo-wrap {
@@ -195,6 +203,7 @@
     ═══════════════════════════════════════════════════ */
     .search-form {
       position: relative;
+      z-index: 50;
       display: flex;
       align-items: center;
       width: 100%;
@@ -216,9 +225,14 @@
     }
 
     .search-form:focus-within {
+      z-index: 60;
       border-color: rgba(168, 85, 247, 0.75);
       background: rgba(18, 18, 34, 0.92);
       box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16), 0 10px 36px rgba(124, 58, 237, 0.25);
+    }
+
+    .search-form:has(#search-suggestions:not([style*="display: none"])) {
+      z-index: 100;
     }
 
     .search-input-wrap {

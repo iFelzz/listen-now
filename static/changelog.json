@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.7.5",
+    "date": "2026-11-05",
+    "time": "12:48 WIB",
+    "type": "fix",
+    "title": "Fix Search Autocomplete Stacking Context & Z-Index",
+    "highlights": [
+      "Fixed CSS stacking context bug where loaded search result cards painted over autocomplete suggestions dropdown.",
+      "Assigned elevated z-index hierarchy to hero header and search form so recommendations always float on top of all content cards.",
+      "Added outside-click dismissal listener to immediately close suggestions when clicking background or results."
+    ]
+  },
+  {
     "version": "v1.7.4",
     "date": "2026-11-05",
     "time": "12:35 WIB",
