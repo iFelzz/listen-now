@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.12.4",
+    "date": "2026-11-05",
+    "time": "09:02 UTC",
+    "type": "improvement",
+    "title": "Natural Document Flow for Footer & Viewport-Fit Safe Areas",
+    "highlights": [
+      "Converted footer positioning from fixed overlay to standard document flow (margin-top: auto) to eliminate bottom clipping on mobile screens.",
+      "Added viewport-fit=cover and dynamic safe-area insets for modern mobile notch and home indicators.",
+      "Synchronized bottom coordinates across floating action buttons, volume controls, and mini player bar."
+    ]
+  },
+  {
     "version": "v1.12.3",
     "date": "2026-11-05",
     "time": "08:55 UTC",
