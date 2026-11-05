@@ -1,8 +1,18 @@
 [
   {
+    "version": "v1.12.3",
+    "date": "2026-11-05",
+    "time": "08:55 UTC",
+    "type": "improvement",
+    "title": "Standardize Release Log Timestamps to UTC",
+    "highlights": [
+      "Converted all release history and changelog timestamps across versions to standard Coordinated Universal Time (UTC)."
+    ]
+  },
+  {
     "version": "v1.12.2",
     "date": "2026-11-05",
-    "time": "15:53 WIB",
+    "time": "08:53 UTC",
     "type": "improvement",
     "title": "Mobile Footer Layout & Floating Trigger Overlap Fix",
     "highlights": [
@@ -14,7 +24,7 @@
   {
     "version": "v1.12.1",
     "date": "2026-11-05",
-    "time": "15:48 WIB",
+    "time": "08:48 UTC",
     "type": "improvement",
     "title": "Symmetrical 3x2 SEO Feature Highlights Showcase Grid",
     "highlights": [
@@ -25,7 +35,7 @@
   {
     "version": "v1.12.0",
     "date": "2026-11-05",
-    "time": "15:28 WIB",
+    "time": "08:28 UTC",
     "type": "feature",
     "title": "Release Log Toolbar: Instant Search, Version Jump & Type Filters",
     "highlights": [
@@ -37,7 +47,7 @@
   {
     "version": "v1.11.2",
     "date": "2026-11-05",
-    "time": "15:10 WIB",
+    "time": "08:10 UTC",
     "type": "improvement",
     "title": "Update Google Search Console Site Verification Meta Tag",
     "highlights": [
@@ -47,7 +57,7 @@
   {
     "version": "v1.11.1",
     "date": "2026-11-05",
-    "time": "14:57 WIB",
+    "time": "07:57 UTC",
     "type": "improvement",
     "title": "Google Search Console Site Verification Endpoint & Meta Tag",
     "highlights": [
@@ -58,7 +68,7 @@
   {
     "version": "v1.11.0",
     "date": "2026-11-05",
-    "time": "14:38 WIB",
+    "time": "07:38 UTC",
     "type": "feature",
     "title": "Comprehensive SEO & Indexability Suite for Search Engines",
     "highlights": [
@@ -71,7 +81,7 @@
   {
     "version": "v1.10.6",
     "date": "2026-11-05",
-    "time": "14:28 WIB",
+    "time": "07:28 UTC",
     "type": "improvement",
     "title": "Strict Email Format Verification & Real-Time Inline Validation",
     "highlights": [
@@ -83,7 +93,7 @@
   {
     "version": "v1.10.5",
     "date": "2026-11-05",
-    "time": "14:22 WIB",
+    "time": "07:22 UTC",
     "type": "improvement",
     "title": "Mandatory Reporter Identity Fields (Name & Email Required)",
     "highlights": [
@@ -94,7 +104,7 @@
   {
     "version": "v1.10.4",
     "date": "2026-11-05",
-    "time": "14:20 WIB",
+    "time": "07:20 UTC",
     "type": "fix",
     "title": "Strict Telegram Delivery Verification & Actionable Error Reporting",
     "highlights": [
@@ -106,7 +116,7 @@
   {
     "version": "v1.10.3",
     "date": "2026-11-05",
-    "time": "14:16 WIB",
+    "time": "07:16 UTC",
     "type": "fix",
     "title": "Pass Environment Variables to Docker Compose & Bulletproof Telegram HTML Parsing",
     "highlights": [
@@ -118,7 +128,7 @@
   {
     "version": "v1.10.2",
     "date": "2026-11-05",
-    "time": "14:14 WIB",
+    "time": "07:14 UTC",
     "type": "improvement",
     "title": "Precise Cooldown Timer with Seconds Display & Toast Deduplication",
     "highlights": [
@@ -130,7 +140,7 @@
   {
     "version": "v1.10.1",
     "date": "2026-11-05",
-    "time": "14:08 WIB",
+    "time": "07:08 UTC",
     "type": "fix",
     "title": "Fix Spacebar Key Ingestion in Form Inputs & Description Field",
     "highlights": [
@@ -141,7 +151,7 @@
   {
     "version": "v1.10.0",
     "date": "2026-11-05",
-    "time": "13:55 WIB",
+    "time": "06:55 UTC",
     "type": "feature",
     "title": "Bug Reporter & Feedback System with Zero-Disk Telegram Forwarding",
     "highlights": [
@@ -155,7 +165,7 @@
   {
     "version": "v1.9.0",
     "date": "2026-11-05",
-    "time": "13:35 WIB",
+    "time": "06:35 UTC",
     "type": "feature",
     "title": "Ambient Artwork Backdrop & Rich Artist Music Insights",
     "highlights": [
@@ -168,7 +178,7 @@
   {
     "version": "v1.8.0",
     "date": "2026-11-05",
-    "time": "12:58 WIB",
+    "time": "05:58 UTC",
     "type": "feature",
     "title": "Global Download Quality Control & Streamlined Song Cards",
     "highlights": [
@@ -181,7 +191,7 @@
   {
     "version": "v1.7.6",
     "date": "2026-11-05",
-    "time": "12:52 WIB",
+    "time": "05:52 UTC",
     "type": "fix",
     "title": "Fix Floating Volume Control & Release Log Button Overlap",
     "highlights": [
@@ -194,7 +204,7 @@
   {
     "version": "v1.7.5",
     "date": "2026-11-05",
-    "time": "12:48 WIB",
+    "time": "05:48 UTC",
     "type": "fix",
     "title": "Fix Search Autocomplete Stacking Context & Z-Index",
     "highlights": [
@@ -206,7 +216,7 @@
   {
     "version": "v1.7.4",
     "date": "2026-11-05",
-    "time": "12:35 WIB",
+    "time": "05:35 UTC",
     "type": "improvement",
     "title": "Production Domain Migration (melodyxx.eztec.biz.id)",
     "highlights": [
@@ -218,7 +228,7 @@
   {
     "version": "v1.7.3",
     "date": "2026-11-05",
-    "time": "11:58 WIB",
+    "time": "04:58 UTC",
     "type": "fix",
     "title": "Dismiss Autocomplete on Search Execution",
     "highlights": [
@@ -231,7 +241,7 @@
   {
     "version": "v1.7.2",
     "date": "2026-11-05",
-    "time": "10:35 WIB",
+    "time": "03:35 UTC",
     "type": "improvement",
     "title": "Artist Photos, National Flags, and Clean Dropdown Backdrop",
     "highlights": [
@@ -244,7 +254,7 @@
   {
     "version": "v1.7.1",
     "date": "2026-11-05",
-    "time": "08:55 WIB",
+    "time": "01:55 UTC",
     "type": "fix",
     "title": "Strict Artist Separation in Search Autocomplete",
     "highlights": [
@@ -257,7 +267,7 @@
   {
     "version": "v1.7.0",
     "date": "2026-11-05",
-    "time": "08:15 WIB",
+    "time": "01:15 UTC",
     "type": "feature",
     "title": "Real-Time Search Autocomplete & Artist Recommendations",
     "highlights": [
@@ -271,7 +281,7 @@
   {
     "version": "v1.6.2",
     "date": "2026-11-05",
-    "time": "07:30 WIB",
+    "time": "00:30 UTC",
     "type": "improvement",
     "title": "Snappy Modal Transitions & Clean Release Notes Icon",
     "highlights": [
@@ -284,7 +294,7 @@
   {
     "version": "v1.6.1",
     "date": "2026-11-05",
-    "time": "07:25 WIB",
+    "time": "00:25 UTC",
     "type": "fix",
     "title": "502 Stream Error & Download Manager Resilience",
     "highlights": [
@@ -298,7 +308,7 @@
   {
     "version": "v1.6.0",
     "date": "2026-11-05",
-    "time": "07:20 WIB",
+    "time": "00:20 UTC",
     "type": "feature",
     "title": "Release Log & What's New Drawer",
     "highlights": [
@@ -311,7 +321,7 @@
   {
     "version": "v1.5.0",
     "date": "2026-11-05",
-    "time": "07:00 WIB",
+    "time": "00:00 UTC",
     "type": "feature",
     "title": "Flexible Artist Search & Smart Suggestions",
     "highlights": [
@@ -324,7 +334,7 @@
   {
     "version": "v1.4.6",
     "date": "2026-11-04",
-    "time": "14:07 WIB",
+    "time": "07:07 UTC",
     "type": "fix",
     "title": "Symmetrical Update Banner Rotation",
     "highlights": [
@@ -334,7 +344,7 @@
   {
     "version": "v1.4.5",
     "date": "2026-11-04",
-    "time": "14:04 WIB",
+    "time": "07:04 UTC",
     "type": "fix",
     "title": "Batch Download Action Bar Positioning",
     "highlights": [
@@ -344,7 +354,7 @@
   {
     "version": "v1.4.4",
     "date": "2026-11-04",
-    "time": "14:00 WIB",
+    "time": "07:00 UTC",
     "type": "feature",
     "title": "Audio Buffering Loading Indicators",
     "highlights": [
@@ -354,7 +364,7 @@
   {
     "version": "v1.4.3",
     "date": "2026-11-04",
-    "time": "13:55 WIB",
+    "time": "06:55 UTC",
     "type": "fix",
     "title": "Custom Styled Search Input Clear Button",
     "highlights": [
@@ -364,7 +374,7 @@
   {
     "version": "v1.4.2",
     "date": "2026-11-04",
-    "time": "13:51 WIB",
+    "time": "06:51 UTC",
     "type": "feature",
     "title": "Real-Time SSE Live Stream on Analytics",
     "highlights": [
@@ -374,7 +384,7 @@
   {
     "version": "v1.4.1",
     "date": "2026-11-04",
-    "time": "12:58 WIB",
+    "time": "05:58 UTC",
     "type": "security",
     "title": "Mandatory Admin Authentication on API",
     "highlights": [
@@ -384,7 +394,7 @@
   {
     "version": "v1.4.0",
     "date": "2026-11-04",
-    "time": "12:55 WIB",
+    "time": "05:55 UTC",
     "type": "security",
     "title": "Admin Key Gate for Analytics Dashboard",
     "highlights": [
@@ -394,7 +404,7 @@
   {
     "version": "v1.3.1",
     "date": "2026-11-04",
-    "time": "12:39 WIB",
+    "time": "05:39 UTC",
     "type": "improvement",
     "title": "Hero Section & Typography Modernization",
     "highlights": [
@@ -404,7 +414,7 @@
   {
     "version": "v1.2.0",
     "date": "2026-11-03",
-    "time": "22:15 WIB",
+    "time": "15:15 UTC",
     "type": "feature",
     "title": "Apple Music Artist Discography Explorer",
     "highlights": [
@@ -414,7 +424,7 @@
   {
     "version": "v1.1.0",
     "date": "2026-11-03",
-    "time": "18:30 WIB",
+    "time": "11:30 UTC",
     "type": "feature",
     "title": "Batch Sequential Download Queue",
     "highlights": [
@@ -424,7 +434,7 @@
   {
     "version": "v1.0.0",
     "date": "2026-11-03",
-    "time": "14:00 WIB",
+    "time": "07:00 UTC",
     "type": "feature",
     "title": "Initial Melodyxx Production Release",
     "highlights": [
