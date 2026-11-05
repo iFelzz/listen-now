@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.10.4",
+    "date": "2026-11-05",
+    "time": "14:20 WIB",
+    "type": "fix",
+    "title": "Strict Telegram Delivery Verification & Actionable Error Reporting",
+    "highlights": [
+      "Removed silent fallback simulation to prevent false-positive success notifications when Telegram credentials are unconfigured or failing.",
+      "Surfaced clear, actionable error toasts when bot setup requires attention (missing tokens, /start not initiated, or invalid chat ID).",
+      "Preserved user input and prevented triggering 5-minute cooldown timer when delivery fails so users can retry immediately."
+    ]
+  },
+  {
     "version": "v1.10.3",
     "date": "2026-11-05",
     "time": "14:16 WIB",

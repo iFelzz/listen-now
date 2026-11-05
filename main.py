@@ -617,11 +617,11 @@ def send_telegram_report_sync(
     )
 
     if not token or not chat_id:
-        logger.warning(
-            "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in container environment. Simulating report delivery:\n%s",
-            report_text
+        logger.error("TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing in environment.")
+        raise HTTPException(
+            status_code=503,
+            detail="Bug report service is not configured yet. TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set in server environment."
         )
-        return
 
     try:
         headers = {"User-Agent": "Melodyxx-Reporter/1.0"}
@@ -677,8 +677,24 @@ def send_telegram_report_sync(
     except urllib.error.HTTPError as h_err:
         err_body = h_err.read().decode("utf-8", errors="replace")
         logger.error("Failed to forward report to Telegram Bot API (HTTP %s): %s", h_err.code, err_body)
+        if h_err.code == 403 or "can't initiate conversation" in err_body:
+            msg = "Telegram Bot cannot initiate chat. Please open your bot in Telegram and send /start first."
+        elif h_err.code == 400 and "chat not found" in err_body:
+            msg = "Invalid Telegram Chat ID or bot is not a member of the chat."
+        elif h_err.code == 401 or "Unauthorized" in err_body:
+            msg = "Invalid Telegram Bot Token. Please check TELEGRAM_BOT_TOKEN in server configuration."
+        else:
+            msg = f"Failed to deliver report to Telegram (HTTP {h_err.code}). Please try again."
+        raise HTTPException(status_code=502, detail=msg)
+
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Failed to forward report to Telegram Bot API: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to connect to Telegram Bot API. Please check server internet connectivity."
+        )
 
 @app.post("/api/report")
 @limiter.limit("2/10minute;5/day")
