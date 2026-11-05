@@ -1490,11 +1490,11 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 42px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(10, 10, 20, 0.92);
+      background: rgba(10, 10, 20, 0.94);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-top: 1px solid var(--clr-border);
@@ -1608,31 +1608,48 @@
         justify-content: center;
       }
 
+      .mini-player {
+        bottom: 58px;
+        bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+      }
+
       footer.app-footer {
         height: auto;
-        padding: 6px 12px;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: rgba(10, 10, 20, 0.96);
       }
 
       .footer-container {
-        padding: 0 8px;
-        font-size: 0.74rem;
-      }
-    }
-
-    @media (max-width: 440px) {
-      .card {
-        grid-template-columns: 1fr;
-      }
-
-      .card-thumb-wrap {
-        aspect-ratio: 16/6;
-        width: 100%;
-      }
-
-      .footer-container {
+        padding: 0 4px;
+        font-size: 0.72rem;
         flex-direction: column;
-        gap: 4px;
-        text-align: center;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .footer-left {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .footer-right {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px 10px;
+      }
+
+      .version-badge {
+        margin-left: 0;
+      }
+
+      .main-content {
+        padding-bottom: 74px;
+      }
+
+      body.player-open .main-content {
+        padding-bottom: 190px;
       }
     }
 
@@ -4273,34 +4290,34 @@ details[open] .summary-caret {
     max-width: none;
   }
   .btn-release-log {
-    bottom: 20px;
-    right: 18px;
-    width: 44px;
-    height: 44px;
+    bottom: 68px;
+    right: 16px;
+    width: 42px;
+    height: 42px;
   }
   body.player-open .btn-release-log,
   body:has(#mini-player.show) .btn-release-log {
-    bottom: 74px;
-    right: 18px;
+    bottom: 128px;
+    right: 16px;
   }
   .volume-control {
-    bottom: 21px;
-    right: 70px;
-    padding: 8px 12px;
-    gap: 8px;
+    bottom: 69px;
+    right: 66px;
+    padding: 7px 10px;
+    gap: 6px;
   }
   .volume-control input[type=range] {
-    width: 72px;
+    width: 64px;
   }
   .volume-control.player-open,
   body.player-open .volume-control,
   body:has(#mini-player.show) .volume-control {
-    bottom: 75px;
-    right: 70px;
+    bottom: 129px;
+    right: 66px;
   }
   body.player-open .batch-progress-widget,
   body:has(#mini-player.show) .batch-progress-widget {
-    bottom: 130px;
+    bottom: 180px;
   }
   .release-modal-card {
     max-height: 90vh;

@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.12.2",
+    "date": "2026-11-05",
+    "time": "15:53 WIB",
+    "type": "improvement",
+    "title": "Mobile Footer Layout & Floating Trigger Overlap Fix",
+    "highlights": [
+      "Adjusted mobile footer layout to a clean two-tier centered row with proper spacing and wrap support.",
+      "Shifted floating Release Log and Volume buttons above the mobile footer to eliminate visual overlapping.",
+      "Added dynamic bottom safe-area insets and proper page padding to prevent content clipping."
+    ]
+  },
+  {
     "version": "v1.12.1",
     "date": "2026-11-05",
     "time": "15:48 WIB",
