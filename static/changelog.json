@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.10.3",
+    "date": "2026-11-05",
+    "time": "14:16 WIB",
+    "type": "fix",
+    "title": "Pass Environment Variables to Docker Compose & Bulletproof Telegram HTML Parsing",
+    "highlights": [
+      "Uncommented and explicitly mapped TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in docker-compose.yml environment block.",
+      "Switched Telegram Bot message formatting from strict Markdown to resilient HTML mode with entity escaping.",
+      "Enhanced HTTP error logging to inspect detailed API response bodies when Telegram rejects requests."
+    ]
+  },
+  {
     "version": "v1.10.2",
     "date": "2026-11-05",
     "time": "14:14 WIB",

@@ -592,35 +592,38 @@ def send_telegram_report_sync(
     filename: Optional[str] = None,
     mime_type: Optional[str] = None
 ):
-    token = TELEGRAM_BOT_TOKEN
-    chat_id = TELEGRAM_CHAT_ID
+    import html as pyhtml
+    import urllib.request
+    import urllib.error
+
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() or TELEGRAM_BOT_TOKEN
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip() or TELEGRAM_CHAT_ID
 
     now_str = time.strftime("%d %b %Y, %H:%M WIB", time.localtime())
     reporter_str = f"{name or 'Anonymous'}" + (f" ({email})" if email else "")
 
     report_text = (
-        f"🚨 *[Melodyxx Report / Feedback]*\n\n"
-        f"👤 *Reporter:* {reporter_str}\n"
-        f"🏷️ *Category:* {category or 'Bug'}\n"
-        f"📅 *Time:* {now_str}\n\n"
-        f"📝 *Description:*\n{description}\n\n"
-        f"💻 *Diagnostics:*\n"
-        f"• *App Version:* {app_version}\n"
-        f"• *Browser & OS:* {platform_info or 'Unknown'}\n"
-        f"• *Screen Resolution:* {screen_res or 'Unknown'}\n"
-        f"• *Page URL:* {current_url or 'Home'}\n"
-        f"• *Client IP:* `{client_ip}`"
+        f"🚨 <b>[Melodyxx Report / Feedback]</b>\n\n"
+        f"👤 <b>Reporter:</b> {pyhtml.escape(reporter_str)}\n"
+        f"🏷️ <b>Category:</b> {pyhtml.escape(category or 'Bug')}\n"
+        f"📅 <b>Time:</b> {now_str}\n\n"
+        f"📝 <b>Description:</b>\n{pyhtml.escape(description)}\n\n"
+        f"💻 <b>Diagnostics:</b>\n"
+        f"• <b>App Version:</b> {pyhtml.escape(app_version)}\n"
+        f"• <b>Browser & OS:</b> {pyhtml.escape(platform_info or 'Unknown')}\n"
+        f"• <b>Screen Resolution:</b> {pyhtml.escape(screen_res or 'Unknown')}\n"
+        f"• <b>Page URL:</b> {pyhtml.escape(current_url or 'Home')}\n"
+        f"• <b>Client IP:</b> <code>{pyhtml.escape(client_ip)}</code>"
     )
 
     if not token or not chat_id:
         logger.warning(
-            "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in environment. Simulating report delivery:\n%s",
+            "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in container environment. Simulating report delivery:\n%s",
             report_text
         )
         return
 
     try:
-        import urllib.request
         headers = {"User-Agent": "Melodyxx-Reporter/1.0"}
 
         if file_bytes and filename:
@@ -641,7 +644,7 @@ def send_telegram_report_sync(
             fields = {
                 "chat_id": chat_id,
                 "caption": caption,
-                "parse_mode": "Markdown"
+                "parse_mode": "HTML"
             }
 
             body_bytes, ctype = make_multipart_body(fields, file_field, filename, file_bytes, mime_type)
@@ -652,7 +655,7 @@ def send_telegram_report_sync(
             if len(report_text) > 1024:
                 follow_req = urllib.request.Request(
                     f"https://api.telegram.org/bot{token}/sendMessage",
-                    data=urllib.parse.urlencode({"chat_id": chat_id, "text": report_text, "parse_mode": "Markdown"}).encode("utf-8"),
+                    data=urllib.parse.urlencode({"chat_id": chat_id, "text": report_text, "parse_mode": "HTML"}).encode("utf-8"),
                     headers=headers
                 )
                 with urllib.request.urlopen(follow_req, timeout=10.0) as f_resp:
@@ -663,7 +666,7 @@ def send_telegram_report_sync(
             payload = urllib.parse.urlencode({
                 "chat_id": chat_id,
                 "text": report_text,
-                "parse_mode": "Markdown"
+                "parse_mode": "HTML"
             }).encode("utf-8")
             req = urllib.request.Request(endpoint, data=payload, headers=headers)
             with urllib.request.urlopen(req, timeout=10.0) as resp:
@@ -671,6 +674,9 @@ def send_telegram_report_sync(
 
         logger.info("Bug report forwarded to Telegram successfully (category: %s, reporter: %s)", category, name or 'anon')
 
+    except urllib.error.HTTPError as h_err:
+        err_body = h_err.read().decode("utf-8", errors="replace")
+        logger.error("Failed to forward report to Telegram Bot API (HTTP %s): %s", h_err.code, err_body)
     except Exception as exc:
         logger.error("Failed to forward report to Telegram Bot API: %s", exc)
 
