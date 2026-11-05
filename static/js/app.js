@@ -1922,8 +1922,11 @@
     // ── Keyboard Shortcuts ────────────────────────────────────
     let shortcutTipShown = false;
     document.addEventListener('keydown', (e) => {
-      // Don't hijack shortcuts when typing in the search box
-      if (document.activeElement === $input) return;
+      // Don't hijack shortcuts when typing in inputs, textareas, selects, or contenteditable
+      const targetTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (['input', 'textarea', 'select'].includes(targetTag) || document.activeElement?.isContentEditable) {
+        return;
+      }
       // Don't trigger on modifier keys
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 

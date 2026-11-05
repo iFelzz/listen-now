@@ -1,5 +1,16 @@
 [
   {
+    "version": "v1.10.1",
+    "date": "2026-11-05",
+    "time": "14:08 WIB",
+    "type": "fix",
+    "title": "Fix Spacebar Key Ingestion in Form Inputs & Description Field",
+    "highlights": [
+      "Fixed global keyboard shortcut interceptor capturing spacebar presses when typing inside textareas and form input fields.",
+      "Ensured unobstructed typing across Bug Reporter form inputs, search fields, and future editable components."
+    ]
+  },
+  {
     "version": "v1.10.0",
     "date": "2026-11-05",
     "time": "13:55 WIB",
