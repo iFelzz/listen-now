@@ -85,6 +85,7 @@
 
     // Global state
     let searchMode = 'songs'; // 'songs' | 'artists'
+    let isSearching = false;
     let allSearchResults = [];
     let currentPage = 1;
     let itemsPerPage = 10;
@@ -454,11 +455,17 @@
       if (!query || !query.trim()) return;
       const q = query.trim();
 
+      if (typeof hideSearchSuggestions === 'function') {
+        hideSearchSuggestions();
+      }
+      if ($input) $input.blur();
+
       if (searchMode === 'artists') {
         await performArtistSearch(q);
         return;
       }
 
+      isSearching = true;
       showState('loading');
       $loadingText.textContent = 'Searching for songs…';
       $searchBtn.disabled = true;
@@ -490,12 +497,22 @@
         showState('error');
       } finally {
         $searchBtn.disabled = false;
+        isSearching = false;
+        if (typeof hideSearchSuggestions === 'function') {
+          hideSearchSuggestions();
+        }
       }
     }
 
     // ── Artist Search & Discography ───────────────────────────
 
     async function performArtistSearch(query) {
+      if (typeof hideSearchSuggestions === 'function') {
+        hideSearchSuggestions();
+      }
+      if ($input) $input.blur();
+
+      isSearching = true;
       showState('loading');
       $loadingText.textContent = `Searching artists for ${query}…`;
       $searchBtn.disabled = true;
@@ -523,6 +540,10 @@
         showState('error');
       } finally {
         $searchBtn.disabled = false;
+        isSearching = false;
+        if (typeof hideSearchSuggestions === 'function') {
+          hideSearchSuggestions();
+        }
       }
     }
 
@@ -1442,6 +1463,13 @@
     let activeSuggestIndex = -1;
 
     function hideSearchSuggestions() {
+      clearTimeout(suggestDebounceTimer);
+      if (suggestAbortCtrl) {
+        try {
+          suggestAbortCtrl.abort();
+        } catch (_) {}
+        suggestAbortCtrl = null;
+      }
       if (!$searchSuggestions) return;
       $searchSuggestions.style.display = 'none';
       $searchSuggestions.innerHTML = '';
@@ -1466,7 +1494,7 @@
     }
 
     function renderSearchSuggestions(data, typedQuery) {
-      if (!$searchSuggestions) return;
+      if (!$searchSuggestions || isSearching) return;
 
       // ── ARTISTS MODE: strictly render matching artists, never song titles ──
       if (searchMode === 'artists') {
@@ -1631,6 +1659,7 @@
     }
 
     async function fetchSearchSuggestions(query) {
+      if (isSearching) return;
       const q = query.trim();
       if (!q || q.startsWith('http://') || q.startsWith('https://')) {
         hideSearchSuggestions();
@@ -1639,7 +1668,9 @@
 
       const cacheKey = `${searchMode}:${q.toLowerCase()}`;
       if (suggestCache.has(cacheKey)) {
-        renderSearchSuggestions(suggestCache.get(cacheKey), q);
+        if (!isSearching) {
+          renderSearchSuggestions(suggestCache.get(cacheKey), q);
+        }
         return;
       }
 
@@ -1653,14 +1684,14 @@
           signal: suggestAbortCtrl.signal,
           headers: { 'Accept': 'application/json' }
         });
-        if (!res.ok) return;
+        if (!res.ok || isSearching) return;
         const data = await res.json();
         suggestCache.set(cacheKey, data);
         if (suggestCache.size > 200) {
           const firstKey = suggestCache.keys().next().value;
           suggestCache.delete(firstKey);
         }
-        if ($input.value.trim().toLowerCase() === q.toLowerCase()) {
+        if (!isSearching && $input.value.trim().toLowerCase() === q.toLowerCase()) {
           renderSearchSuggestions(data, q);
         }
       } catch (err) {
@@ -1692,6 +1723,12 @@
       }, 90);
     });
 
+    $input.addEventListener('blur', () => {
+      setTimeout(() => {
+        hideSearchSuggestions();
+      }, 150);
+    });
+
     if ($searchClearBtn) {
       $searchClearBtn.addEventListener('click', () => {
         $input.value = '';
@@ -1704,6 +1741,7 @@
     $form.addEventListener('submit', (e) => {
       e.preventDefault();
       hideSearchSuggestions();
+      if ($input) $input.blur();
       const q = $input.value.trim();
       if (q) performSearch(q);
     });

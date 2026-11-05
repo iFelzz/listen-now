@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.7.3",
+    "date": "2026-11-05",
+    "time": "11:58 WIB",
+    "type": "fix",
+    "title": "Dismiss Autocomplete on Search Execution",
+    "highlights": [
+      "Fixed race condition where autocomplete suggestions reopened over loaded search results.",
+      "Added immediate abort and debounce clearing upon form submission or search trigger.",
+      "Ensured search input blur drops focus and completely hides suggestion dropdown.",
+      "Introduced active search flag to prevent asynchronous responses from reopening dropdown."
+    ]
+  },
+  {
     "version": "v1.7.2",
     "date": "2026-11-05",
     "time": "10:35 WIB",
