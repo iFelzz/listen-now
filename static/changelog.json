@@ -1,5 +1,15 @@
 [
   {
+    "version": "v1.14.1",
+    "date": "2026-11-05",
+    "time": "23:51 UTC",
+    "type": "improvement",
+    "title": "Reposition Version Tag Beside Melodyxx Copyright",
+    "highlights": [
+      "Moved the version tag badge into the left footer section right next to 'Melodyxx © 2026' with refined glassmorphic chip styling."
+    ]
+  },
+  {
     "version": "v1.14.0",
     "date": "2026-11-05",
     "time": "23:48 UTC",

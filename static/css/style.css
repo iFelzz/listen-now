@@ -1680,23 +1680,29 @@
 .version-badge {
   display: inline-flex;
   align-items: center;
-  margin-left: 6px;
+  margin-left: 2px;
   color: var(--clr-text-dim);
 }
 
 .commit-badge a,
 .version-badge a {
   font-family: inherit;
-  font-size: inherit;
-  color: var(--clr-text-dim);
+  font-size: 0.76rem;
+  color: var(--clr-text-muted);
   text-decoration: none;
   transition: var(--transition);
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
 .commit-badge a:hover,
 .version-badge a:hover {
-  color: var(--clr-accent);
-  text-decoration: underline;
+  color: #ffffff;
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  text-decoration: none;
 }
 
 .version-badge.badge-highlight-pulse a {
