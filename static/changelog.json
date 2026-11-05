@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.8.0",
+    "date": "2026-11-05",
+    "time": "12:58 WIB",
+    "type": "feature",
+    "title": "Global Download Quality Control & Streamlined Song Cards",
+    "highlights": [
+      "Removed repetitive audio quality selectors from individual song cards for a much cleaner and decluttered interface.",
+      "Elevated quality selection to a unified global 'Download Quality' header bar with sleek glowing pill toggle buttons (128k, 192k, 320k).",
+      "Automatically applies active global quality setting across all single-track and batch downloads.",
+      "Updated download button tooltips to reflect current selected bitrates dynamically."
+    ]
+  },
+  {
     "version": "v1.7.6",
     "date": "2026-11-05",
     "time": "12:52 WIB",
