@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.7.0",
+    "date": "2026-11-05",
+    "time": "08:15 WIB",
+    "type": "feature",
+    "title": "Real-Time Search Autocomplete & Artist Recommendations",
+    "highlights": [
+      "Real-time instant autocomplete dropdown when typing in the search command bar.",
+      "Smart top artist entity detection with glowing violet avatar, genre tag, and direct discography navigation.",
+      "High-speed YouTube query suggestions with prefix matching highlights and sub-millisecond in-memory caching.",
+      "Full keyboard navigation support (ArrowDown, ArrowUp, Enter, Escape) and click-outside dismissal.",
+      "Zero OS emojis: 100% styled glowing violet vector SVGs matching Melodyxx design system."
+    ]
+  },
+  {
     "version": "v1.6.2",
     "date": "2026-11-05",
     "time": "07:30 WIB",

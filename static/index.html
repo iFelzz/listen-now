@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.6.2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.7.0" />
 </head>
 
 <body>
@@ -94,6 +94,9 @@
         <button type="submit" id="search-btn" aria-label="Search">
           <span>Search</span>
         </button>
+
+        <!-- Live Autocomplete & Artist Recommendation Dropdown -->
+        <div id="search-suggestions" class="search-suggestions-dropdown" style="display: none;" role="listbox" aria-label="Search recommendations"></div>
       </form>
     </header>
 
@@ -459,7 +462,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.6.2" defer></script>
+  <script src="/static/js/app.js?v=1.7.0" defer></script>
 </body>
 
 </html>

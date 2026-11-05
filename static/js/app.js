@@ -4,6 +4,7 @@
     const $form = document.getElementById('search-form');
     const $input = document.getElementById('search-input');
     const $searchClearBtn = document.getElementById('btn-search-clear');
+    const $searchSuggestions = document.getElementById('search-suggestions');
     const $searchBtn = document.getElementById('search-btn');
     const $loading = document.getElementById('loading');
     const $loadingText = document.getElementById('loading-text');
@@ -1430,6 +1431,166 @@
     }
     // ── Form submit ───────────────────────────────────────────
 
+    // ── Live Autocomplete & Search Recommendations ─────────────
+    const ICON_SUGGEST_SEARCH = `<svg class="suggestion-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+    const ICON_SUGGEST_ARTIST = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    const ICON_SUGGEST_ARROW = `<svg class="suggestion-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`;
+
+    const suggestCache = new Map();
+    let suggestAbortCtrl = null;
+    let suggestDebounceTimer = null;
+    let activeSuggestIndex = -1;
+
+    function hideSearchSuggestions() {
+      if (!$searchSuggestions) return;
+      $searchSuggestions.style.display = 'none';
+      $searchSuggestions.innerHTML = '';
+      activeSuggestIndex = -1;
+    }
+
+    function highlightMatch(text, query) {
+      if (!text) return '';
+      if (!query || !query.trim()) return esc(text);
+      const qClean = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${qClean})`, 'gi');
+      const parts = text.split(regex);
+      return parts.map(part => {
+        if (part.toLowerCase() === query.trim().toLowerCase()) {
+          return `<strong class="suggestion-match">${esc(part)}</strong>`;
+        }
+        return esc(part);
+      }).join('');
+    }
+
+    function renderSearchSuggestions(data, typedQuery) {
+      if (!$searchSuggestions) return;
+      const topArtist = data.top_artist;
+      const suggestions = (data.suggestions || []).filter(s => s && s.trim().length > 0);
+
+      if (!topArtist && suggestions.length === 0) {
+        hideSearchSuggestions();
+        return;
+      }
+
+      let html = '';
+
+      // 1. Featured Top Artist Entity Recommendation
+      if (topArtist && topArtist.name) {
+        const artistMeta = topArtist.genre ? `Artist • ${esc(topArtist.genre)}` : 'Musical Artist';
+        html += `
+          <div class="suggestion-artist-item" data-type="artist" data-artist-id="${esc(topArtist.artist_id || '')}" data-name="${esc(topArtist.name)}" role="option" tabindex="-1">
+            <div class="suggestion-artist-avatar" aria-hidden="true">
+              ${ICON_SUGGEST_ARTIST}
+            </div>
+            <div class="suggestion-artist-info">
+              <span class="suggestion-artist-name">${highlightMatch(topArtist.name, typedQuery)}</span>
+              <span class="suggestion-artist-meta">${artistMeta}</span>
+            </div>
+            <span class="suggestion-artist-badge">Artist</span>
+          </div>
+        `;
+      }
+
+      // Divider if both artist and query predictions exist
+      if (topArtist && suggestions.length > 0) {
+        html += '<div class="suggestion-divider" aria-hidden="true"></div>';
+      }
+
+      // 2. Query Autocomplete Predictions
+      if (suggestions.length > 0) {
+        html += '<div class="suggestion-queries-list">';
+        html += suggestions.map((sugg) => `
+          <div class="suggestion-item" data-type="query" data-query="${esc(sugg)}" role="option" tabindex="-1">
+            ${ICON_SUGGEST_SEARCH}
+            <span class="suggestion-item-text">${highlightMatch(sugg, typedQuery)}</span>
+            ${ICON_SUGGEST_ARROW}
+          </div>
+        `).join('');
+        html += '</div>';
+      }
+
+      $searchSuggestions.innerHTML = html;
+      $searchSuggestions.style.display = 'block';
+      activeSuggestIndex = -1;
+
+      // Attach click events
+      $searchSuggestions.querySelectorAll('.suggestion-artist-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const name = el.dataset.name;
+          const aid = el.dataset.artistId;
+          $input.value = name;
+          syncClearButtonVisibility();
+          hideSearchSuggestions();
+
+          if (searchMode === 'artists' && aid) {
+            loadArtistDiscography(aid);
+          } else {
+            performSearch(name);
+          }
+        });
+      });
+
+      $searchSuggestions.querySelectorAll('.suggestion-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const q = el.dataset.query;
+          $input.value = q;
+          syncClearButtonVisibility();
+          hideSearchSuggestions();
+          performSearch(q);
+        });
+      });
+
+      // Hover sync active state
+      const allItems = Array.from($searchSuggestions.querySelectorAll('.suggestion-artist-item, .suggestion-item'));
+      allItems.forEach((el, idx) => {
+        el.addEventListener('mouseenter', () => {
+          allItems.forEach(i => i.classList.remove('active'));
+          el.classList.add('active');
+          activeSuggestIndex = idx;
+        });
+      });
+    }
+
+    async function fetchSearchSuggestions(query) {
+      const q = query.trim();
+      if (!q || q.startsWith('http://') || q.startsWith('https://')) {
+        hideSearchSuggestions();
+        return;
+      }
+
+      const cacheKey = `${searchMode}:${q.toLowerCase()}`;
+      if (suggestCache.has(cacheKey)) {
+        renderSearchSuggestions(suggestCache.get(cacheKey), q);
+        return;
+      }
+
+      if (suggestAbortCtrl) {
+        suggestAbortCtrl.abort();
+      }
+      suggestAbortCtrl = new AbortController();
+
+      try {
+        const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}&mode=${searchMode}`, {
+          signal: suggestAbortCtrl.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        suggestCache.set(cacheKey, data);
+        if (suggestCache.size > 200) {
+          const firstKey = suggestCache.keys().next().value;
+          suggestCache.delete(firstKey);
+        }
+        if ($input.value.trim().toLowerCase() === q.toLowerCase()) {
+          renderSearchSuggestions(data, q);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.debug('[Suggest Error]', err);
+        }
+      }
+    }
+
     function syncClearButtonVisibility() {
       if (!$searchClearBtn) return;
       if ($input.value.trim().length > 0) {
@@ -1439,29 +1600,96 @@
       }
     }
 
-    $input.addEventListener('input', syncClearButtonVisibility);
+    $input.addEventListener('input', () => {
+      syncClearButtonVisibility();
+      clearTimeout(suggestDebounceTimer);
+      const val = $input.value.trim();
+      if (!val || val.startsWith('http://') || val.startsWith('https://')) {
+        hideSearchSuggestions();
+        return;
+      }
+      suggestDebounceTimer = setTimeout(() => {
+        fetchSearchSuggestions(val);
+      }, 90);
+    });
 
     if ($searchClearBtn) {
       $searchClearBtn.addEventListener('click', () => {
         $input.value = '';
         syncClearButtonVisibility();
+        hideSearchSuggestions();
         $input.focus();
       });
     }
 
     $form.addEventListener('submit', (e) => {
       e.preventDefault();
+      hideSearchSuggestions();
       const q = $input.value.trim();
       if (q) performSearch(q);
     });
 
-    // Allow Enter key to submit, and Escape to clear
+    // Keyboard navigation (ArrowDown, ArrowUp, Enter, Escape)
     $input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        $form.dispatchEvent(new Event('submit'));
+      const isVisible = $searchSuggestions && $searchSuggestions.style.display === 'block';
+      const items = isVisible ? Array.from($searchSuggestions.querySelectorAll('.suggestion-artist-item, .suggestion-item')) : [];
+
+      if (e.key === 'ArrowDown') {
+        if (!isVisible) {
+          const val = $input.value.trim();
+          if (val) fetchSearchSuggestions(val);
+          return;
+        }
+        e.preventDefault();
+        if (items.length > 0) {
+          activeSuggestIndex = (activeSuggestIndex + 1) % items.length;
+          items.forEach((it, idx) => {
+            if (idx === activeSuggestIndex) {
+              it.classList.add('active');
+              it.scrollIntoView({ block: 'nearest' });
+            } else {
+              it.classList.remove('active');
+            }
+          });
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (isVisible && items.length > 0) {
+          e.preventDefault();
+          activeSuggestIndex = (activeSuggestIndex - 1 + items.length) % items.length;
+          items.forEach((it, idx) => {
+            if (idx === activeSuggestIndex) {
+              it.classList.add('active');
+              it.scrollIntoView({ block: 'nearest' });
+            } else {
+              it.classList.remove('active');
+            }
+          });
+        }
+      } else if (e.key === 'Enter') {
+        if (isVisible && activeSuggestIndex >= 0 && items[activeSuggestIndex]) {
+          e.preventDefault();
+          e.stopPropagation();
+          items[activeSuggestIndex].click();
+        } else {
+          hideSearchSuggestions();
+          $form.dispatchEvent(new Event('submit'));
+        }
       } else if (e.key === 'Escape') {
-        $input.value = '';
-        syncClearButtonVisibility();
+        if (isVisible) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideSearchSuggestions();
+        } else {
+          $input.value = '';
+          syncClearButtonVisibility();
+        }
+      }
+    });
+
+    // Close suggestions on click outside
+    document.addEventListener('pointerdown', (e) => {
+      if ($form && !$form.contains(e.target)) {
+        hideSearchSuggestions();
       }
     });
 

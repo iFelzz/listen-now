@@ -10,6 +10,7 @@ using a 3-tier hierarchy:
 
 import re
 import json
+import time
 import logging
 import urllib.parse
 import urllib.request
@@ -805,4 +806,147 @@ def get_album_tracks(album_id: str) -> list:
     except Exception as exc:
         logger.warning("Error fetching album tracks for album %s: %s", album_id, exc)
         return []
+
+_LIVE_SUGGEST_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_LIVE_SUGGEST_TTL = 600  # 10 minutes cache
+
+def get_live_suggestions(query: str, mode: str = "songs") -> Dict[str, Any]:
+    """
+    Ultra-fast real-time search autocomplete & artist recommendations.
+    Fetches real-time YouTube query predictions and iTunes artist data in parallel.
+    Utilizes an in-memory TTL cache for instant (<1ms) responses on repeated queries.
+    """
+    clean_q = query.strip()
+    if not clean_q:
+        return {"query": "", "top_artist": None, "artists": [], "suggestions": []}
+
+    cache_key = f"{mode}:{clean_q.lower()}"
+    now = time.time()
+    if cache_key in _LIVE_SUGGEST_CACHE:
+        ts, data = _LIVE_SUGGEST_CACHE[cache_key]
+        if now - ts < _LIVE_SUGGEST_TTL:
+            return data
+
+    q_norm = clean_label_str(clean_q)
+    alias_matches = ARTIST_ALIASES.get(q_norm, [])
+
+    def fetch_yt(term: str) -> List[str]:
+        try:
+            url = f"https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q={urllib.parse.quote(term)}"
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=1.8) as resp:
+                if resp.status == 200:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                    if isinstance(payload, list) and len(payload) > 1 and isinstance(payload[1], list):
+                        return [s for s in payload[1] if isinstance(s, str)]
+        except Exception as e:
+            logger.debug("YouTube suggestion fetch error: %s", e)
+        return []
+
+    def fetch_itunes_artists(term: str) -> List[Dict[str, Any]]:
+        try:
+            url = f"https://itunes.apple.com/search?term={urllib.parse.quote_plus(term)}&entity=musicArtist&limit=4"
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=1.8) as resp:
+                if resp.status == 200:
+                    return json.loads(resp.read().decode("utf-8")).get("results", [])
+        except Exception as e:
+            logger.debug("iTunes artist lookup error: %s", e)
+        return []
+
+    yt_suggestions: List[str] = []
+    itunes_artists_raw: List[Dict[str, Any]] = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        f_yt = pool.submit(fetch_yt, clean_q)
+        primary_itunes_term = alias_matches[0] if alias_matches else clean_q
+        f_it = pool.submit(fetch_itunes_artists, primary_itunes_term)
+
+        try:
+            yt_suggestions = f_yt.result()
+        except Exception:
+            yt_suggestions = []
+
+        try:
+            itunes_artists_raw = f_it.result()
+        except Exception:
+            itunes_artists_raw = []
+
+        # If top YouTube suggestion looks like an artist and differs from clean_q, check it
+        top_candidate = yt_suggestions[0] if yt_suggestions else None
+        if top_candidate and top_candidate.lower() != clean_q.lower() and len(top_candidate.split()) <= 3:
+            has_exact = any(clean_label_str(r.get("artistName", "")) == clean_label_str(top_candidate) for r in itunes_artists_raw)
+            if not has_exact:
+                try:
+                    f_top = pool.submit(fetch_itunes_artists, top_candidate)
+                    top_raw = f_top.result()
+                    if top_raw:
+                        itunes_artists_raw = top_raw + itunes_artists_raw
+                except Exception:
+                    pass
+
+    seen_ids = set()
+    cleaned_artists: List[Dict[str, Any]] = []
+    for r in itunes_artists_raw:
+        aid = r.get("artistId")
+        aname = r.get("artistName")
+        if not aid or not aname:
+            continue
+        aid_str = str(aid)
+        if aid_str in seen_ids:
+            continue
+        seen_ids.add(aid_str)
+        cleaned_artists.append({
+            "artist_id": aid_str,
+            "name": aname,
+            "genre": r.get("primaryGenreName") or "Artist",
+            "artist_url": r.get("artistLinkUrl") or "",
+        })
+
+    best_artist = None
+    for a in cleaned_artists:
+        anorm = clean_label_str(a["name"])
+        if alias_matches and any(clean_label_str(alias) == anorm for alias in alias_matches):
+            best_artist = a
+            break
+        if anorm == q_norm or anorm.startswith(q_norm) or q_norm in anorm:
+            best_artist = a
+            break
+        if yt_suggestions and anorm == clean_label_str(yt_suggestions[0]):
+            best_artist = a
+            break
+
+    top_artist = best_artist or (cleaned_artists[0] if cleaned_artists else None)
+
+    final_suggestions: List[str] = []
+    seen_sugg = set()
+    for s in yt_suggestions:
+        s_clean = s.strip()
+        s_low = s_clean.lower()
+        if s_clean and s_low not in seen_sugg:
+            seen_sugg.add(s_low)
+            final_suggestions.append(s_clean)
+        if len(final_suggestions) >= 8:
+            break
+
+    result_data = {
+        "query": clean_q,
+        "top_artist": top_artist,
+        "artists": cleaned_artists[:4],
+        "suggestions": final_suggestions
+    }
+
+    _LIVE_SUGGEST_CACHE[cache_key] = (now, result_data)
+    if len(_LIVE_SUGGEST_CACHE) > 500:
+        oldest_key = min(_LIVE_SUGGEST_CACHE.keys(), key=lambda k: _LIVE_SUGGEST_CACHE[k][0])
+        _LIVE_SUGGEST_CACHE.pop(oldest_key, None)
+
+    return result_data
+
 

@@ -760,6 +760,20 @@ async def preview(request: Request, url: str):
         logger.error("Preview error: %s", exc)
         raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
 
+@app.get("/api/suggest")
+@limiter.limit("180/minute")
+async def get_suggestions(request: Request, q: str = "", mode: str = "songs"):
+    """
+    Real-time autocomplete suggestions and instant artist recommendation.
+    Returns matching top artist entity and query suggestions.
+    """
+    clean_q = q.strip() if q else ""
+    if not clean_q:
+        return JSONResponse(content={"query": "", "top_artist": None, "artists": [], "suggestions": []})
+
+    data = await asyncio.to_thread(metadata_resolver.get_live_suggestions, clean_q, mode)
+    return JSONResponse(content=data)
+
 # ── Artist Discovery & Discography Endpoints ────────────────
 
 @app.get("/api/artist/search")
