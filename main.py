@@ -337,6 +337,10 @@ limiter = Limiter(key_func=get_client_ip, default_limits=["5000/day"])
 
 # ── Allowed Origins & Anti-Hotlinking ─────────────────────────
 DEFAULT_ALLOWED_ORIGINS = [
+    "https://melodyxx.eztec.biz.id",
+    "http://melodyxx.eztec.biz.id",
+    "https://www.melodyxx.eztec.biz.id",
+    "http://www.melodyxx.eztec.biz.id",
     "https://listennow.ifelz.my.id",
     "http://listennow.ifelz.my.id",
     "https://www.listennow.ifelz.my.id",

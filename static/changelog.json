@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.7.4",
+    "date": "2026-11-05",
+    "time": "12:35 WIB",
+    "type": "improvement",
+    "title": "Production Domain Migration (melodyxx.eztec.biz.id)",
+    "highlights": [
+      "Configured default allowed CORS origins for new production domain: https://melodyxx.eztec.biz.id.",
+      "Maintained backward compatibility with previous domain to prevent broken client requests.",
+      "Updated system documentation, environment references, and service worker cache layer."
+    ]
+  },
+  {
     "version": "v1.7.3",
     "date": "2026-11-05",
     "time": "11:58 WIB",

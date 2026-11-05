@@ -5,7 +5,7 @@
 
   <p>
     <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPL_v3-7c3aed.svg" alt="License: AGPL v3" /></a>
-    <a href="https://github.com/iFelzz/listen-now/releases"><img src="https://img.shields.io/badge/Version-1.7.3-a855f7.svg" alt="Version: 1.7.3" /></a>
+    <a href="https://github.com/iFelzz/listen-now/releases"><img src="https://img.shields.io/badge/Version-1.7.4-a855f7.svg" alt="Version: 1.7.4" /></a>
     <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11+-3776ab.svg" alt="Python: 3.11+" /></a>
     <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.111.0-009688.svg" alt="FastAPI" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-enabled-2496ED.svg" alt="Docker" /></a>
@@ -168,7 +168,7 @@ Environment variables can be configured in a `.env` file or passed through the c
 
 | Variable | Description | Default |
 |---|---|---|
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS domains | `https://listennow.ifelz.my.id,localhost` |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS domains | `https://melodyxx.eztec.biz.id,localhost` |
 | `ADMIN_KEY` | Admin authorization key for analytics resets and stats | `melodyxx-admin` |
 | `YTDLP_PROXY` | HTTP or SOCKS5 proxy URL for YouTube extraction requests | `None` |
 | `YTDLP_COOKIES_FILE` | Path to `cookies.txt` for YouTube authentication bypass | `None` |
