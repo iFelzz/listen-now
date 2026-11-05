@@ -159,6 +159,19 @@
         error: `<svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
         info: `<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
       };
+
+      // Prevent stacking duplicate or consecutive cooldown toasts
+      if ($toastWrap) {
+        const plainMsg = msg.replace(/<[^>]+>/g, '').trim();
+        const isCooldownMsg = plainMsg.includes('before submitting another report');
+        $toastWrap.querySelectorAll('.toast').forEach(t => {
+          const tText = t.innerText.trim();
+          if (tText === plainMsg || (isCooldownMsg && tText.includes('before submitting another report'))) {
+            t.remove();
+          }
+        });
+      }
+
       const el = document.createElement('div');
       el.className = `toast ${type}`;
       el.setAttribute('role', 'status');
@@ -2291,11 +2304,58 @@
     let selectedReportPreviewUrl = null;
     let isReportModalClosing = false;
     let isReportSubmitting = false;
+    let reportCooldownTimer = null;
 
     function formatFileSize(bytes) {
       if (!bytes || bytes === 0) return '0 B';
       if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
       return `${Math.round(bytes / 1024)} KB`;
+    }
+
+    function formatCooldownTime(totalSeconds) {
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      if (m > 0) {
+        return `${m}m ${s}s`;
+      }
+      return `${s}s`;
+    }
+
+    function getReportRemainingCooldownSec() {
+      const lastSent = parseInt(localStorage.getItem('melodyxx_last_report_ts') || '0', 10);
+      const now = Date.now();
+      const cooldownMs = 5 * 60 * 1000; // 5 minutes
+      const remainingSec = Math.ceil((cooldownMs - (now - lastSent)) / 1000);
+      return remainingSec > 0 ? remainingSec : 0;
+    }
+
+    function syncReportCooldownUI() {
+      const remainingSec = getReportRemainingCooldownSec();
+      const submitText = $btnReportSubmit ? $btnReportSubmit.querySelector('.submit-text') : null;
+
+      if (remainingSec > 0) {
+        const timeStr = formatCooldownTime(remainingSec);
+        if (submitText && !isReportSubmitting) {
+          submitText.textContent = `Wait ${timeStr}`;
+        }
+        if ($btnReportSubmit && !isReportSubmitting) {
+          $btnReportSubmit.title = `Cooldown active. Please wait ${timeStr}.`;
+        }
+        if (!reportCooldownTimer) {
+          reportCooldownTimer = setInterval(syncReportCooldownUI, 1000);
+        }
+      } else {
+        if (reportCooldownTimer) {
+          clearInterval(reportCooldownTimer);
+          reportCooldownTimer = null;
+        }
+        if (submitText && !isReportSubmitting) {
+          submitText.textContent = 'Send Report';
+        }
+        if ($btnReportSubmit && !isReportSubmitting) {
+          $btnReportSubmit.title = 'Send bug report or feedback';
+        }
+      }
     }
 
     function openBugReportModal() {
@@ -2306,7 +2366,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || 'v1.10.0';
+      const activeVer = currentAppVersion || 'v1.10.2';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagPlatform) {
         const platform = navigator.userAgentData?.platform || navigator.platform || 'Unknown';
@@ -2315,6 +2375,8 @@
       }
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
+
+      syncReportCooldownUI();
 
       setTimeout(() => {
         if ($reportName && !$reportName.value) {
@@ -2329,6 +2391,10 @@
       if (!$bugReportModal || isReportModalClosing || $bugReportModal.style.display === 'none') return;
       isReportModalClosing = true;
       $bugReportModal.classList.add('closing');
+      if (reportCooldownTimer) {
+        clearInterval(reportCooldownTimer);
+        reportCooldownTimer = null;
+      }
       setTimeout(() => {
         $bugReportModal.style.display = 'none';
         $bugReportModal.setAttribute('aria-hidden', 'true');
@@ -2455,13 +2521,11 @@
         if (isReportSubmitting) return;
 
         // Check local cooldown
-        const lastSent = parseInt(localStorage.getItem('melodyxx_last_report_ts') || '0', 10);
-        const now = Date.now();
-        const cooldownMs = 5 * 60 * 1000; // 5 minutes
-        if (now - lastSent < cooldownMs) {
-          const remainingSec = Math.ceil((cooldownMs - (now - lastSent)) / 1000);
-          const remainingMin = Math.ceil(remainingSec / 60);
-          toast('info', `Please wait ${remainingMin} minute(s) before submitting another report.`);
+        const remainingSec = getReportRemainingCooldownSec();
+        if (remainingSec > 0) {
+          const timeStr = formatCooldownTime(remainingSec);
+          toast('info', `Please wait <strong>${timeStr}</strong> before submitting another report.`);
+          syncReportCooldownUI();
           return;
         }
 
@@ -2510,6 +2574,7 @@
 
           toast('success', 'Thank you! Your report has been submitted.');
           localStorage.setItem('melodyxx_last_report_ts', String(Date.now()));
+          syncReportCooldownUI();
 
           // Reset form
           $reportForm.reset();

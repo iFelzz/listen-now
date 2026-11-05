@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.10.2",
+    "date": "2026-11-05",
+    "time": "14:14 WIB",
+    "type": "improvement",
+    "title": "Precise Cooldown Timer with Seconds Display & Toast Deduplication",
+    "highlights": [
+      "Enhanced the report cooldown notification to display precise minutes and seconds (e.g. 1m 24s, 45s).",
+      "Added real-time live cooldown countdown ticking directly on the report modal submit button.",
+      "Prevented stacking duplicate cooldown toasts when clicking submit multiple times."
+    ]
+  },
+  {
     "version": "v1.10.1",
     "date": "2026-11-05",
     "time": "14:08 WIB",
