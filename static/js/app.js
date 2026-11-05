@@ -2557,6 +2557,111 @@
       }
     }
 
+    let cachedPlatformSummary = '';
+
+    async function getDetailedPlatformInfo() {
+      if (cachedPlatformSummary) return cachedPlatformSummary;
+      const ua = navigator.userAgent || '';
+      let os = 'Unknown OS';
+      let browser = 'Unknown Browser';
+
+      // 1. Detect OS
+      const hasUaData = Boolean(navigator.userAgentData && navigator.userAgentData.platform);
+      const platformHint = hasUaData ? navigator.userAgentData.platform : (navigator.platform || '');
+
+      if (/Windows/i.test(platformHint) || /Windows/i.test(ua)) {
+        os = 'Windows';
+        if (navigator.userAgentData?.getHighEntropyValues) {
+          try {
+            const hints = await navigator.userAgentData.getHighEntropyValues(['platformVersion']);
+            const major = parseInt((hints.platformVersion || '').split('.')[0], 10);
+            if (major >= 13) {
+              os = 'Windows 11';
+            } else if (major >= 1) {
+              os = 'Windows 10';
+            }
+          } catch (_) {}
+        }
+        if (os === 'Windows') {
+          if (/Windows NT 10\.0/i.test(ua)) {
+            os = 'Windows 10/11';
+          } else if (/Windows NT 6\.3/i.test(ua)) {
+            os = 'Windows 8.1';
+          } else if (/Windows NT 6\.2/i.test(ua)) {
+            os = 'Windows 8';
+          } else if (/Windows NT 6\.1/i.test(ua)) {
+            os = 'Windows 7';
+          } else if (/Windows NT 6\.0/i.test(ua)) {
+            os = 'Windows Vista';
+          } else if (/Windows NT 5\.1/i.test(ua)) {
+            os = 'Windows XP';
+          }
+        }
+      } else if (/Mac|iPhone|iPad|iPod/i.test(platformHint) || /Macintosh|iPhone|iPad|iPod/i.test(ua)) {
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+          const match = ua.match(/OS (\d+[_\.]\d+)/i);
+          os = match ? `iOS ${match[1].replace(/_/g, '.')}` : 'iOS';
+        } else {
+          const match = ua.match(/Mac OS X (\d+[_\.]\d+)/i);
+          os = match ? `macOS ${match[1].replace(/_/g, '.')}` : 'macOS';
+        }
+      } else if (/Android/i.test(platformHint) || /Android/i.test(ua)) {
+        const match = ua.match(/Android (\d+(\.\d+)?)/i);
+        os = match ? `Android ${match[1]}` : 'Android';
+      } else if (/Linux/i.test(platformHint) || /Linux/i.test(ua)) {
+        os = 'Linux';
+      } else if (platformHint) {
+        os = platformHint;
+      }
+
+      // 2. Detect Browser
+      let isBrave = false;
+      if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+        try {
+          isBrave = await navigator.brave.isBrave();
+        } catch (_) {}
+      }
+
+      if (isBrave) {
+        const match = ua.match(/Chrome\/(\d+)/i);
+        browser = match ? `Brave ${match[1]}` : 'Brave';
+      } else if (/Edg(?:e|A|iOS)?\/(\d+)/i.test(ua)) {
+        const match = ua.match(/Edg(?:e|A|iOS)?\/(\d+)/i);
+        browser = `Edge ${match[1]}`;
+      } else if (/OPR\/(\d+)/i.test(ua)) {
+        const match = ua.match(/OPR\/(\d+)/i);
+        browser = `Opera ${match[1]}`;
+      } else if (/Vivaldi\/(\d+)/i.test(ua)) {
+        const match = ua.match(/Vivaldi\/(\d+)/i);
+        browser = `Vivaldi ${match[1]}`;
+      } else if (/SamsungBrowser\/(\d+)/i.test(ua)) {
+        const match = ua.match(/SamsungBrowser\/(\d+)/i);
+        browser = `Samsung Internet ${match[1]}`;
+      } else if (/Firefox\/(\d+)/i.test(ua) || /FxiOS\/(\d+)/i.test(ua)) {
+        const match = ua.match(/(?:Firefox|FxiOS)\/(\d+)/i);
+        browser = `Firefox ${match[1]}`;
+      } else if (/Chrome\/(\d+)/i.test(ua) || /CriOS\/(\d+)/i.test(ua)) {
+        const match = ua.match(/(?:Chrome|CriOS)\/(\d+)/i);
+        browser = `Chrome ${match[1]}`;
+      } else if (/Version\/(\d+).*Safari/i.test(ua)) {
+        const match = ua.match(/Version\/(\d+).*Safari/i);
+        browser = `Safari ${match[1]}`;
+      } else if (navigator.userAgentData?.brands?.length) {
+        const validBrand = navigator.userAgentData.brands.find(b => !/Not[\s_]?A|Chromium/i.test(b.brand));
+        if (validBrand) {
+          browser = `${validBrand.brand} ${validBrand.version}`;
+        }
+      }
+
+      cachedPlatformSummary = `${os} • ${browser}`;
+      return cachedPlatformSummary;
+    }
+
+    // Eagerly resolve platform diagnostics in background
+    try {
+      getDetailedPlatformInfo();
+    } catch (_) {}
+
     function openBugReportModal() {
       if (!$bugReportModal) return;
       $bugReportModal.classList.remove('closing');
@@ -2565,15 +2670,23 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || 'v1.10.2';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.2';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
-      if ($diagPlatform) {
-        const platform = navigator.userAgentData?.platform || navigator.platform || 'Unknown';
-        const browser = navigator.userAgent.split(' ')[0] || 'Browser';
-        $diagPlatform.textContent = `${platform} • ${browser}`;
-      }
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
+
+      if ($diagPlatform) {
+        if (cachedPlatformSummary) {
+          $diagPlatform.textContent = cachedPlatformSummary;
+        } else {
+          $diagPlatform.textContent = 'Detecting…';
+          getDetailedPlatformInfo().then(summary => {
+            if ($diagPlatform) $diagPlatform.textContent = summary;
+          }).catch(() => {
+            if ($diagPlatform) $diagPlatform.textContent = `${navigator.platform || 'Unknown'} • Browser`;
+          });
+        }
+      }
 
       syncReportCooldownUI();
 
@@ -2814,10 +2927,11 @@
           formData.append('category', $reportCategory?.value || 'Bug / Error');
           formData.append('description', desc);
           formData.append('company_website', document.getElementById('report-hp-field')?.value || '');
-          formData.append('platform_info', `${navigator.userAgentData?.platform || navigator.platform || 'Unknown'} • ${navigator.userAgent || 'Browser'}`);
+          const platformInfo = cachedPlatformSummary || await getDetailedPlatformInfo().catch(() => `${navigator.platform || 'Unknown'} • Browser`);
+          formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || 'v1.10.0');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.2');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);
