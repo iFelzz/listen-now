@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.7.6",
+    "date": "2026-11-05",
+    "time": "12:52 WIB",
+    "type": "fix",
+    "title": "Fix Floating Volume Control & Release Log Button Overlap",
+    "highlights": [
+      "Resolved collision where floating audio volume control slider rendered directly on top of the release log button.",
+      "Re-aligned volume control horizontally to the left of the release log button with harmonious vertical centering.",
+      "Configured synchronized vertical shifts when now-playing mini player opens to keep all bottom widgets collision-free.",
+      "Optimized compact sizing and spacing for mobile viewports."
+    ]
+  },
+  {
     "version": "v1.7.5",
     "date": "2026-11-05",
     "time": "12:48 WIB",

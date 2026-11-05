@@ -1252,21 +1252,23 @@
     ═══════════════════════════════════════════════════ */
     .volume-control {
       position: fixed;
-      bottom: 64px;
-      right: 24px;
+      bottom: 27px;
+      right: 84px;
       background: rgba(15, 15, 25, 0.95);
       border: 1px solid rgba(124, 58, 237, 0.3);
-      padding: 12px 18px;
+      padding: 10px 16px;
       border-radius: 999px;
       display: flex;
       align-items: center;
       gap: 12px;
-      z-index: 1000;
+      z-index: 950;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
       transform: translateY(100px);
       opacity: 0;
       pointer-events: none;
-      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 0.25s ease, right 0.25s ease;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     .volume-control.show {
@@ -1300,9 +1302,12 @@
       transform: scale(1.2);
     }
 
-    /* volume control shifts up when mini player is visible */
-    .volume-control.player-open {
-      bottom: 128px;
+    /* volume control shifts up and stays side-by-side with release log button when mini player is visible */
+    .volume-control.player-open,
+    body.player-open .volume-control,
+    body:has(#mini-player.show) .volume-control {
+      bottom: 119px;
+      right: 84px;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -2485,7 +2490,7 @@ body:has(#mini-player.show) .batch-action-bar {
 
 body.player-open .batch-progress-widget,
 body:has(#mini-player.show) .batch-progress-widget {
-  bottom: 120px;
+  bottom: 176px;
 }
 
 .batch-progress-header {
@@ -3194,6 +3199,25 @@ body:has(#mini-player.show) .btn-release-log {
   body:has(#mini-player.show) .btn-release-log {
     bottom: 74px;
     right: 18px;
+  }
+  .volume-control {
+    bottom: 21px;
+    right: 70px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .volume-control input[type=range] {
+    width: 72px;
+  }
+  .volume-control.player-open,
+  body.player-open .volume-control,
+  body:has(#mini-player.show) .volume-control {
+    bottom: 75px;
+    right: 70px;
+  }
+  body.player-open .batch-progress-widget,
+  body:has(#mini-player.show) .batch-progress-widget {
+    bottom: 130px;
   }
   .release-modal-card {
     max-height: 90vh;
