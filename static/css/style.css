@@ -2813,6 +2813,39 @@ body:has(#mini-player.show) .batch-progress-widget {
   max-width: 90vw;
 }
 
+/* Reconnected Toast Banner */
+.reconnect-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1150;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16, 28, 24, 0.96);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(52, 211, 153, 0.3);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 10px 20px;
+  border-radius: 999px;
+  animation: slideDownUpdate 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reconnect-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #34d399;
+}
+
+.reconnect-banner-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f0fdf4;
+}
+
 @keyframes slideDownUpdate {
   from {
     opacity: 0;

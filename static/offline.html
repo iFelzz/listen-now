@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Melodyxx — Server Starting</title>
+  <link rel="icon" type="image/png" href="/static/logo.png?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #08060f;
+      color: #f8fafc;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, rgba(124, 58, 237, 0.22) 0%, rgba(10, 6, 20, 0.95) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(18, 12, 32, 0.85);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 24px;
+      padding: 44px 32px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 32px rgba(124, 58, 237, 0.25);
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .icon-wrap {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      border-radius: 20px;
+      background: rgba(124, 58, 237, 0.16);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #c084fc;
+      box-shadow: 0 0 24px rgba(168, 85, 247, 0.3);
+      position: relative;
+    }
+    .spinner {
+      position: absolute;
+      inset: -4px;
+      border-radius: 24px;
+      border: 2px solid transparent;
+      border-top-color: #a855f7;
+      border-right-color: #38bdf8;
+      animation: spin 1.2s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -0.015em;
+    }
+    .desc {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.55;
+      margin-bottom: 24px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(124, 58, 237, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #e0e7ff;
+      margin-bottom: 20px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fbbf24;
+      box-shadow: 0 0 10px #fbbf24;
+      animation: pulse 1.4s infinite ease-in-out;
+    }
+    .pulse-dot.online {
+      background: #34d399;
+      box-shadow: 0 0 10px #34d399;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .countdown-text {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 14px;
+    }
+    .btn-manual-refresh {
+      background: linear-gradient(135deg, #7c3aed, #9333ea);
+      color: #ffffff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+    }
+    .btn-manual-refresh:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+
+  <div class="card">
+    <div class="icon-wrap">
+      <div class="spinner"></div>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+    </div>
+
+    <div class="status-badge" id="status-badge">
+      <span class="pulse-dot" id="status-dot"></span>
+      <span id="status-text">Container Starting…</span>
+    </div>
+
+    <h1 class="title" id="page-title">Service Reconnecting</h1>
+    <p class="desc" id="page-desc">
+      Melodyxx is updating or starting in Portainer. We'll automatically bring you back the moment it's online!
+    </p>
+
+    <button type="button" class="btn-manual-refresh" id="btn-refresh" onclick="checkServer()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      <span>Retry Now</span>
+    </button>
+
+    <div class="countdown-text" id="countdown-text">Auto-checking every 3s…</div>
+  </div>
+
+  <script>
+    let isReconnecting = false;
+
+    async function checkServer() {
+      if (isReconnecting) return;
+      try {
+        const res = await fetch('/api/health?_t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          isReconnecting = true;
+          const badge = document.getElementById('status-badge');
+          const dot = document.getElementById('status-dot');
+          const text = document.getElementById('status-text');
+          const title = document.getElementById('page-title');
+          const desc = document.getElementById('page-desc');
+
+          if (dot) dot.classList.add('online');
+          if (text) text.textContent = 'Connected!';
+          if (title) title.textContent = 'Connected!';
+          if (desc) desc.textContent = 'Server is back online. Returning to Melodyxx…';
+
+          sessionStorage.setItem('melodyxx_just_reconnected', 'true');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 800);
+        }
+      } catch (_) {
+        // Still starting, keep polling
+      }
+    }
+
+    // Poll every 3 seconds
+    setInterval(checkServer, 3000);
+    // Immediate check
+    setTimeout(checkServer, 1000);
+  </script>
+</body>
+</html>

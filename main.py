@@ -506,6 +506,15 @@ async def root():
         raise HTTPException(status_code=404, detail="Frontend not found.")
     return FileResponse(str(index_path))
 
+@app.get("/offline", include_in_schema=False)
+@app.get("/offline.html", include_in_schema=False)
+async def offline():
+    """Serve standalone custom offline and container-starting page."""
+    offline_path = STATIC_DIR / "offline.html"
+    if not offline_path.exists():
+        raise HTTPException(status_code=404, detail="Offline page not found.")
+    return FileResponse(str(offline_path))
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Serve favicon with no-cache headers."""

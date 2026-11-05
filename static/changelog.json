@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.14.0",
+    "date": "2026-11-05",
+    "time": "23:48 UTC",
+    "type": "feature",
+    "title": "Custom Offline Fallback & Auto-Reconnect Recovery Suite",
+    "highlights": [
+      "Built dedicated glassmorphic offline recovery page (/offline.html) with animated pulsing status indicators.",
+      "Configured Service Worker to catch 502 Bad Gateway responses from upstream proxies during container restarts and serve the friendly offline interface.",
+      "Implemented automatic 3-second background polling that auto-refreshes the page and presents a clean 'Connected!' banner once the container is healthy."
+    ]
+  },
+  {
     "version": "v1.13.1",
     "date": "2026-11-05",
     "time": "23:37 UTC",

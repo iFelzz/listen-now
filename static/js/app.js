@@ -2165,6 +2165,26 @@
           }
         }, 600);
       }
+
+      // Check if reconnected after container restart / offline
+      try {
+        if (sessionStorage.getItem('melodyxx_just_reconnected') === 'true') {
+          sessionStorage.removeItem('melodyxx_just_reconnected');
+          const $reconnectBanner = document.getElementById('reconnect-banner');
+          if ($reconnectBanner) {
+            $reconnectBanner.style.display = 'flex';
+            setTimeout(() => {
+              $reconnectBanner.style.animation = 'slideDownUpdate 0.3s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
+              setTimeout(() => {
+                $reconnectBanner.style.display = 'none';
+                $reconnectBanner.style.animation = '';
+              }, 300);
+            }, 3500);
+          } else {
+            toast('success', `Connected! You're back online.`, 3500);
+          }
+        }
+      } catch (_) {}
     }
 
     // ── Release Log & What's New Drawer ────────────────────────

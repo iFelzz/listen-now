@@ -6,13 +6,14 @@
  *   - Static Assets (CSS, JS, images): Stale-while-revalidate
  */
 
-const CACHE_NAME = 'melodyxx-v70';
+const CACHE_NAME = 'melodyxx-v71';
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
   '/static/js/app.js',
   '/static/logo.png',
   '/static/manifest.json',
+  '/static/offline.html',
 ];
 
 // ── Skip waiting on explicit client message ───────────────────
@@ -60,18 +61,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation / HTML pages: Network-first, fallback to cache
+  // 2. Navigation / HTML pages: Network-first, fallback to cache (or custom offline page)
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          // If server returned 5xx (502 Bad Gateway from Cloudflare, 503, 504), use cached shell
+          if (response && response.status >= 500) {
+            return caches.match(event.request).then((cached) => {
+              if (cached) return cached;
+              return caches.match('/static/offline.html').then((offlinePage) => offlinePage || response);
+            });
+          }
           if (response && response.status === 200) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => {
+          // Network completely unreachable (container starting / offline)
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return caches.match('/static/offline.html');
+          });
+        })
     );
     return;
   }
