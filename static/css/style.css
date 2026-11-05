@@ -3560,8 +3560,20 @@ body:has(#mini-player.show) .btn-release-log {
 
 .seo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .seo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .seo-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .seo-card {
