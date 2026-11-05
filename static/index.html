@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.4.6" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.5.0" />
 </head>
 
 <body>
@@ -191,7 +191,27 @@
               <span class="results-count" id="artist-results-count">0 artists</span>
             </div>
           </div>
+
+          <!-- Did you mean / Suggestion chips -->
+          <div id="artist-suggestions-bar" class="artist-suggestions-bar" style="display: none;">
+            <div class="suggestion-label-wrap">
+              <svg class="suggestion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>Did you mean:</span>
+            </div>
+            <div id="artist-suggestion-chips" class="suggestion-chips" role="group" aria-label="Suggested artists"></div>
+          </div>
+
           <div class="artist-results-grid" id="artist-results-grid"></div>
+
+          <!-- Load More Button -->
+          <div class="artist-load-more-wrap" id="artist-load-more-wrap" style="display: none;">
+            <button type="button" class="btn-load-more-artists" id="btn-load-more-artists" aria-label="Load more artists">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              <span id="btn-load-more-artists-label">Load More Artists</span>
+            </button>
+          </div>
         </section>
 
         <!-- Artist Discography View -->
@@ -385,7 +405,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.4.6" defer></script>
+  <script src="/static/js/app.js?v=1.5.0" defer></script>
 </body>
 
 </html>

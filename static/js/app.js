@@ -30,6 +30,11 @@
     const $artistSearchResults = document.getElementById('artist-search-results');
     const $artistResultsGrid = document.getElementById('artist-results-grid');
     const $artistResultsCount = document.getElementById('artist-results-count');
+    const $artistSuggestionsBar = document.getElementById('artist-suggestions-bar');
+    const $artistSuggestionChips = document.getElementById('artist-suggestion-chips');
+    const $artistLoadMoreWrap = document.getElementById('artist-load-more-wrap');
+    const $btnLoadMoreArtists = document.getElementById('btn-load-more-artists');
+    const $btnLoadMoreArtistsLabel = document.getElementById('btn-load-more-artists-label');
 
     // Artist Discography DOM refs
     const $artistView = document.getElementById('artist-view');
@@ -86,6 +91,9 @@
     let isBatchDownloading = false;
     let cancelBatchDownload = false;
     let lastArtistSearchResults = [];
+    let lastArtistSuggestions = [];
+    let displayedArtistCount = 0;
+    const ARTIST_BATCH_SIZE = 12;
     let currentDiscography = null;
 
     // ── Helpers ───────────────────────────────────────────────
@@ -419,7 +427,12 @@
         if (currentDiscography) {
           showState('artist-view');
         } else if (lastArtistSearchResults && lastArtistSearchResults.length > 0) {
-          renderArtistResults(lastArtistSearchResults);
+          renderArtistSuggestions(lastArtistSuggestions);
+          if ($artistResultsGrid.children.length === 0) {
+            renderArtistResults(lastArtistSearchResults, true);
+          } else {
+            showState('artists');
+          }
         } else {
           showState('empty');
         }
@@ -479,19 +492,22 @@
       $searchBtn.disabled = true;
 
       try {
-        const res = await fetch(`/api/artist/search?q=${encodeURIComponent(query)}&limit=12`);
+        const res = await fetch(`/api/artist/search?q=${encodeURIComponent(query)}&limit=48`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
 
         const artists = data.results || [];
+        const suggestions = data.suggestions || [];
         lastArtistSearchResults = artists;
+        lastArtistSuggestions = suggestions;
 
         if (artists.length === 0) {
           showState('no-results');
           return;
         }
 
-        renderArtistResults(artists);
+        renderArtistSuggestions(suggestions);
+        renderArtistResults(artists, true);
       } catch (err) {
         console.error('[Artist Search Error]', err);
         $errorMsg.textContent = err.message || 'Failed to search artists. Please try again.';
@@ -501,11 +517,52 @@
       }
     }
 
+    function renderArtistSuggestions(suggestions) {
+      if (!$artistSuggestionsBar || !$artistSuggestionChips) return;
+      if (!suggestions || suggestions.length === 0) {
+        $artistSuggestionsBar.style.display = 'none';
+        $artistSuggestionChips.innerHTML = '';
+        return;
+      }
+
+      $artistSuggestionsBar.style.display = 'flex';
+      $artistSuggestionChips.innerHTML = suggestions.map(s => `
+        <button type="button" class="suggestion-chip" data-query="${esc(s)}" aria-label="Search suggested artist ${esc(s)}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>${esc(s)}</span>
+        </button>
+      `).join('');
+
+      $artistSuggestionChips.querySelectorAll('.suggestion-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const q = chip.dataset.query;
+          if (q) {
+            $searchInput.value = q;
+            if (typeof updateSearchClearBtn === 'function') updateSearchClearBtn();
+            performArtistSearch(q);
+          }
+        });
+      });
+    }
+
     const ARTIST_PLACEHOLDER_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`;
 
-    function renderArtistResults(artists) {
-      $artistResultsCount.textContent = `${artists.length} artist${artists.length === 1 ? '' : 's'} found`;
-      $artistResultsGrid.innerHTML = artists.map(art => {
+    function renderArtistResults(artists, reset = true) {
+      if (reset) {
+        displayedArtistCount = 0;
+        $artistResultsGrid.innerHTML = '';
+      }
+
+      appendArtistBatch(ARTIST_BATCH_SIZE);
+      showState('artists');
+    }
+
+    function appendArtistBatch(count = ARTIST_BATCH_SIZE) {
+      const total = lastArtistSearchResults.length;
+      const nextBatch = lastArtistSearchResults.slice(displayedArtistCount, displayedArtistCount + count);
+      if (nextBatch.length === 0) return;
+
+      const html = nextBatch.map(art => {
         const countryLabel = art.country
           ? `<span class="artist-card-country" title="${esc(art.country)}">${art.flag ? `${esc(art.flag)} ` : ''}${esc(art.country)}</span>`
           : '';
@@ -529,13 +586,39 @@
         `;
       }).join('');
 
-      $artistResultsGrid.querySelectorAll('.artist-card').forEach(card => {
+      $artistResultsGrid.insertAdjacentHTML('beforeend', html);
+      displayedArtistCount += nextBatch.length;
+
+      // Attach click listeners to newly appended cards
+      $artistResultsGrid.querySelectorAll('.artist-card:not([data-bound])').forEach(card => {
+        card.setAttribute('data-bound', 'true');
         card.addEventListener('click', () => {
           loadArtistDiscography(card.dataset.artistId);
         });
       });
 
-      showState('artists');
+      // Update count & load more button
+      if (total > displayedArtistCount) {
+        $artistResultsCount.textContent = `Showing ${displayedArtistCount} of ${total} artists found`;
+        if ($artistLoadMoreWrap) {
+          $artistLoadMoreWrap.style.display = 'flex';
+          const remaining = total - displayedArtistCount;
+          if ($btnLoadMoreArtistsLabel) {
+            $btnLoadMoreArtistsLabel.textContent = `Load More Artists (+${Math.min(count, remaining)})`;
+          }
+        }
+      } else {
+        $artistResultsCount.textContent = `${total} artist${total === 1 ? '' : 's'} found`;
+        if ($artistLoadMoreWrap) {
+          $artistLoadMoreWrap.style.display = 'none';
+        }
+      }
+    }
+
+    if ($btnLoadMoreArtists) {
+      $btnLoadMoreArtists.addEventListener('click', () => {
+        appendArtistBatch(ARTIST_BATCH_SIZE);
+      });
     }
 
     async function loadArtistDiscography(artistId) {
@@ -564,7 +647,8 @@
       $btnBackArtist.addEventListener('click', () => {
         currentDiscography = null;
         if (lastArtistSearchResults && lastArtistSearchResults.length > 0) {
-          renderArtistResults(lastArtistSearchResults);
+          renderArtistSuggestions(lastArtistSuggestions);
+          showState('artists');
         } else if (allSearchResults.length > 0) {
           searchMode = 'songs';
           $tabModeSongs.classList.add('active');

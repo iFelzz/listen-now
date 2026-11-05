@@ -14,7 +14,7 @@ import logging
 import urllib.parse
 import urllib.request
 import concurrent.futures
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, List, Set
 
 logger = logging.getLogger(__name__)
 
@@ -439,83 +439,204 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
         "flag": flag or "",
     }
 
-def search_artists(query: str, limit: int = 10) -> list:
+# Common artist acronyms, aliases & nicknames for flexible search
+ARTIST_ALIASES: Dict[str, List[str]] = {
+    "h2h": ["Hearts2Hearts", "Heart2Heart", "Heart to Heart"],
+    "hearts2hearts": ["Hearts2Hearts"],
+    "bmth": ["Bring Me The Horizon"],
+    "rhcp": ["Red Hot Chili Peppers"],
+    "bep": ["Black Eyed Peas"],
+    "snsd": ["Girls' Generation"],
+    "gidle": ["(G)I-DLE"],
+    "(g)i-dle": ["(G)I-DLE"],
+    "g-idle": ["(G)I-DLE"],
+    "mcr": ["My Chemical Romance"],
+    "lp": ["Linkin Park"],
+    "soad": ["System of a Down"],
+    "fob": ["Fall Out Boy"],
+    "foa": ["Fall Out Boy"],
+    "ftp": ["Foster the People"],
+    "top": ["Twenty One Pilots"],
+    "t-o-p": ["Twenty One Pilots"],
+    "cas": ["Cigarettes After Sex"],
+    "casi": ["Cigarettes After Sex"],
+    "akb": ["AKB48"],
+    "akb48": ["AKB48"],
+    "jkt": ["JKT48"],
+    "jkt48": ["JKT48"],
+    "bts": ["BTS"],
+    "txt": ["TOMORROW X TOGETHER"],
+    "svt": ["SEVENTEEN"],
+    "skz": ["Stray Kids"],
+    "nj": ["NewJeans"],
+    "nwjns": ["NewJeans"],
+    "lsf": ["LE SSERAFIM"],
+    "lesserafim": ["LE SSERAFIM"],
+    "rv": ["Red Velvet"],
+    "bp": ["BLACKPINK"],
+    "exo": ["EXO"],
+    "nct": ["NCT", "NCT 127", "NCT DREAM"],
+    "tbz": ["THE BOYZ"],
+    "enhypen": ["ENHYPEN"],
+    "mgk": ["Machine Gun Kelly"],
+    "asap": ["A$AP Rocky", "A$AP Mob"],
+    "a$ap": ["A$AP Rocky"],
+    "ccr": ["Creedence Clearwater Revival"],
+    "elo": ["Electric Light Orchestra"],
+    "boc": ["Boards of Canada"],
+    "tame": ["Tame Impala"],
+    "posty": ["Post Malone"],
+    "weeknd": ["The Weeknd"],
+    "panic": ["Panic! At The Disco"],
+    "patd": ["Panic! At The Disco"],
+    "gorillaz": ["Gorillaz"],
+    "daft": ["Daft Punk"],
+    "chainsmokers": ["The Chainsmokers"],
+    "dua": ["Dua Lipa"],
+    "charli": ["Charli xcx"],
+    "lana": ["Lana Del Rey"],
+    "ariana": ["Ariana Grande"],
+    "taylor": ["Taylor Swift"],
+    "sabrina": ["Sabrina Carpenter"],
+    "chappell": ["Chappell Roan"],
+    "olivia": ["Olivia Rodrigo"],
+    "billie": ["Billie Eilish"],
+}
+
+def get_artist_acronyms(name: str) -> Set[str]:
+    """Extract possible acronyms/initialisms from artist name."""
+    acrs = set()
+    norm = name.strip()
+    # 1. CamelCase & alphanumeric tokens: e.g. Hearts2Hearts -> ['Hearts', '2', 'Hearts']
+    tokens = re.findall(r'[A-Z]+[a-z]*|[0-9]+|[a-z]+', norm)
+    if len(tokens) > 1:
+        acrs.add(''.join(t[0].lower() if not t.isdigit() else t for t in tokens))
+        letters_only = ''.join(t[0].lower() for t in tokens if not t.isdigit())
+        if len(letters_only) > 1:
+            acrs.add(letters_only)
+    # 2. Word tokens separated by spaces or punctuation: e.g. Bring Me The Horizon -> bmth
+    words = [w for w in re.split(r'[\s\-_\.:;/\(\)&+]+', norm) if w]
+    if len(words) > 1:
+        acrs.add(''.join(w[0].lower() for w in words))
+        sig = [w for w in words if w.lower() not in {"the", "of", "and", "a", "an", "in", "on", "at", "to", "for"}]
+        if len(sig) > 1:
+            acrs.add(''.join(w[0].lower() for w in sig))
+    return acrs
+
+def search_artists(query: str, limit: int = 24) -> dict:
     """
-    Search artists via iTunes Search API and enrich with photos & country.
-    Deduplicates identical artist names (keeping the top-ranked verified artist)
-    and sorts exact/strong keyword matches first.
+    Search artists via iTunes Search API with intelligent acronym/alias expansion,
+    multi-query parallel search, and enriched portrait photos & nationality.
+    Returns: {"results": [...], "suggestions": [...], "total": int}
     """
     clean_q = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", query).strip()
     if not clean_q:
+        return {"results": [], "suggestions": [], "total": 0}
+
+    q_norm = clean_label_str(clean_q)
+
+    # Gather search terms: primary query + any registered aliases
+    search_terms = [clean_q]
+    matched_aliases = ARTIST_ALIASES.get(q_norm, [])
+    for alias in matched_aliases:
+        if alias.lower() != clean_q.lower() and alias not in search_terms:
+            search_terms.append(alias)
+
+    def fetch_term(term: str) -> list:
+        try:
+            encoded = urllib.parse.quote_plus(term[:60])
+            url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(25, limit * 2), 50)}"
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=3.5) as resp:
+                if resp.status == 200:
+                    return json.loads(resp.read().decode("utf-8")).get("results", [])
+        except Exception as e:
+            logger.debug("iTunes search error for '%s': %s", term, e)
         return []
-    encoded = urllib.parse.quote_plus(clean_q[:60])
-    url = f"https://itunes.apple.com/search?term={encoded}&entity=musicArtist&limit={min(max(20, limit * 3), 50)}"
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
-            if resp.status != 200:
-                return []
-            data = json.loads(resp.read().decode("utf-8"))
-            
-            seen_names = set()
-            exact_matches = []
-            partial_matches = []
-            other_matches = []
-            
-            q_norm = clean_label_str(clean_q)
 
-            for r in data.get("results", []):
-                aid = r.get("artistId")
-                name = r.get("artistName")
-                if not aid or not name:
-                    continue
+    raw_results = []
+    if len(search_terms) == 1:
+        raw_results = fetch_term(search_terms[0])
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(search_terms), 4)) as pool:
+            for term_res in pool.map(fetch_term, search_terms):
+                raw_results.extend(term_res)
 
-                norm_name = clean_label_str(name)
-                # Deduplicate identical names (Apple ranks results by global popularity,
-                # so the first occurrence is always the verified / primary artist)
-                if norm_name in seen_names:
-                    continue
-                seen_names.add(norm_name)
+    seen_ids = set()
+    seen_names = set()
+    exact_matches = []
+    alias_acronym_matches = []
+    partial_matches = []
+    other_matches = []
 
-                item = {
-                    "artist_id": str(aid),
-                    "name": name,
-                    "genre": r.get("primaryGenreName") or "Music",
-                    "artist_url": r.get("artistLinkUrl") or "",
-                }
+    alias_norms = {clean_label_str(a) for a in matched_aliases}
 
-                if norm_name == q_norm:
-                    exact_matches.append(item)
-                elif q_norm in norm_name or norm_name in q_norm:
-                    partial_matches.append(item)
-                else:
-                    other_matches.append(item)
+    for r in raw_results:
+        aid = r.get("artistId")
+        name = r.get("artistName")
+        if not aid or not name:
+            continue
 
-            # Prioritize exact and partial matches, discarding unrelated noise
-            if exact_matches or partial_matches:
-                combined = exact_matches + partial_matches
-            else:
-                combined = other_matches
+        aid_str = str(aid)
+        norm_name = clean_label_str(name)
 
-            final_results = combined[:limit]
+        if aid_str in seen_ids or norm_name in seen_names:
+            continue
+        seen_ids.add(aid_str)
+        seen_names.add(norm_name)
 
-            # Enrich artists concurrently with high-res portrait photos & country
-            if final_results:
-                try:
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(final_results), 8)) as executor:
-                        extras_list = list(executor.map(lambda it: resolve_artist_extras(it["name"], it.get("artist_id", ""), it.get("genre", "")), final_results))
-                        for item, extras in zip(final_results, extras_list):
-                            item.update(extras)
-                except Exception as enrich_err:
-                    logger.warning("Artist extras enrichment error: %s", enrich_err)
+        item = {
+            "artist_id": aid_str,
+            "name": name,
+            "genre": r.get("primaryGenreName") or "Music",
+            "artist_url": r.get("artistLinkUrl") or "",
+        }
 
-            return final_results
-    except Exception as exc:
-        logger.warning("Artist search error for '%s': %s", query, exc)
-        return []
+        artist_acrs = get_artist_acronyms(name)
+
+        if norm_name == q_norm:
+            exact_matches.append(item)
+        elif norm_name in alias_norms or q_norm in artist_acrs:
+            alias_acronym_matches.append(item)
+        elif q_norm in norm_name or norm_name in q_norm:
+            partial_matches.append(item)
+        else:
+            other_matches.append(item)
+
+    # Combine prioritizing matches without discarding Apple's relevant results
+    combined = exact_matches + alias_acronym_matches + partial_matches + other_matches
+    final_results = combined[:limit]
+
+    # Collect smart suggestions ("Did you mean?")
+    suggestions = []
+    for a in matched_aliases:
+        if a.lower() != clean_q.lower() and a not in suggestions:
+            suggestions.append(a)
+    for it in alias_acronym_matches:
+        if it["name"] not in suggestions and it["name"].lower() != clean_q.lower():
+            suggestions.append(it["name"])
+
+    # Enrich artists concurrently with high-res portrait photos & country
+    if final_results:
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(final_results), 12)) as executor:
+                extras_list = list(executor.map(
+                    lambda it: resolve_artist_extras(it["name"], it.get("artist_id", ""), it.get("genre", "")),
+                    final_results
+                ))
+                for item, extras in zip(final_results, extras_list):
+                    item.update(extras)
+        except Exception as enrich_err:
+            logger.warning("Artist extras enrichment error: %s", enrich_err)
+
+    return {
+        "results": final_results,
+        "suggestions": suggestions[:4],
+        "total": len(final_results)
+    }
 
 def normalize_track_key(title: str) -> str:
     """Normalize song title for deduplication while preserving distinct variations (remix, acoustic, live, etc.)."""

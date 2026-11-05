@@ -753,22 +753,22 @@ async def preview(request: Request, url: str):
 
 @app.get("/api/artist/search")
 @limiter.limit("40/minute")
-async def search_artist(request: Request, q: str, limit: int = 10):
-    """Search music artists via iTunes API."""
+async def search_artist(request: Request, q: str, limit: int = 24):
+    """Search music artists via iTunes API with smart acronym expansion and suggestions."""
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
     
     analytics.record_artist_search(q.strip())
-    limit = min(max(1, limit), 25)
+    limit = min(max(1, limit), 50)
     q_clean = q.strip().lower()
     cache_key = f"{q_clean}:{limit}"
     cached = _artist_search_cache.get(cache_key)
     if cached and (time.time() - cached["ts"]) < _ARTIST_CACHE_TTL:
-        return JSONResponse(content={"results": cached["data"]})
+        return JSONResponse(content=cached["data"])
 
-    results = await asyncio.to_thread(metadata_resolver.search_artists, q.strip(), limit)
-    _artist_search_cache[cache_key] = {"data": results, "ts": time.time()}
-    return JSONResponse(content={"results": results})
+    res_data = await asyncio.to_thread(metadata_resolver.search_artists, q.strip(), limit)
+    _artist_search_cache[cache_key] = {"data": res_data, "ts": time.time()}
+    return JSONResponse(content=res_data)
 
 @app.get("/api/artist/{artist_id}/discography")
 @limiter.limit("30/minute")
