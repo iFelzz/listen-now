@@ -1507,7 +1507,7 @@
       btnText.innerHTML = `${ICON_SPIN} Connecting…`;
       progressFill.style.width = '35%';
       btn.setAttribute('aria-label', `Connecting stream for ${item.title}…`);
-      $loadingText.textContent = `Streaming: ${item.title}`;
+      $loadingText.textContent = `Downloading: ${item.title}`;
 
       try {
         // Fast URL stream resolution (~0.5s)
@@ -1525,9 +1525,9 @@
           throw new Error(data.detail || `HTTP ${res.status}`);
         }
 
-        // Trigger native browser stream download immediately
+        // Trigger native browser download immediately
         progressFill.style.width = '100%';
-        btnText.innerHTML = `${ICON_CHECK} Streaming…`;
+        btnText.innerHTML = `${ICON_CHECK} Downloading…`;
 
         const link = document.createElement('a');
         link.href = data.download_url;
@@ -1538,7 +1538,7 @@
 
         btn.classList.remove('loading');
         btn.classList.add('done');
-        toast('success', `Streaming <strong>${esc(item.title)}</strong> directly to browser!`);
+        toast('success', `Downloading <strong>${esc(item.title)}</strong> directly to your device!`);
 
         if (Notification.permission === 'granted') {
           new Notification('Download Started!', {

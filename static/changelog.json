@@ -1,5 +1,15 @@
 [
   {
+    "version": "v1.13.1",
+    "date": "2026-11-05",
+    "time": "23:37 UTC",
+    "type": "improvement",
+    "title": "Clear Action Terminology: 'Downloading' UX Feedback",
+    "highlights": [
+      "Updated download button status and toast notification labels from 'Streaming' to 'Downloading…' for intuitive user experience."
+    ]
+  },
+  {
     "version": "v1.13.0",
     "date": "2026-11-05",
     "time": "23:32 UTC",
