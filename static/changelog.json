@@ -1,5 +1,15 @@
 [
   {
+    "version": "v1.11.2",
+    "date": "2026-11-05",
+    "time": "15:10 WIB",
+    "type": "improvement",
+    "title": "Update Google Search Console Site Verification Meta Tag",
+    "highlights": [
+      "Updated google-site-verification meta tag with official token (n9xC6-qf3zD8pCA3_-r5wdKkDVhva8FqZfMm5jcfBtU) for instant Search Console ownership verification."
+    ]
+  },
+  {
     "version": "v1.11.1",
     "date": "2026-11-05",
     "time": "14:57 WIB",
