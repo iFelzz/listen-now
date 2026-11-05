@@ -1258,7 +1258,7 @@
     .volume-control {
       position: fixed;
       bottom: 27px;
-      right: 84px;
+      right: 24px;
       background: rgba(15, 15, 25, 0.95);
       border: 1px solid rgba(124, 58, 237, 0.3);
       padding: 10px 16px;
@@ -1312,7 +1312,7 @@
     body.player-open .volume-control,
     body:has(#mini-player.show) .volume-control {
       bottom: 87px;
-      right: 84px;
+      right: 24px;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1485,10 +1485,12 @@
        FOOTER
     ═══════════════════════════════════════════════════ */
     footer.app-footer {
-      position: relative;
+      position: sticky;
+      bottom: 0;
       width: 100%;
       margin-top: auto;
-      padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+      height: 44px;
+      padding: 0 20px env(safe-area-inset-bottom, 0px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1498,7 +1500,7 @@
       border-top: 1px solid var(--clr-border);
       color: var(--clr-text-dim);
       font-size: 0.78rem;
-      z-index: 100;
+      z-index: 800;
     }
 
     .footer-container {
@@ -1531,12 +1533,18 @@
 
     .footer-by a,
     .footer-github-link {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
       color: var(--clr-text-muted);
       text-decoration: none;
       transition: var(--transition);
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      position: relative;
     }
 
     .footer-by a:hover,
@@ -1552,6 +1560,22 @@
     .footer-github-link:hover .footer-github-icon {
       opacity: 1;
       color: var(--clr-accent);
+    }
+
+    .release-footer-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      margin-left: 2px;
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1612,7 +1636,8 @@
       }
 
       footer.app-footer {
-        padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+        height: auto;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
         background: rgba(10, 10, 20, 0.96);
       }
 
@@ -1622,7 +1647,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .footer-left {
@@ -2904,55 +2929,8 @@ body:has(#mini-player.show) .batch-progress-widget {
 }
 
 /* ═══════════════════════════════════════════════════
-   RELEASE LOG & WHAT'S NEW FLOATING LAUNCHER & MODAL
+   RELEASE LOG & WHAT'S NEW MODAL
 ═══════════════════════════════════════════════════ */
-
-.btn-release-log {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(28, 18, 48, 0.92), rgba(18, 12, 32, 0.96));
-  border: 1px solid rgba(168, 85, 247, 0.45);
-  color: #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 950;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(124, 58, 237, 0.3);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.25s ease;
-}
-
-body.player-open .btn-release-log,
-body:has(#mini-player.show) .btn-release-log {
-  bottom: 84px;
-}
-
-.btn-release-log:hover {
-  transform: scale(1.08) translateY(-2px);
-  border-color: #c084fc;
-  color: #ffffff;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6), 0 0 24px rgba(168, 85, 247, 0.55);
-}
-
-.btn-release-log:active {
-  transform: scale(0.96) translateY(0);
-}
-
-.btn-release-log svg {
-  stroke: #c084fc;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-release-log:hover svg {
-  transform: scale(1.08);
-  stroke: #ffffff;
-}
 
 .release-log-badge {
   position: absolute;
@@ -4286,20 +4264,9 @@ details[open] .summary-caret {
   .stat-pill-val {
     max-width: none;
   }
-  .btn-release-log {
-    bottom: 20px;
-    right: 16px;
-    width: 42px;
-    height: 42px;
-  }
-  body.player-open .btn-release-log,
-  body:has(#mini-player.show) .btn-release-log {
-    bottom: 80px;
-    right: 16px;
-  }
   .volume-control {
     bottom: 21px;
-    right: 66px;
+    right: 20px;
     padding: 7px 10px;
     gap: 6px;
   }
@@ -4310,7 +4277,7 @@ details[open] .summary-caret {
   body.player-open .volume-control,
   body:has(#mini-player.show) .volume-control {
     bottom: 81px;
-    right: 66px;
+    right: 20px;
   }
   body.player-open .batch-progress-widget,
   body:has(#mini-player.show) .batch-progress-widget {

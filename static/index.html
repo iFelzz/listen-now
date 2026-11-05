@@ -144,7 +144,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.12.4" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.13.0" />
 </head>
 
 <body>
@@ -621,6 +621,18 @@
           <span class="footer-by">Built by <a href="https://github.com/iFelzz" target="_blank" rel="noopener">iFelzz</a></span>
         </div>
         <div class="footer-right">
+          <button type="button" class="footer-github-link footer-release-btn" id="btn-open-release-log" title="Open Release Log &amp; What's New">
+            <svg class="footer-github-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>Release Log</span>
+            <span class="release-footer-dot" id="release-log-badge" style="display: none;" aria-label="New update available"></span>
+          </button>
+          <span class="footer-sep">&bull;</span>
           <button type="button" class="footer-github-link footer-report-btn" id="btn-open-bug-report" title="Report a Bug or Feedback">
             <svg class="footer-github-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect width="8" height="14" x="8" y="6" rx="4"/>
@@ -628,13 +640,6 @@
             </svg>
             <span>Report Bug</span>
           </button>
-          <span class="footer-sep">&bull;</span>
-          <a href="/stats" class="footer-github-link" title="Internal Analytics &amp; Metrics">
-            <svg class="footer-github-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-            <span>Stats</span>
-          </a>
           <span class="footer-sep">&bull;</span>
           <a href="https://github.com/iFelzz/melodyxx" target="_blank" rel="noopener" class="footer-github-link" title="GitHub Repository">
             <svg class="footer-github-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -739,18 +744,6 @@
       <button type="button" class="btn-batch-dismiss" id="btn-batch-dismiss">Dismiss</button>
     </div>
   </div>
-
-  <!-- Floating Release Log / What's New Button -->
-  <button type="button" class="btn-release-log" id="btn-release-log" aria-label="Open Release Log & What's New" title="What's New in Melodyxx">
-    <span class="release-log-badge" id="release-log-badge" style="display: none;" aria-label="New update available"></span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <line x1="16" y1="13" x2="8" y2="13"></line>
-      <line x1="16" y1="17" x2="8" y2="17"></line>
-      <polyline points="10 9 9 9 8 9"></polyline>
-    </svg>
-  </button>
 
   <!-- Release Log / What's New Modal Drawer -->
   <div id="release-log-modal" class="release-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="release-modal-title">
@@ -972,7 +965,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.12.4" defer></script>
+  <script src="/static/js/app.js?v=1.13.0" defer></script>
 </body>
 
 </html>

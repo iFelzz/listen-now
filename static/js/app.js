@@ -76,7 +76,7 @@
     const $batchSpinner = document.getElementById('batch-spinner');
 
     // Release Log / What's New DOM refs
-    const $btnReleaseLog = document.getElementById('btn-release-log');
+    const $btnReleaseLog = document.getElementById('btn-open-release-log') || document.getElementById('btn-release-log');
     const $releaseLogBadge = document.getElementById('release-log-badge');
     const $releaseLogModal = document.getElementById('release-log-modal');
     const $releaseLogCard = document.getElementById('release-modal-card');

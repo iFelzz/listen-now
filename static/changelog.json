@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.13.0",
+    "date": "2026-11-05",
+    "time": "23:32 UTC",
+    "type": "feature",
+    "title": "Sticky Footer, Integrated Release Log & Cleaned Navigation",
+    "highlights": [
+      "Re-engineered footer with smooth position: sticky anchoring so it stays visible and pinned without clipping content.",
+      "Integrated Release Log button directly into the footer with an active update pulse badge, removing the floating circular trigger.",
+      "Removed the public stats link from the footer (accessible directly via /stats route) for a cleaner and more focused interface."
+    ]
+  },
+  {
     "version": "v1.12.4",
     "date": "2026-11-05",
     "time": "09:02 UTC",
