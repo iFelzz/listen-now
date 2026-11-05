@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.7.2",
+    "date": "2026-11-05",
+    "time": "10:35 WIB",
+    "type": "improvement",
+    "title": "Artist Photos, National Flags, and Clean Dropdown Backdrop",
+    "highlights": [
+      "Added high-resolution artist portrait photos directly in the autocomplete dropdown.",
+      "Added artist country origin and national flag emojis in recommendation meta tags.",
+      "Made search suggestions dropdown background fully opaque to prevent empty state logo bleeding through.",
+      "Automatically hides empty-state illustration while typing or browsing suggestions."
+    ]
+  },
+  {
     "version": "v1.7.1",
     "date": "2026-11-05",
     "time": "08:55 WIB",

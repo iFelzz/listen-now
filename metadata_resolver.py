@@ -303,10 +303,13 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
 
 # ── Artist Discovery & Discography APIs ───────────────────────
 
+_ARTIST_EXTRAS_CACHE: Dict[str, Dict[str, str]] = {}
+
 def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> dict:
     """
     Resolve artist portrait photo and country origin.
     Uses Deezer for high-res portrait images and MusicBrainz / Wikidata for country and national flag emoji.
+    Results are cached in memory for sub-millisecond retrieval.
     """
     photo = ""
     country_name = ""
@@ -316,6 +319,10 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
     clean_name = re.sub(r"[\u2018\u2019\u201c\u201d\u2014\u2013'\"`\-_:;/]", " ", name).strip()
     if not clean_name:
         return {"photo": "", "country": "", "country_code": "", "flag": ""}
+
+    cache_key = f"{clean_name.lower()}::{itunes_id}"
+    if cache_key in _ARTIST_EXTRAS_CACHE:
+        return _ARTIST_EXTRAS_CACHE[cache_key]
 
     # 1. Deezer for high-res artist portrait photo
     try:
@@ -433,12 +440,16 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
         elif "dangdut" in g_low or "indonesian" in g_low:
             country_code, country_name, flag = "ID", "Indonesia", "🇮🇩"
 
-    return {
+    res = {
         "photo": photo or "",
         "country": country_name or "",
         "country_code": country_code or "",
         "flag": flag or "",
     }
+    _ARTIST_EXTRAS_CACHE[cache_key] = res
+    if len(_ARTIST_EXTRAS_CACHE) > 1000:
+        _ARTIST_EXTRAS_CACHE.pop(next(iter(_ARTIST_EXTRAS_CACHE)), None)
+    return res
 
 # Common artist acronyms, aliases & nicknames for flexible search
 ARTIST_ALIASES: Dict[str, List[str]] = {
@@ -902,11 +913,26 @@ def get_live_suggestions(query: str, mode: str = "songs") -> Dict[str, Any]:
                 other_matches.append(item)
 
         artists_list = exact_matches + prefix_matches + other_matches
+        top_candidates = artists_list[:8]
+
+        # Enrich artists concurrently with photo, country, and national flag
+        if top_candidates:
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(top_candidates), 8)) as pool:
+                    extras_list = list(pool.map(
+                        lambda it: resolve_artist_extras(it["name"], it.get("artist_id", ""), it.get("genre", "")),
+                        top_candidates
+                    ))
+                    for item, extras in zip(top_candidates, extras_list):
+                        item.update(extras)
+            except Exception as e:
+                logger.debug("Artist extras error in live suggest: %s", e)
+
         result_data = {
             "mode": "artists",
             "query": clean_q,
-            "top_artist": artists_list[0] if artists_list else None,
-            "artists": artists_list[:8],
+            "top_artist": top_candidates[0] if top_candidates else None,
+            "artists": top_candidates,
             "suggestions": []
         }
         _LIVE_SUGGEST_CACHE[cache_key] = (now, result_data)
@@ -978,6 +1004,12 @@ def get_live_suggestions(query: str, mode: str = "songs") -> Dict[str, Any]:
             break
 
     top_artist = best_artist or (cleaned_artists[0] if cleaned_artists else None)
+    if top_artist:
+        try:
+            top_extras = resolve_artist_extras(top_artist["name"], top_artist.get("artist_id", ""), top_artist.get("genre", ""))
+            top_artist.update(top_extras)
+        except Exception:
+            pass
 
     final_suggestions: List[str] = []
     seen_sugg = set()

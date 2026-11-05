@@ -1446,6 +1446,9 @@
       $searchSuggestions.style.display = 'none';
       $searchSuggestions.innerHTML = '';
       activeSuggestIndex = -1;
+      if ($emptyState) {
+        $emptyState.style.visibility = '';
+      }
     }
 
     function highlightMatch(text, query) {
@@ -1478,15 +1481,28 @@
 
         let html = '<div class="suggestion-queries-list">';
         html += artists.map(art => {
-          const artistMeta = art.genre ? `Artist • ${esc(art.genre)}` : 'Musical Artist';
+          const photoHtml = art.photo
+            ? `<img src="${esc(art.photo)}" alt="${esc(art.name)}" class="suggestion-artist-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="suggestion-artist-avatar-fallback" style="display:none;">${ICON_SUGGEST_ARTIST}</div>`
+            : `<div class="suggestion-artist-avatar-fallback">${ICON_SUGGEST_ARTIST}</div>`;
+
+          const countryLabel = art.country
+            ? `<span class="suggestion-artist-country" title="${esc(art.country)}">${art.flag ? `${esc(art.flag)} ` : ''}${esc(art.country)}</span>`
+            : (art.flag ? `<span class="suggestion-artist-country">${esc(art.flag)}</span>` : '');
+
+          const metaItems = [];
+          if (countryLabel) metaItems.push(countryLabel);
+          metaItems.push(esc(art.genre || 'Artist'));
+
           return `
             <div class="suggestion-artist-item" data-type="artist" data-artist-id="${esc(art.artist_id || '')}" data-name="${esc(art.name)}" role="option" tabindex="-1">
               <div class="suggestion-artist-avatar" aria-hidden="true">
-                ${ICON_SUGGEST_ARTIST}
+                ${photoHtml}
               </div>
               <div class="suggestion-artist-info">
                 <span class="suggestion-artist-name">${highlightMatch(art.name, typedQuery)}</span>
-                <span class="suggestion-artist-meta">${artistMeta}</span>
+                <div class="suggestion-artist-meta">
+                  ${metaItems.join(' • ')}
+                </div>
               </div>
               <span class="suggestion-artist-badge">Artist</span>
             </div>
@@ -1496,6 +1512,7 @@
 
         $searchSuggestions.innerHTML = html;
         $searchSuggestions.style.display = 'block';
+        if ($emptyState) $emptyState.style.visibility = 'hidden';
         activeSuggestIndex = -1;
 
         $searchSuggestions.querySelectorAll('.suggestion-artist-item').forEach(el => {
@@ -1533,15 +1550,28 @@
 
       // 1. Featured Top Artist Entity Recommendation
       if (topArtist && topArtist.name) {
-        const artistMeta = topArtist.genre ? `Artist • ${esc(topArtist.genre)}` : 'Musical Artist';
+        const photoHtml = topArtist.photo
+          ? `<img src="${esc(topArtist.photo)}" alt="${esc(topArtist.name)}" class="suggestion-artist-photo" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="suggestion-artist-avatar-fallback" style="display:none;">${ICON_SUGGEST_ARTIST}</div>`
+          : `<div class="suggestion-artist-avatar-fallback">${ICON_SUGGEST_ARTIST}</div>`;
+
+        const countryLabel = topArtist.country
+          ? `<span class="suggestion-artist-country" title="${esc(topArtist.country)}">${topArtist.flag ? `${esc(topArtist.flag)} ` : ''}${esc(topArtist.country)}</span>`
+          : (topArtist.flag ? `<span class="suggestion-artist-country">${esc(topArtist.flag)}</span>` : '');
+
+        const metaItems = [];
+        if (countryLabel) metaItems.push(countryLabel);
+        metaItems.push(esc(topArtist.genre || 'Artist'));
+
         html += `
           <div class="suggestion-artist-item" data-type="artist" data-artist-id="${esc(topArtist.artist_id || '')}" data-name="${esc(topArtist.name)}" role="option" tabindex="-1">
             <div class="suggestion-artist-avatar" aria-hidden="true">
-              ${ICON_SUGGEST_ARTIST}
+              ${photoHtml}
             </div>
             <div class="suggestion-artist-info">
               <span class="suggestion-artist-name">${highlightMatch(topArtist.name, typedQuery)}</span>
-              <span class="suggestion-artist-meta">${artistMeta}</span>
+              <div class="suggestion-artist-meta">
+                ${metaItems.join(' • ')}
+              </div>
             </div>
             <span class="suggestion-artist-badge">Artist</span>
           </div>

@@ -352,15 +352,23 @@
       left: 0;
       right: 0;
       z-index: 1000;
-      background: rgba(16, 11, 28, 0.96);
-      border: 1px solid rgba(168, 85, 247, 0.32);
+      background: #0f0b1e;
+      border: 1px solid rgba(168, 85, 247, 0.38);
       border-radius: 16px;
-      box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.75), 0 0 25px rgba(168, 85, 247, 0.15);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 22px 60px -10px rgba(0, 0, 0, 0.94), 0 0 30px rgba(168, 85, 247, 0.2);
       overflow: hidden;
       padding: 6px;
       animation: suggestFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Hide distracting empty state illustration while typing or viewing search suggestions */
+    .search-form:focus-within ~ .main-content #empty-state,
+    .search-form:has(#search-suggestions:not([style*="display: none"])) ~ .main-content #empty-state,
+    body:has(#search-suggestions:not([style*="display: none"])) #empty-state {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
     }
 
     @keyframes suggestFadeIn {
@@ -396,8 +404,8 @@
     }
 
     .suggestion-artist-avatar {
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(124, 58, 237, 0.12));
       border: 1px solid rgba(168, 85, 247, 0.4);
@@ -406,8 +414,28 @@
       justify-content: center;
       flex-shrink: 0;
       color: #c084fc;
+      overflow: hidden;
+      position: relative;
     }
 
+    .suggestion-artist-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .suggestion-artist-avatar-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #c084fc;
+    }
+
+    .suggestion-artist-avatar-fallback svg,
     .suggestion-artist-avatar svg {
       width: 18px;
       height: 18px;
@@ -437,6 +465,17 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .suggestion-artist-country {
+      color: #f1f5f9;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
     }
 
     .suggestion-artist-badge {
