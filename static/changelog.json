@@ -1,5 +1,16 @@
 [
   {
+    "version": "v1.14.3",
+    "date": "2026-11-05",
+    "time": "23:58 UTC",
+    "type": "improvement",
+    "title": "Clean Bug Reporter Header & Remove Telegram Branding",
+    "highlights": [
+      "Removed external Telegram pill badge from the issue report modal header.",
+      "Refined modal subtitle to provide clean, brand-consistent feedback messaging without exposing underlying delivery channels."
+    ]
+  },
+  {
     "version": "v1.14.2",
     "date": "2026-11-05",
     "time": "23:56 UTC",
