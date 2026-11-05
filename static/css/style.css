@@ -3540,6 +3540,20 @@ body:has(#mini-player.show) .btn-release-log {
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
 }
 
+.report-input.is-invalid,
+.report-textarea.is-invalid {
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.25) !important;
+}
+
+.report-field-error {
+  font-size: 0.75rem;
+  color: #f87171;
+  margin-top: 2px;
+  line-height: 1.3;
+  animation: releaseFadeIn 0.15s ease-out;
+}
+
 .report-textarea {
   resize: vertical;
   min-height: 84px;

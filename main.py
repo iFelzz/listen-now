@@ -736,8 +736,9 @@ async def submit_bug_report(
         raise HTTPException(status_code=400, detail="Name is required. Please provide your name.")
 
     email_clean = email_val.strip()
-    if not email_clean or "@" not in email_clean or "." not in email_clean.split("@")[-1]:
-        raise HTTPException(status_code=400, detail="A valid email address is required.")
+    email_pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if not email_clean or not re.match(email_pattern, email_clean):
+        raise HTTPException(status_code=400, detail="Please provide a valid email address (e.g. name@example.com).")
 
     # 3. Description validation
     if not desc or len(desc) < 8:

@@ -90,7 +90,9 @@
     const $btnReportCancel = document.getElementById('btn-report-cancel');
     const $reportForm = document.getElementById('report-form');
     const $reportName = document.getElementById('report-name');
+    const $reportNameError = document.getElementById('report-name-error');
     const $reportEmail = document.getElementById('report-email');
+    const $reportEmailError = document.getElementById('report-email-error');
     const $reportCategory = document.getElementById('report-category');
     const $reportDescription = document.getElementById('report-description');
     const $reportCharCount = document.getElementById('report-char-count');
@@ -2503,6 +2505,50 @@
       });
     }
 
+    function isValidEmail(str) {
+      const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+      return emailRegex.test(str.trim());
+    }
+
+    if ($reportEmail) {
+      const validateEmailInput = () => {
+        const val = $reportEmail.value.trim();
+        if (val.length > 0 && !isValidEmail(val)) {
+          $reportEmail.classList.add('is-invalid');
+          if ($reportEmailError) $reportEmailError.style.display = 'block';
+        } else {
+          $reportEmail.classList.remove('is-invalid');
+          if ($reportEmailError) $reportEmailError.style.display = 'none';
+        }
+      };
+      $reportEmail.addEventListener('input', validateEmailInput);
+      $reportEmail.addEventListener('blur', () => {
+        const val = $reportEmail.value.trim();
+        if (!val || !isValidEmail(val)) {
+          $reportEmail.classList.add('is-invalid');
+          if ($reportEmailError) $reportEmailError.style.display = 'block';
+        } else {
+          $reportEmail.classList.remove('is-invalid');
+          if ($reportEmailError) $reportEmailError.style.display = 'none';
+        }
+      });
+    }
+
+    if ($reportName) {
+      $reportName.addEventListener('input', () => {
+        if ($reportName.value.trim()) {
+          $reportName.classList.remove('is-invalid');
+          if ($reportNameError) $reportNameError.style.display = 'none';
+        }
+      });
+      $reportName.addEventListener('blur', () => {
+        if (!$reportName.value.trim()) {
+          $reportName.classList.add('is-invalid');
+          if ($reportNameError) $reportNameError.style.display = 'block';
+        }
+      });
+    }
+
     if ($reportDescription && $reportCharCount) {
       $reportDescription.addEventListener('input', () => {
         const len = $reportDescription.value.length;
@@ -2531,15 +2577,18 @@
 
         const name = ($reportName?.value || '').trim();
         if (!name) {
+          $reportName?.classList.add('is-invalid');
+          if ($reportNameError) $reportNameError.style.display = 'block';
           toast('error', 'Please enter your name.');
           if ($reportName) $reportName.focus();
           return;
         }
 
         const email = ($reportEmail?.value || '').trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !emailRegex.test(email)) {
-          toast('error', 'Please enter a valid email address.');
+        if (!email || !isValidEmail(email)) {
+          $reportEmail?.classList.add('is-invalid');
+          if ($reportEmailError) $reportEmailError.style.display = 'block';
+          toast('error', 'Please enter a valid email address (e.g. name@example.com).');
           if ($reportEmail) $reportEmail.focus();
           return;
         }
@@ -2593,6 +2642,10 @@
 
           // Reset form
           $reportForm.reset();
+          if ($reportName) $reportName.classList.remove('is-invalid');
+          if ($reportEmail) $reportEmail.classList.remove('is-invalid');
+          if ($reportNameError) $reportNameError.style.display = 'none';
+          if ($reportEmailError) $reportEmailError.style.display = 'none';
           if ($reportCharCount) $reportCharCount.textContent = '0 / 1000';
           clearReportFile();
           closeBugReportModal();

@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.10.5" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.10.6" />
 </head>
 
 <body>
@@ -569,10 +569,12 @@
           <div class="report-form-group">
             <label for="report-name" class="report-label">Your Name <span class="report-required">*</span></label>
             <input type="text" id="report-name" name="name" class="report-input" placeholder="e.g. Alex" maxlength="60" autocomplete="name" required />
+            <span class="report-field-error" id="report-name-error" style="display: none;">Name is required</span>
           </div>
           <div class="report-form-group">
             <label for="report-email" class="report-label">Your Email <span class="report-required">*</span></label>
             <input type="email" id="report-email" name="email" class="report-input" placeholder="e.g. alex@example.com" maxlength="80" autocomplete="email" required />
+            <span class="report-field-error" id="report-email-error" style="display: none;">Please enter a valid email (e.g. name@example.com)</span>
           </div>
         </div>
 
@@ -668,7 +670,7 @@
   <!-- Toast container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="/static/js/app.js?v=1.10.5" defer></script>
+  <script src="/static/js/app.js?v=1.10.6" defer></script>
 </body>
 
 </html>

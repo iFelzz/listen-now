@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.10.6",
+    "date": "2026-11-05",
+    "time": "14:28 WIB",
+    "type": "improvement",
+    "title": "Strict Email Format Verification & Real-Time Inline Validation",
+    "highlights": [
+      "Enforced RFC-compliant regex validation on both client and server to reject invalid emails like 'treyt'.",
+      "Added real-time visual input cues and inline error message below the email field on input and blur.",
+      "Blocked form submission and focused the invalid field with descriptive guidance."
+    ]
+  },
+  {
     "version": "v1.10.5",
     "date": "2026-11-05",
     "time": "14:22 WIB",
