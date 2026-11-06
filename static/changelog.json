@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.14.9",
+    "date": "2026-11-06",
+    "time": "05:25 UTC",
+    "type": "fix",
+    "title": "Sticky Footer Visibility & Above-Footer Mini-Player Docking",
+    "highlights": [
+      "Repositioned the fixed mini now-playing audio bar to anchor seamlessly above the sticky footer using dynamic CSS variable --footer-height.",
+      "Eliminated footer occlusion during audio playback so the copyright notice, release log button, bug report modal trigger, and GitHub links remain fully visible and clickable.",
+      "Adjusted floating volume slider, batch action drawer, and progress widgets to float cleanly above the newly docked mini player.",
+      "Added dynamic ResizeObserver and viewport resize hooks to keep footer height measurements pixel-accurate across desktop and mobile screens."
+    ]
+  },
+  {
     "version": "v1.14.8",
     "date": "2026-11-06",
     "time": "05:15 UTC",

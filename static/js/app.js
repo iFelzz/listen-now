@@ -1369,7 +1369,27 @@
       return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
+    function syncFooterHeight() {
+      const footer = document.querySelector('footer.app-footer');
+      if (footer) {
+        const h = footer.offsetHeight;
+        if (h > 0) {
+          document.documentElement.style.setProperty('--footer-height', `${h}px`);
+        }
+      }
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const footerEl = document.querySelector('footer.app-footer');
+      if (footerEl) {
+        new ResizeObserver(() => syncFooterHeight()).observe(footerEl);
+      }
+    }
+    window.addEventListener('resize', syncFooterHeight, { passive: true });
+    window.addEventListener('orientationchange', syncFooterHeight, { passive: true });
+
     function showMiniPlayer(title, artist, thumb) {
+      syncFooterHeight();
       $miniTitle.textContent = title || '—';
       $miniArtist.textContent = artist || '';
       $miniThumb.src = thumb || '/static/logo.png';
@@ -2703,7 +2723,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.8';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.9';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -2964,7 +2984,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.8');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.9');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);
