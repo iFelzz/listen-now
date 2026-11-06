@@ -367,7 +367,37 @@ KNOWN_ARTIST_OVERRIDES: Dict[str, Dict[str, str]] = {
     "j-rocks": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
     "vierra": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
     "vierratale": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+
+    # Top K-Pop & global acts with common spelling / space / pseudonym variances
+    "jung kook": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "jungkook": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "bts": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "blackpink": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "twice": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "stray kids": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "seventeen": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "exo": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "newjeans": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "aespa": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "itzy": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "le sserafim": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "iu": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "g-dragon": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "g dragon": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "taeyang": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "taehyung": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "j-hope": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "jhope": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "agust d": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "rm": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "jimin": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "jin": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
+    "suga": {"country": "South Korea", "country_code": "KR", "flag": "🇰🇷"},
 }
+
+def _compact_artist_slug(text: str) -> str:
+    """Strip spaces, punctuation, and diacritics for robust artist namesake matching."""
+    return re.sub(r"[^a-z0-9]", "", text.lower()) if text else ""
 
 _ARTIST_EXTRAS_CACHE: Dict[str, Dict[str, str]] = {}
 
@@ -386,36 +416,67 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
     if not clean_name:
         return {"photo": "", "country": "", "country_code": "", "flag": ""}
 
-    cache_key = f"{clean_name.lower()}::{itunes_id}"
+    target_compact = _compact_artist_slug(clean_name)
+    cache_key = f"{target_compact}::{itunes_id}"
     if cache_key in _ARTIST_EXTRAS_CACHE:
         return _ARTIST_EXTRAS_CACHE[cache_key]
 
     norm_name = clean_name.lower()
 
-    # 0. Check verified origin overrides first
+    # 0. Check verified origin overrides first (exact name or compact slug)
     if norm_name in KNOWN_ARTIST_OVERRIDES:
         ov = KNOWN_ARTIST_OVERRIDES[norm_name]
         country_name = ov.get("country", "")
         country_code = ov.get("country_code", "")
         flag = ov.get("flag", "")
+        if ov.get("photo"):
+            photo = ov["photo"]
+    elif target_compact in KNOWN_ARTIST_OVERRIDES:
+        ov = KNOWN_ARTIST_OVERRIDES[target_compact]
+        country_name = ov.get("country", "")
+        country_code = ov.get("country_code", "")
+        flag = ov.get("flag", "")
+        if ov.get("photo"):
+            photo = ov["photo"]
 
-    # 1. Deezer for high-res artist portrait photo (rank by popularity to avoid obscure namesakes)
-    try:
-        d_url = f"https://api.deezer.com/search/artist?q={urllib.parse.quote(clean_name)}&limit=8"
-        req = urllib.request.Request(d_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=2.5) as resp:
-            if resp.status == 200:
-                d_data = json.loads(resp.read().decode("utf-8"))
-                items = d_data.get("data", [])
-                if items:
-                    matching_artists = [it for it in items if it.get("name", "").strip().lower() == norm_name]
-                    if not matching_artists:
-                        matching_artists = [it for it in items if norm_name in it.get("name", "").lower() or it.get("name", "").lower() in norm_name]
-                    if matching_artists:
-                        best_d = max(matching_artists, key=lambda x: x.get("nb_fan", 0))
-                        photo = best_d.get("picture_big") or best_d.get("picture_medium") or best_d.get("picture") or ""
-    except Exception:
-        pass
+    # 1. Deezer for high-res artist portrait photo (rank by popularity & compact slug to avoid obscure namesakes)
+    if not photo:
+        try:
+            d_url = f"https://api.deezer.com/search/artist?q={urllib.parse.quote(clean_name)}&limit=10"
+            req = urllib.request.Request(d_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=2.5) as resp:
+                if resp.status == 200:
+                    d_data = json.loads(resp.read().decode("utf-8"))
+                    items = d_data.get("data", [])
+                    if items:
+                        # Priority 1: Exact compact match (handles spacing differences like 'Jung Kook' vs 'Jungkook', 'A$AP Rocky' vs 'ASAP Rocky')
+                        compact_matches = [it for it in items if _compact_artist_slug(it.get("name", "")) == target_compact]
+                        if compact_matches:
+                            best_d = max(compact_matches, key=lambda x: x.get("nb_fan", 0))
+                        else:
+                            # Priority 2: Exact lower name matches
+                            exact_matches = [it for it in items if it.get("name", "").strip().lower() == norm_name]
+                            if exact_matches:
+                                best_d = max(exact_matches, key=lambda x: x.get("nb_fan", 0))
+                            else:
+                                # Priority 3: Substring / fuzzy compact match
+                                fuzzy_matches = [
+                                    it for it in items
+                                    if target_compact in _compact_artist_slug(it.get("name", ""))
+                                    or _compact_artist_slug(it.get("name", "")) in target_compact
+                                ]
+                                best_d = max(fuzzy_matches, key=lambda x: x.get("nb_fan", 0)) if fuzzy_matches else items[0]
+
+                        if best_d:
+                            photo = (
+                                best_d.get("picture_xl")
+                                or best_d.get("picture_big")
+                                or best_d.get("picture_medium")
+                                or best_d.get("picture")
+                                or ""
+                            )
+        except Exception:
+            pass
 
     # Fallback to Apple Music latest release artwork if Deezer portrait unavailable
     if not photo and itunes_id:
@@ -429,7 +490,7 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
                         if r.get("wrapperType") == "collection":
                             raw_art = r.get("artworkUrl100", "")
                             if raw_art:
-                                photo = raw_art.replace("100x100bb.jpg", "300x300bb.jpg")
+                                photo = raw_art.replace("100x100bb.jpg", "800x800bb.jpg")
                                 break
         except Exception:
             pass

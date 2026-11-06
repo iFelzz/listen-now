@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.14.8",
+    "date": "2026-11-06",
+    "time": "05:15 UTC",
+    "type": "fix",
+    "title": "Compact Slug Matcher & High-Res Artist Portrait Resolution",
+    "highlights": [
+      "Engineered compact-slug artist matching algorithm to bridge spacing and punctuation discrepancies (e.g. 'Jung Kook' vs 'Jungkook') in Deezer searches.",
+      "Eliminated photo mismatches caused by low-fan homonym or bootleg profiles by ranking compact candidates by dominant fan counts.",
+      "Upgraded artist portrait resolution to ultra-sharp 1000x1000 (picture_xl) with Apple Music 800x800 fallback.",
+      "Added South Korea flag and country verified origin presets for major K-Pop acts (Jung Kook, BTS, Blackpink, Twice, Stray Kids, Seventeen, etc.)."
+    ]
+  },
+  {
     "version": "v1.14.7",
     "date": "2026-11-06",
     "time": "02:45 UTC",
