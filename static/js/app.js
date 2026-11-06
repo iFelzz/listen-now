@@ -1346,6 +1346,7 @@
     const audioPlayer = document.getElementById('global-player');
     const $volumeControl = document.getElementById('volume-control');
     const $volumeSlider = document.getElementById('volume-slider');
+    const $miniMuteBtn = document.getElementById('mini-mute-btn');
 
     // ── Mini Player DOM refs ──────────────────────────────────
     const $miniPlayer = document.getElementById('mini-player');
@@ -1361,6 +1362,33 @@
     // SVG paths for mini player icons
     const MINI_ICON_PLAY = 'M8 5v14l11-7z';
     const MINI_ICON_PAUSE = 'M6 19h4V5H6v14zm8-14v14h4V5h-4z';
+
+    // Volume icons for integrated mute button
+    const VOL_ICON_HIGH = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+    const VOL_ICON_LOW = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+    const VOL_ICON_MUTED = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
+
+    let lastNonZeroVolume = 1;
+
+    function updateVolumeUI(val) {
+      const v = parseFloat(val);
+      if ($volumeSlider) $volumeSlider.value = v;
+      if ($miniMuteBtn) {
+        const svg = $miniMuteBtn.querySelector('svg');
+        if (svg) {
+          if (v <= 0.001) {
+            svg.innerHTML = VOL_ICON_MUTED;
+            $miniMuteBtn.setAttribute('title', 'Unmute');
+          } else if (v < 0.5) {
+            svg.innerHTML = VOL_ICON_LOW;
+            $miniMuteBtn.setAttribute('title', 'Mute');
+          } else {
+            svg.innerHTML = VOL_ICON_HIGH;
+            $miniMuteBtn.setAttribute('title', 'Mute');
+          }
+        }
+      }
+    }
 
     function formatTime(seconds) {
       if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
@@ -1399,13 +1427,12 @@
       $miniDuration.textContent = '0:00';
       $miniPlayIcon.querySelector('path') && ($miniPlayIcon.innerHTML = `<path d="${MINI_ICON_PAUSE}"/>`);
       $miniPlayer.classList.add('show');
-      $volumeControl.classList.add('player-open');
       document.body.classList.add('player-open');
     }
 
     function hideMiniPlayer() {
       $miniPlayer.classList.remove('show');
-      $volumeControl.classList.remove('player-open');
+      $miniPlayer.classList.remove('playing');
       document.body.classList.remove('player-open');
     }
 
@@ -1413,21 +1440,48 @@
       $miniPlayIcon.innerHTML = `<path d="${isPaused ? MINI_ICON_PLAY : MINI_ICON_PAUSE}"/>`;
     }
 
-    // Volume slider initialization
+    // Volume slider & mute initialization
     const savedVol = localStorage.getItem('melodyxx_volume') || localStorage.getItem('listen_now_volume');
     if (savedVol !== null) {
-      $volumeSlider.value = savedVol;
+      const parsed = parseFloat(savedVol);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+        if ($volumeSlider) $volumeSlider.value = parsed;
+        if (parsed > 0.05) lastNonZeroVolume = parsed;
+      }
     }
-    audioPlayer.volume = $volumeSlider.value;
-    $volumeSlider.addEventListener('input', (e) => {
-      audioPlayer.volume = e.target.value;
-      localStorage.setItem('melodyxx_volume', e.target.value);
-    });
+    audioPlayer.volume = $volumeSlider ? parseFloat($volumeSlider.value) : 1;
+    updateVolumeUI(audioPlayer.volume);
+
+    if ($volumeSlider) {
+      $volumeSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        audioPlayer.volume = val;
+        if (val > 0.05) lastNonZeroVolume = val;
+        updateVolumeUI(val);
+        localStorage.setItem('melodyxx_volume', String(val));
+      });
+    }
+
+    if ($miniMuteBtn) {
+      $miniMuteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (audioPlayer.volume > 0.001) {
+          lastNonZeroVolume = audioPlayer.volume > 0.05 ? audioPlayer.volume : 1;
+          audioPlayer.volume = 0;
+          updateVolumeUI(0);
+          localStorage.setItem('melodyxx_volume', '0');
+        } else {
+          const targetVol = lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.7;
+          audioPlayer.volume = targetVol;
+          updateVolumeUI(targetVol);
+          localStorage.setItem('melodyxx_volume', String(targetVol));
+        }
+      });
+    }
 
     // ── Audio events ──────────────────────────────────────────
 
     audioPlayer.addEventListener('play', () => {
-      $volumeControl.classList.add('show');
       $miniPlayer.classList.add('playing');
       setMiniIcon(false); // show pause icon in mini player
       updateCurrentPlayingBtn(true);
@@ -1453,14 +1507,12 @@
     });
 
     audioPlayer.addEventListener('ended', () => {
-      $volumeControl.classList.remove('show');
       $miniPlayer.classList.remove('playing');
       hideMiniPlayer();
       resetCurrentPlayingBtn();
     });
 
     audioPlayer.addEventListener('pause', () => {
-      $volumeControl.classList.remove('show');
       $miniPlayer.classList.remove('playing');
       setMiniIcon(true); // show play icon in mini player
       if (!audioPlayer.ended) {
@@ -1998,22 +2050,25 @@
         }
       } else if (e.key === 'Escape') {
         resetCurrentPlayingBtn();
-        $volumeControl.classList.remove('show');
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
         hideMiniPlayer();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        const newVol = Math.min(1, parseFloat($volumeSlider.value) + 0.1);
-        $volumeSlider.value = newVol;
+        const currentV = $volumeSlider ? parseFloat($volumeSlider.value) : audioPlayer.volume;
+        const newVol = Math.min(1, Math.round((currentV + 0.05) * 100) / 100);
         audioPlayer.volume = newVol;
-        localStorage.setItem('melodyxx_volume', newVol);
+        if (newVol > 0.05) lastNonZeroVolume = newVol;
+        updateVolumeUI(newVol);
+        localStorage.setItem('melodyxx_volume', String(newVol));
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        const newVol = Math.max(0, parseFloat($volumeSlider.value) - 0.1);
-        $volumeSlider.value = newVol;
+        const currentV = $volumeSlider ? parseFloat($volumeSlider.value) : audioPlayer.volume;
+        const newVol = Math.max(0, Math.round((currentV - 0.05) * 100) / 100);
         audioPlayer.volume = newVol;
-        localStorage.setItem('melodyxx_volume', newVol);
+        if (newVol > 0.05) lastNonZeroVolume = newVol;
+        updateVolumeUI(newVol);
+        localStorage.setItem('melodyxx_volume', String(newVol));
       }
 
       // Show keyboard tip on first use
@@ -2738,7 +2793,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.0';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.1';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -2999,7 +3054,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.0');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.1');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);

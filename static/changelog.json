@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.15.1",
+    "date": "2026-11-06",
+    "time": "08:20 UTC",
+    "type": "improvement",
+    "title": "Integrated Mini Player Seekbar, In-Player Volume & Enlarged Island",
+    "highlights": [
+      "Unified audio controls into a single cohesive player island by embedding the volume slider and mute button directly alongside playback controls.",
+      "Replaced external top-border seekbar with an ergonomic in-card seekbar flanked by high-visibility current and total duration time indicators.",
+      "Enlarged player island dimensions (74px height, up to 860px width, 48px album artwork) for comfortable controls and improved text legibility.",
+      "Added interactive one-click mute/unmute toggle button with dynamic SVG speaker state indicators.",
+      "Refined mobile responsive layout with adaptive multi-row flex structure and automatic seekbar row wrapping."
+    ]
+  },
+  {
     "version": "v1.15.0",
     "date": "2026-11-06",
     "time": "05:45 UTC",
