@@ -303,6 +303,72 @@ def resolve_rich_metadata(yt_info: dict, raw_title: str) -> Dict[str, Any]:
 
 # ── Artist Discovery & Discography APIs ───────────────────────
 
+# Prominent artists with unambiguous origins or known namesake/homonym risks
+KNOWN_ARTIST_OVERRIDES: Dict[str, Dict[str, str]] = {
+    "tulus": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "tiara andini": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "mahalini": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "judika": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "raisa": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "isyana sarasvati": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "afgan": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "fiersa besari": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "hindia": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "pamungkas": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "bernadya": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "sal priadi": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "nadin amizah": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "sheila on 7": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "dewa 19": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "noah": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "peterpan": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "slank": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "padi": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "lyodra": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "ziva magnolya": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "febi putri": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "yura yunita": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "glenn fredly": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "rizky febian": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "bunga citra lestari": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "rossa": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "agnez mo": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "agnes monica": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "anggun": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "rich brian": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "niki": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "stephanie poetri": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "ari lasso": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "chrisye": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "iwan fals": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "rhoma irama": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "via vallen": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "happy asmara": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "denny caknan": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "kunto aji": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "maliq & d'essentials": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "ran": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "fourtwnty": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "payung teduh": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "d'masiv": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "ungu": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "geisha": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "kotak": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "nidji": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "naif": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "the changcuters": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "armada": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "wali": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "st12": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "kangen band": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "ada band": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "kerispatih": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "letto": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "j-rocks": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "vierra": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+    "vierratale": {"country": "Indonesia", "country_code": "ID", "flag": "🇮🇩"},
+}
+
 _ARTIST_EXTRAS_CACHE: Dict[str, Dict[str, str]] = {}
 
 def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> dict:
@@ -324,19 +390,30 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
     if cache_key in _ARTIST_EXTRAS_CACHE:
         return _ARTIST_EXTRAS_CACHE[cache_key]
 
-    # 1. Deezer for high-res artist portrait photo
+    norm_name = clean_name.lower()
+
+    # 0. Check verified origin overrides first
+    if norm_name in KNOWN_ARTIST_OVERRIDES:
+        ov = KNOWN_ARTIST_OVERRIDES[norm_name]
+        country_name = ov.get("country", "")
+        country_code = ov.get("country_code", "")
+        flag = ov.get("flag", "")
+
+    # 1. Deezer for high-res artist portrait photo (rank by popularity to avoid obscure namesakes)
     try:
-        d_url = f"https://api.deezer.com/search/artist?q={urllib.parse.quote(clean_name)}&limit=1"
+        d_url = f"https://api.deezer.com/search/artist?q={urllib.parse.quote(clean_name)}&limit=8"
         req = urllib.request.Request(d_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=2.0) as resp:
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
             if resp.status == 200:
                 d_data = json.loads(resp.read().decode("utf-8"))
                 items = d_data.get("data", [])
                 if items:
-                    top_d = items[0]
-                    top_name = top_d.get("name", "").lower()
-                    if clean_name.lower() in top_name or top_name in clean_name.lower():
-                        photo = top_d.get("picture_medium") or top_d.get("picture") or ""
+                    matching_artists = [it for it in items if it.get("name", "").strip().lower() == norm_name]
+                    if not matching_artists:
+                        matching_artists = [it for it in items if norm_name in it.get("name", "").lower() or it.get("name", "").lower() in norm_name]
+                    if matching_artists:
+                        best_d = max(matching_artists, key=lambda x: x.get("nb_fan", 0))
+                        photo = best_d.get("picture_big") or best_d.get("picture_medium") or best_d.get("picture") or ""
     except Exception:
         pass
 
@@ -357,30 +434,64 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
         except Exception:
             pass
 
-    # 2. MusicBrainz for Country
-    try:
-        mb_url = f'https://musicbrainz.org/ws/2/artist/?query=artist:%22{urllib.parse.quote(clean_name)}%22&fmt=json&limit=1'
-        req = urllib.request.Request(mb_url, headers={"User-Agent": "Melodyxx/1.1.0 (melodyxx@app.local)"})
-        with urllib.request.urlopen(req, timeout=2.0) as resp:
-            if resp.status == 200:
-                mb_data = json.loads(resp.read().decode("utf-8"))
-                mb_artists = mb_data.get("artists", [])
-                if mb_artists:
-                    ar = mb_artists[0]
-                    country_code = ar.get("country") or ""
-                    country_name = ar.get("area", {}).get("name") or ""
-                    # Handle city/subdivision without explicit country code
-                    if not country_code and country_name:
-                        us_areas = {"brooklyn", "new york", "los angeles", "chicago", "houston", "nashville", "atlanta", "miami", "seattle"}
-                        uk_areas = {"london", "manchester", "liverpool", "birmingham", "glasgow"}
-                        if country_name.lower() in us_areas:
-                            country_code = "US"
-                            country_name = f"{country_name}, United States"
-                        elif country_name.lower() in uk_areas:
-                            country_code = "GB"
-                            country_name = f"{country_name}, United Kingdom"
-    except Exception:
-        pass
+    # 2. MusicBrainz for Country (if not resolved via override)
+    if not country_name:
+        try:
+            mb_url = f'https://musicbrainz.org/ws/2/artist/?query=artist:%22{urllib.parse.quote(clean_name)}%22&fmt=json&limit=6'
+            req = urllib.request.Request(mb_url, headers={"User-Agent": "Melodyxx/1.1.0 (melodyxx@app.local)"})
+            with urllib.request.urlopen(req, timeout=2.5) as resp:
+                if resp.status == 200:
+                    mb_data = json.loads(resp.read().decode("utf-8"))
+                    mb_artists = mb_data.get("artists", [])
+                    if mb_artists:
+                        best_ar = None
+                        best_score = -999
+                        g_low = (genre or "").lower()
+
+                        for ar in mb_artists:
+                            ar_name = (ar.get("name") or "").strip().lower()
+                            c_code = ar.get("country") or ""
+                            c_name = ar.get("area", {}).get("name") or ""
+                            if not c_code and not c_name:
+                                continue
+
+                            score = int(ar.get("score") or 0)
+                            if ar_name == norm_name:
+                                score += 30
+
+                            disamb = (ar.get("disambiguation") or "").lower()
+                            tags = [t.get("name", "").lower() for t in ar.get("tags", [])]
+
+                            # Penalize incompatible genres
+                            if "pop" in g_low or "r&b" in g_low:
+                                if "black metal" in disamb or "death metal" in disamb or any("metal" in t for t in tags):
+                                    score -= 80
+                            elif "metal" in g_low or "rock" in g_low:
+                                if any("metal" in t for t in tags) or "metal" in disamb:
+                                    score += 40
+
+                            # Bonus for singer / songwriter / pop
+                            if "singer" in disamb or "songwriter" in disamb:
+                                score += 25
+
+                            if score > best_score:
+                                best_score = score
+                                best_ar = ar
+
+                        if best_ar:
+                            country_code = best_ar.get("country") or ""
+                            country_name = best_ar.get("area", {}).get("name") or ""
+                            if not country_code and country_name:
+                                us_areas = {"brooklyn", "new york", "los angeles", "chicago", "houston", "nashville", "atlanta", "miami", "seattle"}
+                                uk_areas = {"london", "manchester", "liverpool", "birmingham", "glasgow"}
+                                if country_name.lower() in us_areas:
+                                    country_code = "US"
+                                    country_name = f"{country_name}, United States"
+                                elif country_name.lower() in uk_areas:
+                                    country_code = "GB"
+                                    country_name = f"{country_name}, United Kingdom"
+        except Exception:
+            pass
 
     if country_code and len(country_code) == 2:
         flag = "".join(chr(127397 + ord(c)) for c in country_code.upper() if "A" <= c <= "Z")
@@ -446,6 +557,10 @@ def resolve_artist_extras(name: str, itunes_id: str = "", genre: str = "") -> di
         "country_code": country_code or "",
         "flag": flag or "",
     }
+    _ARTIST_EXTRAS_CACHE[cache_key] = res
+    if len(_ARTIST_EXTRAS_CACHE) > 1000:
+        _ARTIST_EXTRAS_CACHE.pop(next(iter(_ARTIST_EXTRAS_CACHE)), None)
+    return res
     _ARTIST_EXTRAS_CACHE[cache_key] = res
     if len(_ARTIST_EXTRAS_CACHE) > 1000:
         _ARTIST_EXTRAS_CACHE.pop(next(iter(_ARTIST_EXTRAS_CACHE)), None)

@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.14.6",
+    "date": "2026-11-06",
+    "time": "02:07 UTC",
+    "type": "improvement",
+    "title": "Smart Artist Nationality & Portrait Photo Disambiguation",
+    "highlights": [
+      "Engineered intelligent popularity and fan-count ranking in Deezer photo lookups to prevent obscure namesake bands (e.g. Norwegian black metal Tulus) from replacing mainstream artists.",
+      "Added multi-candidate genre-aware scoring for MusicBrainz lookups to filter out conflicting genres.",
+      "Embedded verified origin overrides for top Indonesian and homonym-prone global artists to ensure 100% accurate country flags and high-res portraits."
+    ]
+  },
+  {
     "version": "v1.14.5",
     "date": "2026-11-06",
     "time": "00:54 UTC",
