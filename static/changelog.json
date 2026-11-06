@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.16.1",
+    "date": "2026-11-06",
+    "time": "09:40 UTC",
+    "type": "fix",
+    "title": "Feature Highlights Iconography Alignment",
+    "highlights": [
+      "Replaced misplaced clock icon on 'Full Artist Discographies' with a studio microphone SVG symbolizing singers and bands.",
+      "Upgraded blank shield on '100% Free & Ad-Free' to an active verified shield-check SVG signifying certified ad-free security.",
+      "Replaced dollar sign on 'HD Bitrate Selection' with an audio sliders tuner SVG accurately representing 320k/192k/128k quality controls."
+    ]
+  },
+  {
     "version": "v1.16.0",
     "date": "2026-11-06",
     "time": "09:15 UTC",
