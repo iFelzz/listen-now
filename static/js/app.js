@@ -2002,26 +2002,43 @@
     const $btnUpdateDismiss = document.getElementById('btn-update-dismiss');
 
     let currentAppVersion = null;
-    let isUpdateBannerShown = false;
+    let latestNotifiedVersion = null;
+    let dismissedVersion = null;
     let newWorkerWaiting = null;
 
     function showUpdateNotification(newVersion) {
-      if (isUpdateBannerShown) return;
-      isUpdateBannerShown = true;
+      if (!newVersion) return;
+      const formattedVer = newVersion.startsWith('v') ? newVersion : `v${newVersion}`;
+
+      const isVersionBump = latestNotifiedVersion && latestNotifiedVersion !== formattedVer;
+      latestNotifiedVersion = formattedVer;
 
       if ($updateNewVersion) {
-        $updateNewVersion.textContent = newVersion;
+        $updateNewVersion.textContent = formattedVer;
       }
       if ($updateBanner) {
         $updateBanner.style.display = 'flex';
+        if (isVersionBump) {
+          $updateBanner.classList.remove('banner-highlight');
+          void $updateBanner.offsetWidth; // trigger reflow
+          $updateBanner.classList.add('banner-highlight');
+        }
       }
 
-      toast('info', `New update available (${newVersion})! Click Refresh to update.`);
+      if (isVersionBump) {
+        toast('info', `Newer version available (${formattedVer})! Click Refresh to update.`);
+      } else {
+        toast('info', `New update available (${formattedVer})! Click Refresh to update.`);
+      }
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          reg?.update().catch(() => {});
+        }).catch(() => {});
+      }
     }
 
     function checkForUpdates() {
-      if (isUpdateBannerShown) return;
-
       fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2038,7 +2055,22 @@
           }
 
           if (formattedRemote !== currentAppVersion) {
-            showUpdateNotification(formattedRemote);
+            const isNewerNotice = !latestNotifiedVersion || formattedRemote !== latestNotifiedVersion;
+            const isNewerThanDismissed = !dismissedVersion || formattedRemote !== dismissedVersion;
+
+            if (isNewerNotice) {
+              dismissedVersion = null; // New version supercedes previous dismiss
+              showUpdateNotification(formattedRemote);
+            } else if (isNewerThanDismissed && $updateBanner && $updateBanner.style.display === 'none') {
+              showUpdateNotification(formattedRemote);
+            } else if ($updateNewVersion && $updateNewVersion.textContent !== formattedRemote) {
+              $updateNewVersion.textContent = formattedRemote;
+            }
+          } else {
+            if ($updateBanner && $updateBanner.style.display !== 'none') {
+              $updateBanner.style.display = 'none';
+            }
+            dismissedVersion = null;
           }
         })
         .catch(err => {
@@ -2051,7 +2083,7 @@
         $btnUpdateReload.textContent = 'Updating…';
         $btnUpdateReload.disabled = true;
 
-        const targetVer = $updateNewVersion ? $updateNewVersion.textContent.trim() : '';
+        const targetVer = $updateNewVersion ? $updateNewVersion.textContent.trim() : (latestNotifiedVersion || '');
         try {
           sessionStorage.setItem('melodyxx_just_updated', targetVer || 'true');
         } catch (_) {}
@@ -2081,6 +2113,7 @@
         if ($updateBanner) {
           $updateBanner.style.display = 'none';
         }
+        dismissedVersion = latestNotifiedVersion;
       });
     }
 
@@ -2112,8 +2145,8 @@
       });
     }
 
-    // Periodic check every 60s & on tab refocus
-    setInterval(checkForUpdates, 60 * 1000);
+    // Periodic check every 30s & on tab refocus
+    setInterval(checkForUpdates, 30 * 1000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkForUpdates();
@@ -2670,7 +2703,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.4';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.5';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -2931,7 +2964,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.4');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.5');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);

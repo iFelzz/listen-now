@@ -2838,6 +2838,16 @@ body:has(#mini-player.show) .batch-progress-widget {
   max-width: 90vw;
 }
 
+.update-notification-banner.banner-highlight {
+  animation: bannerPulseHighlight 0.6s ease;
+}
+
+@keyframes bannerPulseHighlight {
+  0% { transform: translateX(-50%) scale(0.97); box-shadow: 0 0 0 rgba(168, 85, 247, 0); }
+  50% { transform: translateX(-50%) scale(1.03); box-shadow: 0 0 32px rgba(168, 85, 247, 0.65); border-color: rgba(192, 132, 252, 0.9); }
+  100% { transform: translateX(-50%) scale(1); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(124, 58, 237, 0.35); border-color: rgba(139, 92, 246, 0.5); }
+}
+
 /* Reconnected Toast Banner */
 .reconnect-banner {
   position: fixed;

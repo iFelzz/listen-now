@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.14.5",
+    "date": "2026-11-06",
+    "time": "00:54 UTC",
+    "type": "improvement",
+    "title": "Continuous Multi-Release Polling & Dynamic Update Banner Sync",
+    "highlights": [
+      "Eliminated blocker flag that halted background update checking once an initial update notification was displayed.",
+      "Engineered continuous live version polling so intermediate deployments (e.g. v1.14.4 -> v1.14.5 -> v1.14.6) automatically bump and highlight the notification banner without getting stuck.",
+      "Added intelligent dismissal recovery that re-alerts users only when newer subsequent versions arrive."
+    ]
+  },
+  {
     "version": "v1.14.4",
     "date": "2026-11-06",
     "time": "00:03 UTC",
