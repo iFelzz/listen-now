@@ -222,11 +222,24 @@
     const TRACK_ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
     const TRACK_ICON_SPIN = `<svg class="spinner-track-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
 
+    const CARD_ICON_PLAY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+    const CARD_ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+    const CARD_ICON_SPIN = `<svg class="spinner-card-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+
     function resetCurrentPlayingBtn() {
       if (!currentPlayingBtn) return;
+      const card = currentPlayingBtn.closest('.card');
+      if (card) card.classList.remove('is-playing', 'is-paused');
+
       if (currentPlayingBtn.classList.contains('btn-track-play')) {
         currentPlayingBtn.innerHTML = TRACK_ICON_PLAY;
         currentPlayingBtn.classList.remove('loading', 'playing');
+      } else if (currentPlayingBtn.classList.contains('btn-card-play')) {
+        currentPlayingBtn.classList.remove('loading', 'playing', 'paused');
+        const iconSpan = currentPlayingBtn.querySelector('.btn-play-icon');
+        const textSpan = currentPlayingBtn.querySelector('.btn-play-label');
+        if (iconSpan) iconSpan.innerHTML = CARD_ICON_PLAY;
+        if (textSpan) textSpan.textContent = 'Play';
       } else {
         currentPlayingBtn.innerHTML = ICON_PLAY;
         currentPlayingBtn.classList.remove('loading', 'playing');
@@ -236,10 +249,24 @@
 
     function updateCurrentPlayingBtn(isPlaying) {
       if (!currentPlayingBtn) return;
+      const card = currentPlayingBtn.closest('.card');
+
       if (currentPlayingBtn.classList.contains('btn-track-play')) {
         currentPlayingBtn.classList.remove('loading');
         currentPlayingBtn.classList.toggle('playing', isPlaying);
         currentPlayingBtn.innerHTML = isPlaying ? TRACK_ICON_PAUSE : TRACK_ICON_PLAY;
+      } else if (currentPlayingBtn.classList.contains('btn-card-play')) {
+        currentPlayingBtn.classList.remove('loading');
+        currentPlayingBtn.classList.toggle('playing', isPlaying);
+        currentPlayingBtn.classList.toggle('paused', !isPlaying);
+        if (card) {
+          card.classList.toggle('is-playing', isPlaying);
+          card.classList.toggle('is-paused', !isPlaying);
+        }
+        const iconSpan = currentPlayingBtn.querySelector('.btn-play-icon');
+        const textSpan = currentPlayingBtn.querySelector('.btn-play-label');
+        if (iconSpan) iconSpan.innerHTML = isPlaying ? CARD_ICON_PAUSE : CARD_ICON_PLAY;
+        if (textSpan) textSpan.textContent = isPlaying ? 'Pause' : 'Resume';
       } else {
         currentPlayingBtn.classList.remove('loading');
         currentPlayingBtn.classList.toggle('playing', isPlaying);
@@ -253,6 +280,7 @@
       const views = formatViews(item.views);
       const cardId = `card-${index}`;
       const btnId = `btn-dl-${index}`;
+      const playBtnId = `btn-play-${index}`;
 
       return `
     <article class="card" id="${cardId}" role="listitem" aria-label="${esc(item.title)}">
@@ -266,14 +294,6 @@
           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 90%22><rect fill=%22%231a1a2e%22 width=%22160%22 height=%2290%22/><text x=%2280%22 y=%2250%22 fill=%22%234b4c6e%22 text-anchor=%22middle%22 font-size=%2224%22>♪</text></svg>'"
         />
         <span class="card-duration" aria-label="Duration ${esc(item.duration)}">${esc(item.duration)}</span>
-        <button class="btn-play-overlay"
-          data-url="${esc(item.url)}"
-          data-title="${esc(item.title)}"
-          data-artist="${esc(item.channel)}"
-          data-thumb="${esc(item.thumbnail)}"
-          aria-label="Play Preview">
-          ${ICON_PLAY}
-        </button>
       </div>
 
       <div class="card-info">
@@ -285,6 +305,23 @@
       </div>
 
       <div class="card-action">
+        <button
+          type="button"
+          class="btn-card-play"
+          id="${playBtnId}"
+          data-url="${esc(item.url)}"
+          data-title="${esc(item.title)}"
+          data-artist="${esc(item.channel)}"
+          data-thumb="${esc(item.thumbnail)}"
+          aria-label="Play Preview: ${esc(item.title)}"
+          title="Play preview"
+        >
+          <span class="btn-play-icon">${CARD_ICON_PLAY}</span>
+          <span class="btn-play-label">Play</span>
+          <span class="play-equalizer" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+        </button>
         <button
           class="btn-download"
           id="${btnId}"
@@ -328,7 +365,7 @@
       $paginationControls.style.display = allSearchResults.length > itemsPerPage ? 'flex' : 'none';
 
       // Attach preview player handlers
-      document.querySelectorAll('.btn-play-overlay').forEach(btn => {
+      document.querySelectorAll('.btn-card-play').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
 
@@ -345,7 +382,10 @@
           resetCurrentPlayingBtn();
 
           btn.classList.add('loading');
-          btn.innerHTML = ICON_SPIN;
+          const iconSpan = btn.querySelector('.btn-play-icon');
+          const textSpan = btn.querySelector('.btn-play-label');
+          if (iconSpan) iconSpan.innerHTML = CARD_ICON_SPIN;
+          if (textSpan) textSpan.textContent = 'Loading...';
 
           try {
             const res = await fetch(`/api/preview?url=${encodeURIComponent(btn.dataset.url)}`);
@@ -357,14 +397,21 @@
 
             btn.classList.remove('loading');
             btn.classList.add('playing');
-            btn.innerHTML = ICON_PAUSE;
+            if (iconSpan) iconSpan.innerHTML = CARD_ICON_PAUSE;
+            if (textSpan) textSpan.textContent = 'Pause';
+            const card = btn.closest('.card');
+            if (card) card.classList.add('is-playing');
             currentPlayingBtn = btn;
 
             showMiniPlayer(btn.dataset.title, btn.dataset.artist, btn.dataset.thumb);
           } catch (err) {
             console.error(err);
-            btn.classList.remove('loading');
-            btn.innerHTML = ICON_PLAY;
+            btn.classList.remove('loading', 'playing');
+            if (iconSpan) iconSpan.innerHTML = CARD_ICON_PLAY;
+            if (textSpan) textSpan.textContent = 'Play';
+            const card = btn.closest('.card');
+            if (card) card.classList.remove('is-playing', 'is-paused');
+            currentPlayingBtn = null;
             toast('error', 'Preview unavailable for this video.');
           }
         });
@@ -1493,6 +1540,11 @@
         currentPlayingBtn.classList.add('loading');
         if (currentPlayingBtn.classList.contains('btn-track-play')) {
           currentPlayingBtn.innerHTML = TRACK_ICON_SPIN;
+        } else if (currentPlayingBtn.classList.contains('btn-card-play')) {
+          const iconSpan = currentPlayingBtn.querySelector('.btn-play-icon');
+          const textSpan = currentPlayingBtn.querySelector('.btn-play-label');
+          if (iconSpan) iconSpan.innerHTML = CARD_ICON_SPIN;
+          if (textSpan) textSpan.textContent = 'Loading...';
         } else {
           currentPlayingBtn.innerHTML = ICON_SPIN;
         }
@@ -2794,7 +2846,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.2';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.16.0';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -3055,7 +3107,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.2');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.16.0');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);

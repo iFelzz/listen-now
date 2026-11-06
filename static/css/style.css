@@ -907,6 +907,22 @@
       opacity: 1;
     }
 
+    .card.is-playing {
+      border-color: rgba(168, 85, 247, 0.6);
+      box-shadow: 0 8px 32px -6px rgba(124, 58, 237, 0.35), 0 0 0 1px rgba(168, 85, 247, 0.25) inset;
+      background: linear-gradient(135deg, rgba(28, 20, 52, 0.9) 0%, rgba(18, 14, 34, 0.96) 100%);
+    }
+
+    .card.is-playing::before {
+      opacity: 1;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, transparent 60%);
+    }
+
+    .card.is-paused {
+      border-color: rgba(168, 85, 247, 0.38);
+      box-shadow: 0 6px 20px -6px rgba(124, 58, 237, 0.2);
+    }
+
     @keyframes card-in {
       from {
         opacity: 0;
@@ -952,45 +968,6 @@
       border-radius: 8px;
       overflow: hidden;
       background: rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-play-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(124, 58, 237, 0.85);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      opacity: 0;
-      transition: all 0.2s ease;
-      z-index: 2;
-    }
-
-    .card-thumb-wrap:hover .btn-play-overlay,
-    .btn-play-overlay.playing,
-    .btn-play-overlay.loading {
-      opacity: 1;
-    }
-
-    .btn-play-overlay:hover {
-      background: rgba(124, 58, 237, 1);
-      transform: translate(-50%, -50%) scale(1.1);
-    }
-
-    .btn-play-overlay.playing {
-      background: rgba(220, 38, 38, 0.85);
-    }
-
-    .btn-play-overlay.loading svg {
-      animation: spin 1s linear infinite;
     }
 
     .card-thumb {
@@ -1059,8 +1036,9 @@
     .btn-download {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 16px;
       border-radius: var(--radius-md);
       border: 1.5px solid rgba(139, 92, 246, 0.3);
       background: rgba(124, 58, 237, 0.1);
@@ -1074,6 +1052,7 @@
       flex-shrink: 0;
       position: relative;
       z-index: 1;
+      width: 100%;
     }
 
     .btn-download:hover {
@@ -1173,12 +1152,131 @@
       color: var(--clr-accent);
     }
 
-    /* Card action — download button */
+    /* Card action — Play Preview and Download buttons */
     .card-action {
       display: flex;
-      align-items: center;
-      justify-content: flex-end;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 7px;
       flex-shrink: 0;
+      min-width: 104px;
+    }
+
+    /* Card Preview Play button */
+    .btn-card-play {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid rgba(168, 85, 247, 0.35);
+      background: rgba(168, 85, 247, 0.08);
+      color: #d8b4fe;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      outline: none;
+      width: 100%;
+    }
+
+    .btn-card-play:hover {
+      background: rgba(168, 85, 247, 0.22);
+      border-color: rgba(192, 132, 252, 0.65);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    }
+
+    .btn-card-play:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    .btn-card-play .btn-play-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-card-play:hover .btn-play-icon {
+      transform: scale(1.1);
+    }
+
+    /* Animated Sound Equalizer bars */
+    .btn-card-play .play-equalizer {
+      display: none;
+      align-items: flex-end;
+      gap: 2.5px;
+      height: 12px;
+      margin-left: 2px;
+    }
+
+    .btn-card-play.playing .play-equalizer {
+      display: inline-flex;
+    }
+
+    .play-equalizer span {
+      display: block;
+      width: 2.5px;
+      background: #e9d5ff;
+      border-radius: 999px;
+      box-shadow: 0 0 6px #c084fc;
+      animation: playEqBars 0.85s ease-in-out infinite alternate;
+    }
+
+    .play-equalizer span:nth-child(1) { height: 6px; animation-duration: 0.75s; }
+    .play-equalizer span:nth-child(2) { height: 12px; animation-duration: 0.95s; animation-delay: 0.15s; }
+    .play-equalizer span:nth-child(3) { height: 8px; animation-duration: 0.85s; animation-delay: 0.3s; }
+
+    @keyframes playEqBars {
+      0% { height: 3px; }
+      100% { height: 12px; }
+    }
+
+    /* Playing state — Glowing neon pulse */
+    .btn-card-play.playing {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.38) 0%, rgba(168, 85, 247, 0.25) 100%);
+      border-color: #c084fc;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), 0 0 2px #c084fc inset;
+      animation: btnCardPlayPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes btnCardPlayPulse {
+      0%, 100% {
+        box-shadow: 0 0 12px rgba(168, 85, 247, 0.4), 0 0 0 1px rgba(192, 132, 252, 0.3) inset;
+        border-color: rgba(192, 132, 252, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 22px rgba(168, 85, 247, 0.75), 0 0 0 1px rgba(233, 213, 255, 0.5) inset;
+        border-color: #d8b4fe;
+      }
+    }
+
+    /* Paused state */
+    .btn-card-play.paused {
+      background: rgba(124, 58, 237, 0.18);
+      border-color: rgba(168, 85, 247, 0.5);
+      color: #e9d5ff;
+    }
+
+    .btn-card-play.paused .play-equalizer span {
+      animation-play-state: paused;
+      opacity: 0.6;
+    }
+
+    /* Loading spin animation */
+    .btn-card-play.loading .btn-play-icon svg,
+    .spinner-card-icon {
+      animation: spin 0.9s linear infinite;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1730,8 +1828,13 @@
 
       .card-action {
         grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
       }
 
+      .btn-card-play,
       .btn-download {
         width: 100%;
         justify-content: center;

@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.16.0",
+    "date": "2026-11-06",
+    "time": "09:15 UTC",
+    "type": "feature",
+    "title": "Dedicated Card Preview Button with Equalizer Visualizer",
+    "highlights": [
+      "Removed intrusive thumbnail play button overlay, restoring clean high-definition video artwork display.",
+      "Engineered dedicated Preview Play button stacked directly above the MP3 Download button inside each song card.",
+      "Integrated real-time animated neon equalizer bars that dance during audio preview playback.",
+      "Added dynamic glowing neon border and background illumination to the song card currently being played.",
+      "Synchronized interactive Play/Pause/Resume states with seamless loading spinners and keyboard spacebar shortcuts."
+    ]
+  },
+  {
     "version": "v1.15.2",
     "date": "2026-11-06",
     "time": "08:45 UTC",
