@@ -1428,6 +1428,7 @@
 
     audioPlayer.addEventListener('play', () => {
       $volumeControl.classList.add('show');
+      $miniPlayer.classList.add('playing');
       setMiniIcon(false); // show pause icon in mini player
       updateCurrentPlayingBtn(true);
     });
@@ -1444,6 +1445,7 @@
     });
 
     audioPlayer.addEventListener('playing', () => {
+      $miniPlayer.classList.add('playing');
       if (currentPlayingBtn) {
         currentPlayingBtn.classList.remove('loading');
       }
@@ -1452,12 +1454,14 @@
 
     audioPlayer.addEventListener('ended', () => {
       $volumeControl.classList.remove('show');
+      $miniPlayer.classList.remove('playing');
       hideMiniPlayer();
       resetCurrentPlayingBtn();
     });
 
     audioPlayer.addEventListener('pause', () => {
       $volumeControl.classList.remove('show');
+      $miniPlayer.classList.remove('playing');
       setMiniIcon(true); // show play icon in mini player
       if (!audioPlayer.ended) {
         updateCurrentPlayingBtn(false);
@@ -1513,6 +1517,17 @@
         audioPlayer.pause();
       }
     });
+
+    const $miniClose = document.getElementById('mini-close');
+    if ($miniClose) {
+      $miniClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        hideMiniPlayer();
+        resetCurrentPlayingBtn();
+      });
+    }
 
     // ── Download (Zero-Disk Stream Piping, Cobalt-Style) ──────
 
@@ -2723,7 +2738,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.9';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.0';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -2984,7 +2999,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.14.9');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.15.0');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);

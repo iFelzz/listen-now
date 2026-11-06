@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.15.0",
+    "date": "2026-11-06",
+    "time": "05:45 UTC",
+    "type": "feature",
+    "title": "Floating Neon Island Mini Player Redesign",
+    "highlights": [
+      "Completely redesigned the audio preview player into a sleek floating glassmorphism pill capsule with glowing neon violet aesthetics.",
+      "Integrated seamless curved seekbar directly onto the capsule boundary with smooth glowing track scrubber.",
+      "Added dynamic ambient pulse animation while audio is playing to deliver an immersive, high-tech listening experience.",
+      "Introduced one-click dismiss / close button to easily stop and conceal the player anytime.",
+      "Optimized compact layout with violet time badge and glowing gradient circular play/pause control for maximum desktop and mobile ergonomics."
+    ]
+  },
+  {
     "version": "v1.14.9",
     "date": "2026-11-06",
     "time": "05:25 UTC",
