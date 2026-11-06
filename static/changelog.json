@@ -1,5 +1,18 @@
 [
   {
+    "version": "v1.15.2",
+    "date": "2026-11-06",
+    "time": "08:45 UTC",
+    "type": "improvement",
+    "title": "Song Title Word-Wrap & Expanded Island Breadth",
+    "highlights": [
+      "Enabled multiline word-wrapping for song titles to prevent long titles from being truncated with ellipses.",
+      "Expanded floating island maximum width to 940px with dynamic min-height (76px) and generous internal padding.",
+      "Allocated broader flex width (up to 380px) for track information ensuring full title and artist visibility.",
+      "Added hover tooltip attribute to show complete raw song titles upon inspection."
+    ]
+  },
+  {
     "version": "v1.15.1",
     "date": "2026-11-06",
     "time": "08:20 UTC",
