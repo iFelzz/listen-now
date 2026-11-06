@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/css/style.css?v=1.16.1" />
+  <link rel="stylesheet" href="/static/css/style.css?v=1.17.0" />
 
   <style>
     body {
@@ -461,9 +461,61 @@
     /* Section Panels */
     .tables-split-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
       gap: 20px;
       margin-bottom: 28px;
+    }
+
+    .ip-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.80rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .country-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #f1f5f9;
+      white-space: nowrap;
+    }
+
+    .country-flag {
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    .device-pill {
+      font-size: 0.78rem;
+      color: var(--clr-text-muted);
+      white-space: nowrap;
+    }
+
+    .activity-pill {
+      display: inline-block;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.80rem;
+      color: #c4b5fd;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .time-seen {
+      font-size: 0.76rem;
+      color: var(--clr-text-dim);
+      white-space: nowrap;
     }
 
     .section-panel {
@@ -757,6 +809,41 @@
 
     <!-- Metrics Cards Grid -->
     <div class="metrics-grid">
+      <!-- Active Users (Live) -->
+      <div class="metric-card" style="border-color: rgba(34, 197, 94, 0.3); background: linear-gradient(135deg, rgba(34, 197, 94, 0.06), rgba(15, 12, 29, 0.6));">
+        <div class="metric-card-header">
+          <span class="metric-label" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="pulse-dot" style="width: 7px; height: 7px; background: #22c55e; box-shadow: 0 0 10px #22c55e;"></span>
+            Active Users
+          </span>
+          <div class="metric-icon-wrap" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" style="color: #4ade80;" id="val-active-users">0</div>
+        <div class="metric-sub">Past 5-min sliding window</div>
+      </div>
+
+      <!-- Unique Visitors -->
+      <div class="metric-card">
+        <div class="metric-card-header">
+          <span class="metric-label">Unique Visitors</span>
+          <div class="metric-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+        </div>
+        <div class="metric-value" id="val-unique-visitors">0</div>
+        <div class="metric-sub">Today: <strong id="val-today-visitors">0</strong> visitors</div>
+      </div>
+
       <!-- Total Streams -->
       <div class="metric-card">
         <div class="metric-card-header">
@@ -847,6 +934,39 @@
       </div>
     </div>
 
+    <!-- Real-Time Active Visitors Panel -->
+    <div class="section-panel" style="margin-bottom: 24px;">
+      <div class="panel-head">
+        <span class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+          Live Active Visitors
+        </span>
+        <span class="panel-count-tag" id="active-visitors-count-pill">0 active</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="history-table" style="min-width: 720px;">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Country & Origin</th>
+              <th>Client / Device</th>
+              <th>Current Activity</th>
+              <th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="active-visitors-table-body">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No active visitors detected in past 5 minutes.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Rankings Grid -->
     <div class="tables-split-grid">
       <!-- Top Tracks -->
@@ -881,6 +1001,24 @@
           <li class="empty-rank-msg">No artist searches recorded yet.</li>
         </ul>
       </div>
+
+      <!-- Top Countries -->
+      <div class="section-panel">
+        <div class="panel-head">
+          <span class="panel-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            Top Visitor Countries
+          </span>
+          <span class="panel-count-tag" id="top-countries-count">0 countries</span>
+        </div>
+        <ul class="rank-list" id="top-countries-list">
+          <li class="empty-rank-msg">No geographic visits recorded yet.</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Daily Activity History -->
@@ -902,6 +1040,7 @@
           <thead>
             <tr>
               <th>Date</th>
+              <th>Visitors</th>
               <th>Streams</th>
               <th>Bandwidth</th>
               <th>Searches</th>
@@ -910,7 +1049,7 @@
           </thead>
           <tbody id="history-table-body">
             <tr>
-              <td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td>
+              <td colspan="6" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td>
             </tr>
           </tbody>
         </table>
@@ -1138,6 +1277,10 @@
     function renderMetrics(data) {
       localUptimeSeconds = Number(data.uptime_seconds || 0);
 
+      document.getElementById('val-active-users').textContent = Number(data.active_users_count || 0).toLocaleString();
+      document.getElementById('val-unique-visitors').textContent = Number(data.total_unique_visitors || 0).toLocaleString();
+      document.getElementById('val-today-visitors').textContent = Number(data.today?.unique_visitors || 0).toLocaleString();
+
       document.getElementById('val-total-streams').textContent = Number(data.total_streams || 0).toLocaleString();
       document.getElementById('val-today-streams').textContent = Number(data.today?.streams || 0).toLocaleString();
 
@@ -1154,6 +1297,31 @@
       document.getElementById('val-today-previews').textContent = Number(data.today?.previews || 0).toLocaleString();
 
       document.getElementById('val-uptime').textContent = data.uptime_human || formatUptime(localUptimeSeconds);
+
+      // Active Visitors Table
+      const $activeTableBody = document.getElementById('active-visitors-table-body');
+      const activeUsers = data.active_users || [];
+      const $activePill = document.getElementById('active-visitors-count-pill');
+      if ($activePill) $activePill.textContent = `${activeUsers.length} active`;
+
+      if (activeUsers.length === 0) {
+        $activeTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No active visitors detected in past 5 minutes.</td></tr>';
+      } else {
+        $activeTableBody.innerHTML = activeUsers.map(u => `
+          <tr>
+            <td><span class="ip-pill">${esc(u.ip || 'Unknown')}</span></td>
+            <td>
+              <span class="country-pill">
+                <span class="country-flag">${esc(u.flag || '🌐')}</span>
+                <span>${esc(u.country || 'Unknown')}</span>
+              </span>
+            </td>
+            <td><span class="device-pill">${esc(u.device || 'Desktop • Browser')}</span></td>
+            <td><span class="activity-pill" title="${esc(u.last_action)}">${esc(u.last_action || 'Browsing')}</span></td>
+            <td><span class="time-seen">${esc(u.last_seen_human || 'Just now')}</span></td>
+          </tr>
+        `).join('');
+      }
 
       // Top Tracks
       const $topTracksList = document.getElementById('top-tracks-list');
@@ -1193,6 +1361,29 @@
         `).join('');
       }
 
+      // Top Countries
+      const $topCountriesList = document.getElementById('top-countries-list');
+      const countries = data.top_countries || [];
+      const $countriesCount = document.getElementById('top-countries-count');
+      if ($countriesCount) $countriesCount.textContent = `${countries.length} countries`;
+
+      if (countries.length === 0) {
+        $topCountriesList.innerHTML = '<li class="empty-rank-msg">No geographic visits recorded yet.</li>';
+      } else {
+        $topCountriesList.innerHTML = countries.map((c, idx) => `
+          <li class="rank-item">
+            <div class="rank-item-info">
+              <span class="rank-number">#${idx + 1}</span>
+              <span class="country-pill">
+                <span class="country-flag">${esc(c.flag || '🌐')}</span>
+                <span class="rank-item-name" title="${esc(c.country)}">${esc(c.country)}</span>
+              </span>
+            </div>
+            <span class="rank-item-stat">${Number(c.visits).toLocaleString()} visits</span>
+          </li>
+        `).join('');
+      }
+
       // Daily Breakdown
       const $historyBody = document.getElementById('history-table-body');
       const recent = data.recent_days || {};
@@ -1200,13 +1391,15 @@
       document.getElementById('history-days-count').textContent = `${dates.length} days recorded`;
 
       if (dates.length === 0) {
-        $historyBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td></tr>';
+        $historyBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--clr-text-dim); padding: 24px;">No historical data available.</td></tr>';
       } else {
         $historyBody.innerHTML = dates.map(d => {
           const row = recent[d];
+          const visitors = row.unique_visitors !== undefined ? row.unique_visitors : (d === data.today?.date ? data.today?.unique_visitors : 0);
           return `
             <tr>
               <td style="color: #fff; font-weight: 600;">${esc(d)}</td>
+              <td><strong style="color: #c4b5fd;">${Number(visitors || 0).toLocaleString()}</strong></td>
               <td>${Number(row.streams || 0).toLocaleString()}</td>
               <td>${formatBytes(row.bytes || 0)}</td>
               <td>${Number(row.searches || 0).toLocaleString()}</td>

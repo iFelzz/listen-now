@@ -1,5 +1,19 @@
 [
   {
+    "version": "v1.17.0",
+    "date": "2026-11-06",
+    "time": "11:55 UTC",
+    "type": "feature",
+    "title": "Real-Time Active Visitors, Geographic Telemetry & Daily Unique Visitors",
+    "highlights": [
+      "Fixed streaming analytics pipeline: audio preview chunks and direct streaming transfers now increment bandwidth and complete counts in real-time.",
+      "Engineered Real-Time Active Visitors engine with a 5-minute sliding window tracking live online users, IP address, device environment, and current action.",
+      "Integrated instant geo-location resolver utilizing Cloudflare edge headers with fallback IP lookup and flag icons.",
+      "Added Unique Visitors telemetry tracking daily unique visitor counts and all-time unique visitors.",
+      "Expanded Analytics Dashboard with live Active Users card, Unique Visitors card, Live Visitors table, Top Countries demographic ranking, and historical visitors breakdown."
+    ]
+  },
+  {
     "version": "v1.16.1",
     "date": "2026-11-06",
     "time": "09:40 UTC",

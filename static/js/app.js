@@ -2846,7 +2846,7 @@
       document.body.style.overflow = 'hidden';
 
       // Populate diagnostics
-      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.16.1';
+      const activeVer = currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.17.0';
       if ($diagAppVersion) $diagAppVersion.textContent = activeVer;
       if ($diagScreen) $diagScreen.textContent = `${window.screen.width} × ${window.screen.height}`;
       if ($diagPage) $diagPage.textContent = window.location.href;
@@ -3107,7 +3107,7 @@
           formData.append('platform_info', platformInfo);
           formData.append('screen_res', `${window.screen.width}x${window.screen.height}`);
           formData.append('current_url', window.location.href);
-          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.16.1');
+          formData.append('app_version', currentAppVersion || document.getElementById('app-version-badge')?.textContent || 'v1.17.0');
 
           if (selectedReportFile) {
             formData.append('media', selectedReportFile, selectedReportFile.name);
@@ -3168,6 +3168,15 @@
         closeBugReportModal();
       }
     });
+
+    // ── Visitor heartbeat for live analytics ───────────────────
+    function pingAnalytics(action = 'Online') {
+      try {
+        fetch(`/api/ping?action=${encodeURIComponent(action)}`, { method: 'POST', keepalive: true }).catch(() => {});
+      } catch (_) {}
+    }
+    pingAnalytics('Browsing App');
+    setInterval(() => pingAnalytics('Active in App'), 120000);
 
     // ── Load and display version badge ─────────────────────────
     function loadVersion() {

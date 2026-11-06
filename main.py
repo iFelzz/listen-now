@@ -503,15 +503,44 @@ def _extract_stream_info(url: str, raw_title: str = "", explicit_meta: Optional[
             "user_agent":  headers.get("User-Agent"),
         }
 
+def get_client_ip(request: Request) -> str:
+    """Extract client IP respecting Cloudflare and reverse-proxy headers."""
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    x_real_ip = request.headers.get("x-real-ip")
+    if x_real_ip:
+        return x_real_ip.strip()
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host.strip()
+    return "127.0.0.1"
+
 # ── Routes ────────────────────────────────────────────────────
 
 @app.get("/", include_in_schema=False)
-async def root():
+async def root(request: Request):
     """Serve the frontend single page app."""
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    analytics.record_activity(client_ip, "Browsing App", cf_country=cf_country, user_agent=ua)
     index_path = STATIC_DIR / "index.html"
     if not index_path.exists():
         raise HTTPException(status_code=404, detail="Frontend not found.")
     return FileResponse(str(index_path))
+
+@app.api_route("/api/ping", methods=["GET", "POST"], include_in_schema=False)
+async def visitor_ping(request: Request):
+    """Keep-alive heartbeat and visitor activity ping."""
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    action = request.query_params.get("action", "Online")
+    analytics.record_activity(client_ip, action[:40], cf_country=cf_country, user_agent=ua)
+    return JSONResponse(content={"status": "ok"})
 
 @app.get("/offline", include_in_schema=False)
 @app.get("/offline.html", include_in_schema=False)
@@ -945,7 +974,10 @@ async def search(request: Request, q: str, limit: int = 10):
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
 
-    analytics.record_search(q.strip())
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    analytics.record_search(q.strip(), ip=client_ip, cf_country=cf_country, user_agent=ua)
 
     limit = min(max(1, limit), 50)
     q_stripped = q.strip()
@@ -1018,7 +1050,10 @@ async def preview(request: Request, url: str):
     if not clean_url:
         raise HTTPException(status_code=400, detail="URL is required")
 
-    analytics.record_preview()
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    analytics.record_preview(title="", ip=client_ip, cf_country=cf_country, user_agent=ua)
 
     cached = _preview_cache.get(clean_url)
     if not (cached and (time.time() - cached.get("ts", 0)) < _PREVIEW_TTL_SECONDS):
@@ -1150,12 +1185,18 @@ async def preview_stream(request: Request, url: str):
         resp.close()
         return Response(status_code=status_code, headers=resp_headers)
 
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    analytics.record_activity(client_ip, "Listening Preview", cf_country=cf_country, user_agent=ua)
+
     async def _stream_generator():
         try:
             while True:
                 chunk = await loop.run_in_executor(None, resp.read, 64 * 1024)
                 if not chunk:
                     break
+                analytics.record_stream_chunk(len(chunk))
                 yield chunk
         finally:
             resp.close()
@@ -1190,7 +1231,10 @@ async def search_artist(request: Request, q: str, limit: int = 24):
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
     
-    analytics.record_artist_search(q.strip())
+    client_ip = get_client_ip(request)
+    cf_country = request.headers.get("cf-ipcountry")
+    ua = request.headers.get("user-agent", "")
+    analytics.record_artist_search(q.strip(), ip=client_ip, cf_country=cf_country, user_agent=ua)
     limit = min(max(1, limit), 50)
     q_clean = q.strip().lower()
     cache_key = f"{q_clean}:{limit}"
@@ -1706,7 +1750,18 @@ async def stream_audio(
                 logger.info("Client disconnected early from stream: %s", output_filename)
             finally:
                 _active_streams_count = max(0, _active_streams_count - 1)
-                analytics.record_stream_complete(stream_title, stream_artist, total_streamed_bytes)
+                client_ip = get_client_ip(request)
+                cf_country = request.headers.get("cf-ipcountry")
+                ua = request.headers.get("user-agent", "")
+                analytics.record_stream_complete(
+                    stream_title,
+                    stream_artist,
+                    total_streamed_bytes,
+                    ip=client_ip,
+                    cf_country=cf_country,
+                    user_agent=ua,
+                    quality=stream_quality,
+                )
                 logger.info("Stream closed: %s (Remaining active: %d, Streamed: %d bytes)",
                             output_filename, _active_streams_count, total_streamed_bytes)
                 if process.returncode is None:
