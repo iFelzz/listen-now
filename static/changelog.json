@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.14.7",
+    "date": "2026-11-06",
+    "time": "02:45 UTC",
+    "type": "fix",
+    "title": "Same-Origin Preview Audio Stream Proxy & Android Player Client",
+    "highlights": [
+      "Configured YouTube Android player client extraction fallback across yt-dlp queries to eliminate 403 Forbidden and format extraction errors.",
+      "Engineered zero-disk same-origin preview streaming proxy (/api/preview/stream) with HTTP Range support for instant, seekable in-browser audio playback.",
+      "Resolved cross-origin media playback blocking on googlevideo.com URLs to ensure audio preview buttons play smoothly without 'Preview unavailable' errors."
+    ]
+  },
+  {
     "version": "v1.14.6",
     "date": "2026-11-06",
     "time": "02:07 UTC",

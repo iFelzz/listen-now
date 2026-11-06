@@ -30,6 +30,8 @@ import secrets
 import asyncio
 import logging
 import urllib.parse
+import urllib.request
+import urllib.error
 import shutil
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -220,6 +222,11 @@ def _get_base_ytdl_opts() -> dict[str, Any]:
         "no_warnings": True,
         "noplaylist": True,
         "source_address": "0.0.0.0",
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"],
+            }
+        },
         "http_headers": {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -998,47 +1005,167 @@ async def search(request: Request, q: str, limit: int = 10):
         raise HTTPException(status_code=500, detail=str(exc))
 
 @app.get("/api/preview")
-@limiter.limit("20/minute")
+@limiter.limit("60/minute")
 async def preview(request: Request, url: str):
     """
     Extract best direct audio stream URL for in-browser audio playback.
-    Cached for up to 10 minutes.
+    Returns a same-origin proxy streaming URL. Cached for up to 10 minutes.
     """
     if not is_allowed_origin_or_referer(request):
         raise HTTPException(status_code=403, detail="Forbidden: Cross-origin preview hotlinking is not allowed.")
 
-    if not url.strip():
+    clean_url = url.strip()
+    if not clean_url:
         raise HTTPException(status_code=400, detail="URL is required")
 
     analytics.record_preview()
 
-    cached = _preview_cache.get(url)
-    if cached and (time.time() - cached["ts"]) < _PREVIEW_TTL_SECONDS:
-        return {"stream_url": cached["stream_url"]}
+    cached = _preview_cache.get(clean_url)
+    if not (cached and (time.time() - cached.get("ts", 0)) < _PREVIEW_TTL_SECONDS):
+        ydl_opts = {
+            **_get_base_ytdl_opts(),
+            "format": "bestaudio/best",
+        }
 
-    ydl_opts = {
-        **_get_base_ytdl_opts(),
-        "format": "bestaudio/best",
+        try:
+            def _extract():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    return ydl.extract_info(clean_url, download=False)
+
+            info = await asyncio.to_thread(_extract)
+            stream_url = info.get("url")
+            if not stream_url:
+                raise HTTPException(status_code=404, detail="Stream URL not found")
+
+            if len(_preview_cache) >= _MAX_CACHE_ENTRIES:
+                prune_memory_caches()
+            _preview_cache[clean_url] = {"stream_url": stream_url, "ts": time.time()}
+        except Exception as exc:
+            logger.error("Preview error: %s", exc)
+            raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
+
+    encoded = urllib.parse.quote(clean_url)
+    return {"stream_url": f"/api/preview/stream?url={encoded}"}
+
+@app.api_route("/api/preview/stream", methods=["GET", "HEAD"])
+async def preview_stream(request: Request, url: str):
+    """
+    Zero-disk same-origin audio preview streaming proxy.
+    Proxies YouTube audio stream with HTTP Range support so browser <audio> can seek and play reliably.
+    """
+    if not is_allowed_origin_or_referer(request):
+        raise HTTPException(status_code=403, detail="Forbidden: Cross-origin preview streaming is not allowed.")
+
+    clean_url = url.strip()
+    if not clean_url:
+        raise HTTPException(status_code=400, detail="URL is required")
+
+    cached = _preview_cache.get(clean_url)
+    stream_url = None
+    if cached and (time.time() - cached.get("ts", 0)) < _PREVIEW_TTL_SECONDS:
+        stream_url = cached.get("stream_url")
+
+    if not stream_url:
+        ydl_opts = {
+            **_get_base_ytdl_opts(),
+            "format": "bestaudio/best",
+        }
+        try:
+            def _extract():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    return ydl.extract_info(clean_url, download=False)
+            info = await asyncio.to_thread(_extract)
+            stream_url = info.get("url")
+            if not stream_url:
+                raise HTTPException(status_code=404, detail="Stream URL not found")
+            _preview_cache[clean_url] = {"stream_url": stream_url, "ts": time.time()}
+        except Exception as exc:
+            logger.error("Preview stream extraction error: %s", exc)
+            raise HTTPException(status_code=500, detail=f"Failed to extract preview stream: {str(exc)}")
+
+    # Forward Range & User-Agent headers
+    client_range = request.headers.get("range")
+    req_headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Accept-Encoding": "identity",
     }
+    if client_range:
+        req_headers["Range"] = client_range
 
+    def _open_upstream(target_url: str):
+        upstream_req = urllib.request.Request(target_url, headers=req_headers)
+        return urllib.request.urlopen(upstream_req, timeout=15)
+
+    loop = asyncio.get_running_loop()
     try:
-        def _extract():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                return ydl.extract_info(url, download=False)
-
-        info = await asyncio.to_thread(_extract)
-        stream_url = info.get("url")
-        if not stream_url:
-            raise HTTPException(status_code=404, detail="Stream URL not found")
-
-        if len(_preview_cache) >= _MAX_CACHE_ENTRIES:
-            prune_memory_caches()
-        _preview_cache[url] = {"stream_url": stream_url, "ts": time.time()}
-
-        return {"stream_url": stream_url}
+        resp = await loop.run_in_executor(None, _open_upstream, stream_url)
+    except urllib.error.HTTPError as http_err:
+        # If upstream expired (403/410), refresh cache once
+        if http_err.code in (403, 410):
+            logger.warning("Preview upstream returned %s, refreshing stream url for: %s", http_err.code, clean_url)
+            _preview_cache.pop(clean_url, None)
+            ydl_opts = {
+                **_get_base_ytdl_opts(),
+                "format": "bestaudio/best",
+            }
+            try:
+                def _re_extract():
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        return ydl.extract_info(clean_url, download=False)
+                info = await asyncio.to_thread(_re_extract)
+                stream_url = info.get("url")
+                if not stream_url:
+                    raise HTTPException(status_code=404, detail="Stream URL not found on refresh")
+                _preview_cache[clean_url] = {"stream_url": stream_url, "ts": time.time()}
+                resp = await loop.run_in_executor(None, _open_upstream, stream_url)
+            except Exception as re_err:
+                logger.error("Preview re-extraction failed: %s", re_err)
+                raise HTTPException(status_code=502, detail=f"Upstream audio unavailable: {re_err}")
+        else:
+            raise HTTPException(status_code=http_err.code, detail=f"Upstream error: {http_err.reason}")
     except Exception as exc:
-        logger.error("Preview error: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to extract preview: {str(exc)}")
+        logger.error("Preview connection failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Failed to connect to audio upstream: {exc}")
+
+    status_code = resp.status if resp.status in (200, 206) else 200
+    resp_headers = {
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, max-age=3600",
+    }
+    content_type = resp.headers.get("Content-Type")
+    if content_type:
+        resp_headers["Content-Type"] = content_type
+    content_range = resp.headers.get("Content-Range")
+    if content_range:
+        resp_headers["Content-Range"] = content_range
+    content_length = resp.headers.get("Content-Length")
+    if content_length:
+        resp_headers["Content-Length"] = content_length
+
+    if request.method.upper() == "HEAD":
+        resp.close()
+        return Response(status_code=status_code, headers=resp_headers)
+
+    async def _stream_generator():
+        try:
+            while True:
+                chunk = await loop.run_in_executor(None, resp.read, 64 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            resp.close()
+
+    return StreamingResponse(
+        _stream_generator(),
+        status_code=status_code,
+        headers=resp_headers,
+        media_type=content_type or "audio/mp4",
+    )
 
 @app.get("/api/suggest")
 @limiter.limit("180/minute")
