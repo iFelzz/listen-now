@@ -2,6 +2,7 @@
        DESIGN TOKENS
     ═══════════════════════════════════════════════════ */
     :root {
+      color-scheme: dark;
       --clr-bg: #09090f;
       --clr-surface: #13131f;
       --clr-surface-2: #1a1a2e;
@@ -45,6 +46,7 @@
 
     html {
       scroll-behavior: smooth;
+      color-scheme: dark;
     }
 
     body {
@@ -53,6 +55,7 @@
       color: var(--clr-text);
       min-height: 100vh;
       overflow-x: hidden;
+      color-scheme: dark;
     }
 
     /* ═══════════════════════════════════════════════════
@@ -670,6 +673,7 @@
     }
 
     .limit-selector select {
+      color-scheme: dark;
       background: rgba(0, 0, 0, 0.2);
       border: 1px solid var(--clr-border);
       color: var(--clr-text);
@@ -678,6 +682,13 @@
       outline: none;
       cursor: pointer;
       font-family: inherit;
+    }
+
+    .limit-selector select optgroup,
+    .limit-selector select option {
+      color-scheme: dark;
+      background-color: #120b22;
+      color: #f1f5f9;
     }
 
     .limit-selector select:focus {
@@ -2274,6 +2285,7 @@
 }
 
 .disco-select {
+  color-scheme: dark;
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
   border-radius: 6px;
@@ -2284,6 +2296,13 @@
   cursor: pointer;
   outline: none;
   transition: var(--transition);
+}
+
+.disco-select optgroup,
+.disco-select option {
+  color-scheme: dark;
+  background-color: #120b22;
+  color: #f1f5f9;
 }
 
 .disco-select:hover, .disco-select:focus {
@@ -3254,6 +3273,7 @@ body:has(#mini-player.show) .batch-progress-widget {
 .release-version-select {
   appearance: none;
   -webkit-appearance: none;
+  color-scheme: dark;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(168, 85, 247, 0.3);
   border-radius: 8px;
@@ -3277,9 +3297,20 @@ body:has(#mini-player.show) .batch-progress-widget {
   box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
 }
 
+.release-version-select optgroup {
+  color-scheme: dark;
+  background: #190f30;
+  color: #c084fc;
+  font-weight: 700;
+  font-style: normal;
+  padding: 6px 8px;
+}
+
 .release-version-select option {
+  color-scheme: dark;
   background: #120b22;
   color: #f1f5f9;
+  padding: 4px 8px;
 }
 
 .release-select-arrow {
@@ -3968,6 +3999,7 @@ body:has(#mini-player.show) .batch-progress-widget {
 .report-input,
 .report-textarea,
 .report-select {
+  color-scheme: dark;
   background: rgba(15, 10, 26, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
@@ -4019,7 +4051,9 @@ body:has(#mini-player.show) .batch-progress-widget {
   cursor: pointer;
 }
 
+.report-select optgroup,
 .report-select option {
+  color-scheme: dark;
   background: #18112b;
   color: #f8fafc;
 }

@@ -1,5 +1,17 @@
 [
   {
+    "version": "v1.14.4",
+    "date": "2026-11-06",
+    "time": "00:03 UTC",
+    "type": "improvement",
+    "title": "Dark Mode Color Scheme & Native Select Contrast Alignment",
+    "highlights": [
+      "Added global color-scheme: dark meta tag and CSS declarations to force native browser selects and optgroup popups to render in dark theme.",
+      "Styled .release-version-select optgroup headers with rich dark-violet backgrounds and high-contrast glowing lavender typography.",
+      "Eliminated glaring white default browser backgrounds in dropdown version menus on Windows and Chromium browsers."
+    ]
+  },
+  {
     "version": "v1.14.3",
     "date": "2026-11-05",
     "time": "23:58 UTC",
